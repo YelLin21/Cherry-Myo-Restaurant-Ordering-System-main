@@ -14,7 +14,7 @@ export default function HomePage() {
         <div className="w-full p-4 mb-6 shadow-inner" style={{ backgroundColor: "#F3E0DA" }}>
           <div className="flex flex-col items-center">
             <img
-              src="src/image/cherry_myo.png"
+              src="/image/cherry_myo.png"
               alt="Cherry Myo Logo"
               className="w-20 h-20 rounded-full"
             />
@@ -35,7 +35,7 @@ export default function HomePage() {
             className="bg-white rounded-xl overflow-hidden shadow hover:scale-105 transition cursor-pointer"
           >
             <img
-              src="src/image/food menu.jpg"
+              src="/image/food menu.jpg"
               alt="Food"
               className="h-32 w-full object-cover"
             />
@@ -48,7 +48,7 @@ export default function HomePage() {
             className="bg-white rounded-xl overflow-hidden shadow hover:scale-105 transition cursor-pointer"
           >
             <img
-              src="src/image/grill.jpg"
+              src="/image/grill.jpg"
               alt="Grill"
               className="h-32 w-full object-cover"
             />
@@ -61,7 +61,7 @@ export default function HomePage() {
             className="bg-white rounded-xl overflow-hidden shadow hover:scale-105 transition cursor-pointer"
           >
             <img
-              src="src/image/tea.jpg"
+              src="/image/tea.jpg"
               alt="Beverages"
               className="h-32 w-full object-cover"
             />
@@ -71,7 +71,7 @@ export default function HomePage() {
 
           <div className="bg-white rounded-xl overflow-hidden shadow">
             <img
-              src="src/image/promotion.jpg"
+              src="/image/promotion.jpg"
               alt="Promotion"
               className="h-32 w-full object-cover"
             />

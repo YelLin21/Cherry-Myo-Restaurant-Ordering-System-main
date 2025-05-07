@@ -7,7 +7,7 @@ export default function Navbar() {
         {/* Changed this div to use flex */}
         <div className="flex items-center gap-4">
           <img
-            src="src/image/cherry_myo.png"
+            src="/image/cherry_myo.png"
             alt="Cherry Myo Logo"
             className="w-20 h-20 rounded-full"
           />
