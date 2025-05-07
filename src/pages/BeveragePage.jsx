@@ -1,72 +1,135 @@
-import { useState } from "react";
-import Navbar from "../components/Navbar.jsx"; // Import NavBar component
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import Navbar from "../components/Navbar.jsx";
 
-export default function FoodMenuPage() {
-  const BeerItems = [
-    { name: "Chang Beer", price: 40 },
-    { name: "Singer Beer", price: 40 },
-    { name: "Leo Beer", price: 50 },
-    { name: "Water", price: 10 },
-  ];
+export default function GrillMenuPage() {
+  const [menuItems, setMenuItems] = useState([]);
+  const [quantities, setQuantities] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [activeTab, setActiveTab] = useState("Beverage");
+  const navigate = useNavigate();
 
-  // Maintain quantity for each item separately
-  const [quantities, setQuantities] = useState(
-    Array(BeerItems.length).fill(0)
+  useEffect(() => {
+    fetch("http://localhost:5000/api/menu")
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch beverage menu");
+        return res.json();
+      })
+      .then((data) => {
+        const BeverageItems = data.filter((item) => item.category === "Beverage");
+        setMenuItems(BeverageItems);
+
+        const initialQuantities = {};
+        BeverageItems.forEach((item) => {
+          initialQuantities[item._id] = 0;
+        });
+        setQuantities(initialQuantities);
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleIncrement = (id) => {
+    setQuantities((prev) => ({
+      ...prev,
+      [id]: prev[id] + 1,
+    }));
+  };
+
+  const handleDecrement = (id) => {
+    setQuantities((prev) => ({
+      ...prev,
+      [id]: prev[id] > 0 ? prev[id] - 1 : 0,
+    }));
+  };
+
+  const cartItems = menuItems.filter((item) => quantities[item._id] > 0);
+  const subtotal = cartItems.reduce(
+    (total, item) => total + item.price * quantities[item._id],
+    0
   );
 
-  const handleIncrement = (index) => {
-    const updated = [...quantities];
-    updated[index]++;
-    setQuantities(updated);
-  };
-
-  const handleDecrement = (index) => {
-    const updated = [...quantities];
-    if (updated[index] > 0) updated[index]--;
-    setQuantities(updated);
-  };
+  const filteredItems = menuItems.filter(
+    (item) => item.category === activeTab
+  );
 
   return (
     <div>
       <Navbar />
       <main className="p-8 bg-gray-100 min-h-screen pt-10">
-      <div className="pt-16 p-6 bg-pink-50 min-h-screen">
-        <h1 className="text-xl font-bold mb-4">Beverage Menu</h1>
+        <div className="pt-16 p-6 bg-pink-50 min-h-screen">
+          <h1 className="text-xl font-bold mb-4">Beverage Menu</h1>
 
-        {/* Menu List */}
-        <div className="space-y-4">
-          {BeerItems.map((item, index) => (
-            <div
-              style={{ backgroundColor: "#FFC0CB" }}
-              key={index}
-              className="bg-white p-4 rounded-lg shadow flex justify-between"
-            >
-              <div>
-                <h2 className="font-semibold">{item.name}</h2>
-                <p className="text-sm">{item.price} Baht</p>
+          {loading && <p className="text-center">Loading...</p>}
+          {error && <p className="text-center text-red-500">{error}</p>}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            {filteredItems.map((item) => (
+              <div
+                key={item._id}
+                className="rounded-xl shadow p-4 flex flex-col items-center"
+                style={{ backgroundColor: "#FFC0CB" }}
+              >
+                <img
+                  src={item.image || "https://via.placeholder.com/150"}
+                  alt={item.name}
+                  className="w-32 h-32 object-cover rounded mb-2"
+                />
+                <h2 className="font-semibold text-lg">{item.name}</h2>
+                <p className="text-gray-600">{item.price} Baht</p>
+
+                <div className="flex items-center mt-3">
+                  <button
+                    onClick={() => handleDecrement(item._id)}
+                    className="px-3 py-1 text-white rounded"
+                    style={{ backgroundColor: "#9B9B9B" }}
+                  >
+                    −
+                  </button>
+                  <span className="px-4 font-semibold text-lg">
+                    {quantities[item._id]}
+                  </span>
+                  <button
+                    onClick={() => handleIncrement(item._id)}
+                    className="px-3 py-1 text-white rounded"
+                    style={{ backgroundColor: "#BD3B53" }}
+                  >
+                    +
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center">
-                <button
-                  className="px-2 py-1 text-white rounded hover:opacity-80"
-                  style={{ backgroundColor: "#9B9B9B" }}
-                  onClick={() => handleDecrement(index)}
-                >
-                  -
-                </button>
-                <span className="px-3">{quantities[index]}</span>
-                <button
-                  className="px-2 py-1 text-white rounded hover:opacity-80"
-                  style={{ backgroundColor: "#BD3B53" }}
-                  onClick={() => handleIncrement(index)}
-                >
-                  +
-                </button>
+            ))}
+          </div>
+
+          {/* Cart View */}
+          {cartItems.length > 0 && (
+            <div className="mt-10 bg-white p-6 rounded-lg shadow-md">
+              <h2 className="text-xl font-bold mb-4">🛒 Cart</h2>
+              <ul className="space-y-2">
+                {cartItems.map((item) => (
+                  <li key={item._id} className="flex justify-between">
+                    <span>
+                      {item.name} × {quantities[item._id]}
+                    </span>
+                    <span>{item.price * quantities[item._id]} Baht</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="flex justify-between mt-4 font-bold text-lg">
+                <span>Total:</span>
+                <span>{subtotal} Baht</span>
               </div>
+              <button
+                onClick={() => navigate("/cart")}
+                className="mt-4 bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700"
+              >
+                Next →
+              </button>
             </div>
-          ))}
+          )}
         </div>
-      </div>
-    </main>
-    </div >
+      </main>
+    </div>
   );
 }

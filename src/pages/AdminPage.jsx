@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import AdminMenuForm from "../components/AdminMenuForm";
 import AdminMenuList from "../components/AdminMenuList";
 
-const TABS = ["Breakfast", "Lunch", "Dinner"];
+const TABS = ["Breakfast", "Lunch", "Dinner", "Grill", "Beverage"];
 
 export default function AdminPage() {
   const [menuItems, setMenuItems] = useState([]);
