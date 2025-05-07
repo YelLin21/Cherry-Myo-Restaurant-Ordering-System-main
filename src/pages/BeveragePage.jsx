@@ -1,14 +1,15 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar.jsx";
+import { useCart } from "../context/CartContext.jsx";
 
-export default function GrillMenuPage() {
+export default function BeverageMenuPage() {
   const [menuItems, setMenuItems] = useState([]);
-  const [quantities, setQuantities] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState("Beverage");
+
   const navigate = useNavigate();
+  const { cart, addToCart, removeFromCart, total } = useCart();
 
   useEffect(() => {
     fetch("http://localhost:5000/api/menu")
@@ -17,55 +18,27 @@ export default function GrillMenuPage() {
         return res.json();
       })
       .then((data) => {
-        const BeverageItems = data.filter((item) => item.category === "Beverage");
-        setMenuItems(BeverageItems);
-
-        const initialQuantities = {};
-        BeverageItems.forEach((item) => {
-          initialQuantities[item._id] = 0;
-        });
-        setQuantities(initialQuantities);
+        const beverageItems = data.filter((item) => item.category === "Beverage");
+        setMenuItems(beverageItems);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
 
-  const handleIncrement = (id) => {
-    setQuantities((prev) => ({
-      ...prev,
-      [id]: prev[id] + 1,
-    }));
-  };
-
-  const handleDecrement = (id) => {
-    setQuantities((prev) => ({
-      ...prev,
-      [id]: prev[id] > 0 ? prev[id] - 1 : 0,
-    }));
-  };
-
-  const cartItems = menuItems.filter((item) => quantities[item._id] > 0);
-  const subtotal = cartItems.reduce(
-    (total, item) => total + item.price * quantities[item._id],
-    0
-  );
-
-  const filteredItems = menuItems.filter(
-    (item) => item.category === activeTab
-  );
+  const getQuantity = (id) => cart[id]?.quantity || 0;
 
   return (
     <div>
       <Navbar />
       <main className="p-8 bg-gray-100 min-h-screen pt-10">
         <div className="pt-16 p-6 bg-pink-50 min-h-screen">
-          <h1 className="text-xl font-bold mb-4">Beverage Menu</h1>
+          <h1 className="text-2xl font-bold text-center mb-6">Beverage Menu</h1>
 
           {loading && <p className="text-center">Loading...</p>}
           {error && <p className="text-center text-red-500">{error}</p>}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {filteredItems.map((item) => (
+            {menuItems.map((item) => (
               <div
                 key={item._id}
                 className="rounded-xl shadow p-4 flex flex-col items-center"
@@ -81,17 +54,17 @@ export default function GrillMenuPage() {
 
                 <div className="flex items-center mt-3">
                   <button
-                    onClick={() => handleDecrement(item._id)}
+                    onClick={() => removeFromCart(item)}
                     className="px-3 py-1 text-white rounded"
                     style={{ backgroundColor: "#9B9B9B" }}
                   >
                     −
                   </button>
                   <span className="px-4 font-semibold text-lg">
-                    {quantities[item._id]}
+                    {getQuantity(item._id)}
                   </span>
                   <button
-                    onClick={() => handleIncrement(item._id)}
+                    onClick={() => addToCart(item)}
                     className="px-3 py-1 text-white rounded"
                     style={{ backgroundColor: "#BD3B53" }}
                   >
@@ -102,24 +75,36 @@ export default function GrillMenuPage() {
             ))}
           </div>
 
-          {/* Cart View */}
-          {cartItems.length > 0 && (
+          {/* Cart Summary */}
+          {Object.values(cart).length > 0 && (
             <div className="mt-10 bg-white p-6 rounded-lg shadow-md">
               <h2 className="text-xl font-bold mb-4">🛒 Cart</h2>
+
+              {/* Header Row */}
+              <div className="flex justify-between font-semibold border-b pb-2 mb-2">
+                <span className="w-1/2">Item</span>
+                <span className="w-1/4 text-right">Price</span>
+                <span className="w-1/4 text-center">Quantity</span>
+                <span className="w-1/4 text-right">Total</span>
+              </div>
+
+              {/* Cart Items */}
               <ul className="space-y-2">
-                {cartItems.map((item) => (
+                {Object.values(cart).map(({ item, quantity }) => (
                   <li key={item._id} className="flex justify-between">
-                    <span>
-                      {item.name} × {quantities[item._id]}
-                    </span>
-                    <span>{item.price * quantities[item._id]} Baht</span>
+                    <span className="w-1/2">{item.name}</span>
+                    <span className="w-1/4 text-right">{item.price}</span>
+                    <span className="w-1/4 text-center">{quantity}</span>
+                    <span className="w-1/4 text-right">{item.price * quantity} Baht</span>
                   </li>
                 ))}
               </ul>
+
               <div className="flex justify-between mt-4 font-bold text-lg">
-                <span>Total:</span>
-                <span>{subtotal} Baht</span>
+                <span>Total Price:</span>
+                <span>{total} Baht</span>
               </div>
+
               <button
                 onClick={() => navigate("/cart")}
                 className="mt-4 bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700"
@@ -128,6 +113,7 @@ export default function GrillMenuPage() {
               </button>
             </div>
           )}
+
         </div>
       </main>
     </div>
