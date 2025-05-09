@@ -14,7 +14,7 @@ export default function GrillMenuPage() {
   const { cart, addToCart, removeFromCart, total } = useCart();
 
   useEffect(() => {
-    fetch(`${APIBASE}/api/menu`)
+    fetch(`${APIBASE}/menu`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch grill menu");
         return res.json();

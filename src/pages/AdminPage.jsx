@@ -12,14 +12,14 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState("Breakfast");
 
   useEffect(() => {
-    fetch(`${APIBASE}/api/menu`)
+    fetch(`${APIBASE}/menu`)
       .then((res) => res.json())
       .then((data) => setMenuItems(data));
   }, []);
 
   const handleAdd = (item) => {
     const newItem = { ...item, category: activeTab };
-    fetch(`${APIBASE}/api/menu`, {
+    fetch(`${APIBASE}/menu`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(newItem),
@@ -31,7 +31,7 @@ export default function AdminPage() {
   };
 
   const handleDelete = (id) => {
-    fetch(`${APIBASE}/api/menu/${id}`, {
+    fetch(`${APIBASE}/menu/${id}`, {
       method: "DELETE",
     }).then(() => {
       setMenuItems((prev) => prev.filter((item) => item._id !== id));
