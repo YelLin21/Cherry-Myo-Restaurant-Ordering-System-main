@@ -76,7 +76,7 @@ export default function FoodMenuPage() {
 
                 <div className="flex items-center mt-3">
                   <button
-                    onClick={() => removeFromCart(item)}
+                    onClick={() => removeFromCart(item._id)}
                     className="px-3 py-1 text-white rounded"
                     style={{ backgroundColor: "#9B9B9B" }}
                   >

@@ -17,17 +17,25 @@ export const CartProvider = ({ children }) => {
   };
 
   function removeFromCart(id, force = false) {
-    setCart((prev) => {
-      const newCart = { ...prev };
-      if (force || newCart[id].quantity <= 1) {
-        delete newCart[id];
-      } else {
-        newCart[id].quantity -= 1;
-      }
-      return newCart;
-    });
-  }
-  
+  setCart((prev) => {
+    const newCart = { ...prev };
+    const item = newCart[id];
+
+    if (!item) return newCart;
+
+    if (force || item.quantity === 1) {
+      delete newCart[id];
+    }
+    else {
+    newCart[id] = {
+        ...item,
+        quantity: item.quantity - 1,
+      };
+    }
+
+    return newCart;
+  });
+}
 
   const total = Object.values(cart).reduce(
     (sum, entry) => sum + entry.item.price * entry.quantity,

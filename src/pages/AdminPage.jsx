@@ -39,7 +39,7 @@ export default function AdminPage() {
   };
 
   const handleUpdate = (updatedItem) => {
-    fetch(`${APIBASE}/api/menu/${updatedItem._id}`, {
+    fetch(`${APIBASE}/menu/${updatedItem._id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updatedItem),
