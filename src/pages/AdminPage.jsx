@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import AdminMenuForm from "../components/AdminMenuForm";
 import AdminMenuList from "../components/AdminMenuList";
 
+const APIBASE= import.meta.env.VITE_API_URL; 
+
 const TABS = ["Breakfast", "Lunch", "Dinner", "Grill", "Beverage"];
 
 export default function AdminPage() {
@@ -10,14 +12,14 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState("Breakfast");
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/menu")
+    fetch(`${APIBASE}/api/menu`)
       .then((res) => res.json())
       .then((data) => setMenuItems(data));
   }, []);
 
   const handleAdd = (item) => {
-    const newItem = { ...item, category: activeTab }; // 👈 Set category here
-    fetch("http://localhost:5000/api/menu", {
+    const newItem = { ...item, category: activeTab };
+    fetch(`${APIBASE}/api/menu`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(newItem),
@@ -29,7 +31,7 @@ export default function AdminPage() {
   };
 
   const handleDelete = (id) => {
-    fetch(`http://localhost:5000/api/menu/${id}`, {
+    fetch(`${APIBASE}/api/menu/${id}`, {
       method: "DELETE",
     }).then(() => {
       setMenuItems((prev) => prev.filter((item) => item._id !== id));
@@ -37,7 +39,7 @@ export default function AdminPage() {
   };
 
   const handleUpdate = (updatedItem) => {
-    fetch(`http://localhost:5000/api/menu/${updatedItem._id}`, {
+    fetch(`${APIBASE}/api/menu/${updatedItem._id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updatedItem),
@@ -55,7 +57,6 @@ export default function AdminPage() {
     <div className="p-8 bg-gray-50 min-h-screen">
       <h1 className="text-2xl font-bold mb-6 text-pink-700">Admin Panel</h1>
 
-      {/* Tabs */}
       <div className="flex gap-4 mb-6">
         {TABS.map((tab) => (
           <button
@@ -75,10 +76,10 @@ export default function AdminPage() {
         onUpdate={handleUpdate}
         editingItem={editingItem}
         clearEdit={() => setEditingItem(null)}
-        activeTab={activeTab} // 👈 Pass active tab here
+        activeTab={activeTab}
       />
       <AdminMenuList
-        items={menuItems.filter((item) => item.category === activeTab)} // 👈 Show items by tab
+        items={menuItems.filter((item) => item.category === activeTab)}
         onDelete={handleDelete}
         onEdit={setEditingItem}
       />

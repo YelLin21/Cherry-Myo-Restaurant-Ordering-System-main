@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar.jsx";
 import { useCart } from "../context/CartContext.jsx"; // Import cart context
 
+const APIBASE= import.meta.env.VITE_API_URL; 
+
 const TABS = ["Breakfast", "Lunch", "Dinner"];
 
 export default function FoodMenuPage() {
@@ -15,7 +17,7 @@ export default function FoodMenuPage() {
   const { cart, addToCart, removeFromCart, total } = useCart();
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/menu")
+    fetch(`${APIBASE}/api/menu`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch menu");
         return res.json();
