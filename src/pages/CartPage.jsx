@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar.jsx";
-import { useCart } from "../context/CartContext.jsx"; // shared cart context
+import { useCart } from "../context/CartContext.jsx";
 
 export default function CartPage() {
   const [selectedItems, setSelectedItems] = useState({});
@@ -18,7 +18,7 @@ export default function CartPage() {
   const handleDeleteSelected = () => {
     Object.keys(selectedItems).forEach((id) => {
       if (selectedItems[id]) {
-        removeFromCart(id, true); // true = force delete
+        removeFromCart(id, true);
       }
     });
     setSelectedItems({});
@@ -27,86 +27,76 @@ export default function CartPage() {
   return (
     <div>
       <Navbar />
-      <main className="p-8 bg-gray-100 min-h-screen pt-10">
-        <div className="pt-16 p-6 bg-pink-50 min-h-screen">
+      <main className="pt-20 px-4 sm:px-6 lg:px-8 bg-gray-100 min-h-screen">
+        <div className="bg-pink-50 rounded-xl p-4 sm:p-6 lg:p-8 shadow-md">
           <h1 className="text-2xl font-bold text-center mb-6">Cart</h1>
 
           {Object.values(cart).length > 0 ? (
-            <div className="mt-10 bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-xl font-bold mb-4">🛒 Cart</h2>
+            <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md">
+              <h2 className="text-xl font-bold mb-4">🛒 Your Cart</h2>
 
-              {/* Header Row */}
-              <div className="flex justify-between font-semibold border-b pb-2 mb-2">
-                <span className="w-1/12"></span>
-                <span className="w-4/12">Item</span>
-                <span className="w-2/12 text-right">Price</span>
-                <span className="w-2/12 text-center">Quantity</span>
-                <span className="w-2/12 text-right">Total</span>
+              <div className="hidden md:flex justify-between font-semibold border-b pb-2 mb-2">
+                <span className="w-[5%]"></span>
+                <span className="w-[35%]">Item</span>
+                <span className="w-[20%] text-right">Price</span>
+                <span className="w-[20%] text-center">Quantity</span>
+                <span className="w-[20%] text-right">Total</span>
               </div>
 
-              {/* Cart Items */}
-              <ul className="space-y-2">
+              <ul className="space-y-4">
                 {Object.values(cart).map(({ item, quantity }) => (
-                  <li key={item._id} className="flex justify-between items-center">
-                    {/* Checkbox */}
+                  <li
+                    key={item._id}
+                    className="flex flex-col md:flex-row justify-between items-center border rounded-md p-3 gap-4"
+                  >
                     <input
                       type="checkbox"
-                      className="w-1/12"
+                      className="md:w-[5%]"
                       checked={!!selectedItems[item._id]}
                       onChange={() => handleCheckboxChange(item._id)}
                     />
-                    
-                    {/* Item name */}
-                    <span className="w-4/12">{item.name}</span>
+                    <span className="md:w-[35%] text-center md:text-left">{item.name}</span>
+                    <span className="md:w-[20%] text-right">{item.price} Baht</span>
 
-                    {/* Item price */}
-                    <span className="w-2/12 text-right">{item.price} Baht</span>
-
-                    {/* Quantity controls */}
-                    <span className="w-2/12 text-center flex justify-center items-center gap-2">
+                    <span className="md:w-[20%] flex justify-center items-center gap-2">
                       <button
                         onClick={() => removeFromCart(item._id)}
-                        className="px-2 py-1 rounded hover:bg-gray-400" style={{ backgroundColor: "#9B9B9B" }}
+                        className="px-2 py-1 rounded bg-gray-400 hover:bg-gray-500 text-white"
                       >
                         −
                       </button>
                       {quantity}
                       <button
                         onClick={() => addToCart(item)}
-                        className="px-2 py-1 text-white rounded hover:bg-pink-600" style={{ backgroundColor: "#BD3B53" }}
+                        className="px-2 py-1 rounded bg-pink-600 hover:bg-pink-700 text-white"
                       >
                         +
                       </button>
                     </span>
 
-                    {/* Total price */}
-                    <span className="w-2/12 text-right">{item.price * quantity} Baht</span>
+                    <span className="md:w-[20%] text-right">{item.price * quantity} Baht</span>
                   </li>
                 ))}
               </ul>
 
-              {/* Total and Delete */}
-              <div className="flex justify-between items-center mt-6">
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={handleDeleteSelected}
-                    className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-                  >
-                    Delete Selected
-                  </button>
-                </div>
-                <div className="text-lg font-bold">
-                  Total Price: {total} Baht
-                </div>
+              <div className="flex flex-col md:flex-row justify-between items-center mt-6 gap-4">
+                <button
+                  onClick={handleDeleteSelected}
+                  className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 w-full md:w-auto"
+                >
+                  Delete Selected
+                </button>
+                <div className="text-lg font-bold">Total Price: {total} Baht</div>
               </div>
 
-              {/* Proceed button */}
-              <button
-                onClick={() => navigate("/checkout")}
-                className="mt-6 bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 float-right"
-              >
-                Next →
-              </button>
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => navigate("/checkout")}
+                  className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700"
+                >
+                  Next →
+                </button>
+              </div>
             </div>
           ) : (
             <p className="text-center text-lg">Your cart is empty.</p>
