@@ -8,10 +8,10 @@ After cloning the project, run
 6. pnpm install socket.io-client
 
 After installing all, final step run  
-pnpm run dev
-```
-If it is successful, it shows 
-"Server running on port 5000"
-"MongoDB connected"
+"pnpm run dev"
+
+If it is successful, it shows   
+"Server running on port 5000"  
+"MongoDB connected"  
 "Socket connected:xxxxxxxxx"
-```
+
