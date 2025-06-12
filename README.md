@@ -7,7 +7,7 @@ After cloning the project, run
 5. pnpm add -D nodemon
 6. pnpm install socket.io-client
 
-After installing all, final step run
+After installing all, final step run  
 pnpm run dev
 ```
 If it is successful, it shows 
