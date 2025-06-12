@@ -7,7 +7,9 @@ After cloning the project, run
 5. pnpm add -D nodemon
 6. pnpm install socket.io-client
 
+```
 If it is successful, it shows 
 "Server running on port 5000"
 "MongoDB connected"
 "Socket connected:xxxxxxxxx"
+```
