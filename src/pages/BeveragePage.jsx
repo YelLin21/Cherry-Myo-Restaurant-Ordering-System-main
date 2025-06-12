@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar.jsx";
 import { useCart } from "../context/CartContext.jsx";
+import { io } from "socket.io-client";
 
 const APIBASE = import.meta.env.VITE_API_URL;
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
 
 export default function BeverageMenuPage() {
   const [menuItems, setMenuItems] = useState([]);
@@ -25,6 +27,34 @@ export default function BeverageMenuPage() {
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
+
+    // Setup socket connection
+    const socket = io(SOCKET_URL, { transports: ["websocket"] });
+    socket.on("connect", () => {
+      console.log("✅ Socket connected:", socket.id);
+    });
+    socket.on("menu:new", (newItem) => {
+      console.log("📦 New item received:", newItem);
+      if (newItem.category === "Beverage") {
+        setMenuItems((prev) => [...prev, newItem]);
+      }
+    });
+    socket.on("menu:update", (updatedItem) => {
+      console.log("✏️ Updated item received:", updatedItem);
+      setMenuItems((prev) =>
+        prev.map((item) =>
+          item._id === updatedItem._id ? updatedItem : item
+        )
+      );
+    });
+    socket.on("menu:delete", (id) => {
+      console.log("🗑️ Deleted item ID received:", id);
+      setMenuItems((prev) => prev.filter((item) => item._id !== id));
+    });
+    return () => {
+      socket.disconnect();
+    };
+    
   }, []);
 
   const getQuantity = (id) => cart[id]?.quantity || 0;

@@ -16,11 +16,18 @@ export default function AdminMenuList({ items, onDelete, onEdit }) {
           style={{ backgroundColor: "#FFC0CB" }}
         >
           <div className="flex items-center space-x-4">
+            {item.image &&
             <img
-              src={item.image || "https://via.placeholder.com/100"}
+              src={item.image}
               alt={item.name}
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = "https://placehold.co/100x100?text=No+Image";
+              }}
               className="w-20 h-20 object-cover rounded"
             />
+            }
+
             <div>
               <h3 className="font-semibold text-lg">{item.name}</h3>
               <p className="text-gray-700">{item.price} Baht</p>
@@ -37,7 +44,11 @@ export default function AdminMenuList({ items, onDelete, onEdit }) {
               Edit
             </button>
             <button
-              onClick={() => onDelete(item._id)}
+              onClick={() => {
+                if (window.confirm("Are you sure you want to delete this item?")) {
+                  onDelete(item._id);
+                }
+              }}
               className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
             >
               Delete

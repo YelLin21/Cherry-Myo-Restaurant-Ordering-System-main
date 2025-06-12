@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar.jsx";
-import { useCart } from "../context/CartContext.jsx"; // Import cart context
+import { useCart } from "../context/CartContext.jsx";
+import { io } from "socket.io-client";
 
-const APIBASE= import.meta.env.VITE_API_URL; 
+const APIBASE = import.meta.env.VITE_API_URL;
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
 
 const TABS = ["Breakfast", "Lunch", "Dinner"];
 
@@ -17,6 +19,7 @@ export default function FoodMenuPage() {
   const { cart, addToCart, removeFromCart, total } = useCart();
 
   useEffect(() => {
+    // Initial fetch
     fetch(`${APIBASE}/menu`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch menu");
@@ -25,6 +28,36 @@ export default function FoodMenuPage() {
       .then((data) => setMenuItems(data))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
+
+    // Setup socket connection
+    const socket = io(SOCKET_URL, { transports: ["websocket"] });
+
+    socket.on("connect", () => {
+      console.log("✅ Socket connected:", socket.id);
+    });
+
+    socket.on("menu:new", (newItem) => {
+      console.log("📦 New item received:", newItem);
+      setMenuItems((prev) => [...prev, newItem]);
+    });
+
+    socket.on("menu:update", (updatedItem) => {
+      console.log("✏️ Updated item received:", updatedItem);
+      setMenuItems((prev) =>
+        prev.map((item) =>
+          item._id === updatedItem._id ? updatedItem : item
+        )
+      );
+    });
+
+    socket.on("menu:delete", (id) => {
+      console.log("🗑️ Deleted item ID received:", id);
+      setMenuItems((prev) => prev.filter((item) => item._id !== id));
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
   const getQuantity = (id) => cart[id]?.quantity || 0;
@@ -46,10 +79,11 @@ export default function FoodMenuPage() {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 rounded-full font-medium ${activeTab === tab
+                className={`px-4 py-2 rounded-full font-medium ${
+                  activeTab === tab
                     ? "bg-pink-700 text-white"
                     : "bg-gray-200 text-gray-800"
-                  }`}
+                }`}
               >
                 {tab}
               </button>
@@ -102,7 +136,6 @@ export default function FoodMenuPage() {
             <div className="mt-10 bg-white p-6 rounded-lg shadow-md">
               <h2 className="text-xl font-bold mb-4">🛒 Cart</h2>
 
-              {/* Header Row */}
               <div className="flex justify-between font-semibold border-b pb-2 mb-2">
                 <span className="w-1/2">Item</span>
                 <span className="w-1/4 text-right">Price</span>
@@ -110,14 +143,15 @@ export default function FoodMenuPage() {
                 <span className="w-1/4 text-right">Total</span>
               </div>
 
-              {/* Cart Items */}
               <ul className="space-y-2">
                 {Object.values(cart).map(({ item, quantity }) => (
                   <li key={item._id} className="flex justify-between">
                     <span className="w-1/2">{item.name}</span>
                     <span className="w-1/4 text-right">{item.price}</span>
                     <span className="w-1/4 text-center">{quantity}</span>
-                    <span className="w-1/4 text-right">{item.price * quantity} Baht</span>
+                    <span className="w-1/4 text-right">
+                      {item.price * quantity} Baht
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -135,7 +169,6 @@ export default function FoodMenuPage() {
               </button>
             </div>
           )}
-
         </div>
       </main>
     </div>

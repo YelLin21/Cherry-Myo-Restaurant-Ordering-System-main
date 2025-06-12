@@ -11,6 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.50.0",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
@@ -22,6 +23,8 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.5.3",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
     "tinyglobby": "^0.2.13"
   },
   "devDependencies": {

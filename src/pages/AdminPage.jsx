@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import AdminMenuForm from "../components/AdminMenuForm";
 import AdminMenuList from "../components/AdminMenuList";
+import { io } from "socket.io-client";
 
-const APIBASE= import.meta.env.VITE_API_URL; 
+const APIBASE = import.meta.env.VITE_API_URL;
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL;
 
 const TABS = ["Breakfast", "Lunch", "Dinner", "Grill", "Beverage"];
 
@@ -12,9 +14,34 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState("Breakfast");
 
   useEffect(() => {
+    // 1. Initial fetch from API
     fetch(`${APIBASE}/menu`)
       .then((res) => res.json())
       .then((data) => setMenuItems(data));
+
+    // 2. Connect to socket
+    const socket = io(SOCKET_URL, {
+      transports: ["websocket"],
+    });
+
+    // 3. Listen to real-time events
+    socket.on("menu:new", (newItem) => {
+      setMenuItems((prev) => [...prev, newItem]);
+    });
+
+    socket.on("menu:update", (updatedItem) => {
+      setMenuItems((prev) =>
+        prev.map((item) => (item._id === updatedItem._id ? updatedItem : item))
+      );
+    });
+
+    socket.on("menu:delete", (id) => {
+      setMenuItems((prev) => prev.filter((item) => item._id !== id));
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
   const handleAdd = (item) => {
@@ -23,19 +50,15 @@ export default function AdminPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(newItem),
-    })
-      .then((res) => res.json())
-      .then((newItem) => {
-        setMenuItems((prev) => [...prev, newItem]);
-      });
+    });
+    // Don't update state here — socket will handle it
   };
 
   const handleDelete = (id) => {
     fetch(`${APIBASE}/menu/${id}`, {
       method: "DELETE",
-    }).then(() => {
-      setMenuItems((prev) => prev.filter((item) => item._id !== id));
     });
+    // Don't update state here — socket will handle it
   };
 
   const handleUpdate = (updatedItem) => {
@@ -43,20 +66,16 @@ export default function AdminPage() {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updatedItem),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        setMenuItems((prev) =>
-          prev.map((item) => (item._id === data._id ? data : item))
-        );
-        setEditingItem(null);
-      });
+    });
+    setEditingItem(null);
+    // Don't update state here — socket will handle it
   };
 
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
       <h1 className="text-2xl font-bold mb-6 text-pink-700">Admin Panel</h1>
 
+      {/* Tabs */}
       <div className="flex gap-4 mb-6">
         {TABS.map((tab) => (
           <button
@@ -71,6 +90,7 @@ export default function AdminPage() {
         ))}
       </div>
 
+      {/* Form to add/update menu */}
       <AdminMenuForm
         onAdd={handleAdd}
         onUpdate={handleUpdate}
@@ -78,6 +98,8 @@ export default function AdminPage() {
         clearEdit={() => setEditingItem(null)}
         activeTab={activeTab}
       />
+
+      {/* List of menu items */}
       <AdminMenuList
         items={menuItems.filter((item) => item.category === activeTab)}
         onDelete={handleDelete}
