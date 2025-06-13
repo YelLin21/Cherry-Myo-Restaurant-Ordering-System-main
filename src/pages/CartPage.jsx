@@ -1,12 +1,17 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import Navbar from "../components/Navbar.jsx";
 import { useCart } from "../context/CartContext.jsx";
+import "../index.css";
+
+const APIBASE = import.meta.env.VITE_API_URL;
 
 export default function CartPage() {
   const [selectedItems, setSelectedItems] = useState({});
-  const navigate = useNavigate();
-  const { cart, addToCart, removeFromCart, total } = useCart();
+  const [tableNumber, setTableNumber] = useState("");
+  const [orderSent, setOrderSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const { cart, addToCart, removeFromCart, total, clearCart } = useCart();
 
   const handleCheckboxChange = (id) => {
     setSelectedItems((prev) => ({
@@ -24,9 +29,52 @@ export default function CartPage() {
     setSelectedItems({});
   };
 
+  const handlePlaceOrder = async () => {
+    if (!tableNumber.trim()) {
+      alert("Please enter your table number.");
+      return;
+    }
+
+    setLoading(true);
+
+    const order = {
+      tableNumber,
+      items: Object.values(cart).map(({ item, quantity }) => ({
+        itemId: item._id,
+        name: item.name,
+        price: item.price,
+        quantity,
+      })),
+    };
+
+    try {
+      const res = await fetch(`${APIBASE}/orders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(order),
+      });
+
+      if (!res.ok) throw new Error("Order failed");
+
+      setOrderSent(true);
+      clearCart();
+    } catch (err) {
+      alert("Failed to send order.");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div>
       <Navbar />
+      {orderSent && (
+  <div className="fixed top-24 left-1/2 transform -translate-x-1/2 bg-green-100 border border-green-400 text-green-800 px-6 py-3 rounded shadow-lg z-50 animate-fadeIn">
+    ✅ Your order is sending to the kitchen...
+  </div>
+)}
+
       <main className="pt-20 px-4 sm:px-6 lg:px-8 bg-gray-100 min-h-screen">
         <div className="bg-pink-50 rounded-xl p-4 sm:p-6 lg:p-8 shadow-md">
           <h1 className="text-2xl font-bold text-center mb-6">Cart</h1>
@@ -55,8 +103,12 @@ export default function CartPage() {
                       checked={!!selectedItems[item._id]}
                       onChange={() => handleCheckboxChange(item._id)}
                     />
-                    <span className="md:w-[35%] text-center md:text-left">{item.name}</span>
-                    <span className="md:w-[20%] text-right">{item.price} Baht</span>
+                    <span className="md:w-[35%] text-center md:text-left">
+                      {item.name}
+                    </span>
+                    <span className="md:w-[20%] text-right">
+                      {item.price} Baht
+                    </span>
 
                     <span className="md:w-[20%] flex justify-center items-center gap-2">
                       <button
@@ -74,7 +126,9 @@ export default function CartPage() {
                       </button>
                     </span>
 
-                    <span className="md:w-[20%] text-right">{item.price * quantity} Baht</span>
+                    <span className="md:w-[20%] text-right">
+                      {item.price * quantity} Baht
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -89,13 +143,28 @@ export default function CartPage() {
                 <div className="text-lg font-bold">Total Price: {total} Baht</div>
               </div>
 
-              <div className="mt-6 flex justify-end">
+              <div className="mt-6">
+                <input
+                  type="text"
+                  placeholder="Enter Table Number"
+                  value={tableNumber}
+                  onChange={(e) => setTableNumber(e.target.value)}
+                  className="border px-4 py-2 rounded w-full md:w-1/2 mb-4"
+                />
+
                 <button
-                  onClick={() => navigate("/checkout")}
-                  className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700"
+                  onClick={handlePlaceOrder}
+                  className={`${
+                    orderSent || loading
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-green-600 hover:bg-green-700"
+                  } text-white px-6 py-2 rounded w-full md:w-auto`}
+                  disabled={orderSent || loading}
                 >
-                  Next →
+                  {loading ? "⌛ Sending..." : orderSent ? "Order Sent" : "Next →"}
                 </button>
+
+                
               </div>
             </div>
           ) : (

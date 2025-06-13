@@ -5,6 +5,7 @@ import GrillMenuPage from "./pages/GrillMenuPage";
 import BeveragePage from "./pages/BeveragePage";
 import CartPage from "./pages/CartPage";
 import AdminPage from "./pages/AdminPage";
+import KitchenPage from "./pages/KitchenPage";
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
         <Route path="/beverages" element={<BeveragePage />} />
         <Route path="/cart" element={<CartPage />} />
         <Route path="/admin" element={<AdminPage />} />
+        <Route path="/kitchen" element={<KitchenPage />} />
       </Routes>
     </Router>
   );
