@@ -23,8 +23,14 @@ dist-ssr
 *.sln
 *.sw?
 
-# local env files
-.env*.local
+# Ignore all .env files
 .env
 .env.*
+*.env
+*.env.*
+
+# Ignore any env-related local overrides
+.env*.local
+
+# Ignore specific client file
 supabaseClient.js
