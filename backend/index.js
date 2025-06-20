@@ -45,6 +45,7 @@ io.on("connection", (socket) => {
 // ✅ API routes
 app.use("/api/menu", require("./routes/menu"));
 app.use("/api/orders", require("./routes/order")); // move after express.json()
+ 
 
 // ✅ Start the server
 const PORT = process.env.PORT || 5000;

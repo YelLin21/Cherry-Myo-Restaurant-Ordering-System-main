@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 
-
 const APIBASE = import.meta.env.VITE_API_URL;
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
 
@@ -20,41 +19,55 @@ export default function KitchenPage() {
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
 
-    // Setup socket connection
-    const socket = io(SOCKET_URL, { transports: ["websocket"] }); 
+    const socket = io(SOCKET_URL, { transports: ["websocket"] });
+
     socket.on("connect", () => {
       console.log("✅ Socket connected:", socket.id);
     });
+
     socket.on("order:new", (newOrder) => {
-      console.log("📦 New order received:", newOrder);
-      setOrders((prev) => [...prev, newOrder]);
+      if (newOrder.status === "Pending") {
+        setOrders((prev) => [...prev, newOrder]);
+      }
     });
 
     socket.on("order:update", (updatedOrder) => {
-      console.log("✏️ Updated order received:", updatedOrder);
-      setOrders((prev) =>
-        prev.map((order) =>
+      setOrders((prev) => {
+        if (updatedOrder.status !== "Pending") {
+          return prev.filter((order) => order._id !== updatedOrder._id);
+        }
+        return prev.map((order) =>
           order._id === updatedOrder._id ? updatedOrder : order
-        )
-      );
-    }
-    );
+        );
+      });
+    });
+
     socket.on("order:delete", (id) => {
-      console.log("🗑️ Deleted order ID received:", id);
       setOrders((prev) => prev.filter((order) => order._id !== id));
     });
+
     return () => {
       socket.disconnect();
     };
-
-
   }, []);
 
-  const handleMarkAsProcessing = (orderId) => {
-    // Optional future update:
-    // fetch(`${APIBASE}/orders/${orderId}/status`, { method: "PUT" })
-    alert(`Order ${orderId} marked as processing!`);
+
+
+  const handleMarkAsProcessing = async (orderId) => {
+    try {
+      const res = await fetch(`${APIBASE}/orders/${orderId}/process`, {
+        method: "PUT",
+      });
+      if (!res.ok) throw new Error("Failed to update order");
+
+      setOrders((prev) => prev.filter((order) => order._id !== orderId));
+      alert("✅ Sending to the admin Checkout...");
+    } catch (error) {
+      console.error(error);
+      alert("❌ Failed to mark as processing.");
+    }
   };
+
 
   return (
     <div className="min-h-screen p-6 bg-gray-100">
@@ -91,7 +104,7 @@ export default function KitchenPage() {
               </ul>
             </div>
 
-            <div className="flex justify-between items-center mt-4">
+            <div className="text-right mt-4">
 
               <button
                 onClick={() => handleMarkAsProcessing(order._id)}

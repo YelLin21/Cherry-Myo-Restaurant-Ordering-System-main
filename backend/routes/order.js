@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Order = require("../models/Order");
 
-// Get all orders (newest first)
+// GET all orders
 router.get("/", async (req, res) => {
   try {
     const orders = await Order.find().sort({ createdAt: -1 });
@@ -12,7 +12,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Create a new order
+// POST create a new order
 router.post("/", async (req, res) => {
   try {
     const { tableNumber, items } = req.body;
@@ -24,10 +24,8 @@ router.post("/", async (req, res) => {
     const newOrder = new Order({
       tableNumber,
       items,
-      status: "Pending",
       createdAt: new Date(),
     });
-
     await newOrder.save();
 
     const io = req.app.get("io");
@@ -39,7 +37,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-// Update order status
+// PUT update status
 router.put("/:id/status", async (req, res) => {
   try {
     const { status } = req.body;
@@ -64,6 +62,27 @@ router.put("/:id/status", async (req, res) => {
     res.json(updatedOrder);
   } catch (error) {
     res.status(500).json({ error: "Failed to update order status" });
+  }
+});
+
+// PUT mark order as ready for checkout
+router.put("/:id/process", async (req, res) => {
+  try {
+    const updated = await Order.findByIdAndUpdate(
+      req.params.id,
+      { status: "readyForCheckout" },
+      { new: true }
+    );
+
+    if (!updated) return res.status(404).send("Order not found");
+
+    const io = req.app.get("io");
+    io.emit("order:readyForCheckout", updated);
+
+    res.json(updated);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Server error");
   }
 });
 
