@@ -10,6 +10,7 @@ export default function KitchenPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    
     fetch(`${APIBASE}/orders`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch orders");
