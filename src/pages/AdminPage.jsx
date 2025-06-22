@@ -4,7 +4,8 @@ import AdminMenuList from "../components/AdminMenuList";
 import { io } from "socket.io-client";
 
 const APIBASE = import.meta.env.VITE_API_URL;
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL;
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000" || "https://cherry-myo-restaurant-ordering-system.onrender.com";
+
 
 const TABS = ["Breakfast", "Lunch", "Dinner", "Grill", "Beverage"];
 

@@ -5,7 +5,8 @@ import { useCart } from "../context/CartContext.jsx";
 import { io } from "socket.io-client";
 
 const APIBASE = import.meta.env.VITE_API_URL;
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000" || "https://cherry-myo-restaurant-ordering-system.onrender.com";
+
 
 export default function BeverageMenuPage() {
   const [menuItems, setMenuItems] = useState([]);

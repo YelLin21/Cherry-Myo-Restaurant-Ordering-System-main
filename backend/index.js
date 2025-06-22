@@ -5,39 +5,40 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 require("dotenv").config({ path: "../.env" });
 
+
 const app = express();
 const server = http.createServer(app);
 
-// ✅ Configure CORS properly
-// app.use(cors({
-//   origin: "http://localhost:5173", // ✅ Replace with your frontend URL if deployed
-//   methods: ["GET", "POST", "PUT", "DELETE"],
-//   credentials: true
-// }));
-
-const allowedOrigin = process.env.NODE_ENV === "production"
-  ? "https://your-production-site.com"
-  : "http://localhost:5173";
+// ✅ Dynamic CORS: allow both local and production frontend
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://cherry-myo-restaurant-ordering-system-main.vercel.app"
+];
 
 app.use(cors({
-  origin: allowedOrigin,
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
-
 
 app.use(express.json());
 
 // ✅ Set up Socket.io
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173", // ✅ Match this with frontend
+    origin: allowedOrigins,
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true
   }
 });
 
-app.set("io", io); // So we can access it in routes
+app.set("io", io); // Allow access in routes
 
 // ✅ MongoDB connection
 mongoose.connect(process.env.MONGO_URI)
@@ -55,8 +56,7 @@ io.on("connection", (socket) => {
 
 // ✅ API routes
 app.use("/api/menu", require("./routes/menu"));
-app.use("/api/orders", require("./routes/order")); // move after express.json()
- 
+app.use("/api/orders", require("./routes/order"));
 
 // ✅ Start the server
 const PORT = process.env.PORT || 5000;
