@@ -11,14 +11,14 @@ export default function HomePage() {
     <div className="bg-pink-100 min-h-screen p-4">
       <div className="flex flex-col items-center">
         {/* Header */}
-        <div className="w-full p-4 mb-6 shadow-inner" style={{ backgroundColor: "#F3E0DA" }}>
+        <div className="w-full p-4 mb-6 shadow-inner" style={{ backgroundColor: "#FFC0CB" }}>
           <div className="flex flex-col items-center">
             <img
               src="/image/cherry_myo.png"
               alt="Cherry Myo Logo"
               className="w-20 h-20 rounded-full"
             />
-            <h1 className="text-2xl font-bold my-2">Cherry Myo</h1>
+            <h1 className="text-2xl font-bold my-2 text-pink-800">Cherry Myo</h1>
             <input
               type="text"
               placeholder="Search..."
