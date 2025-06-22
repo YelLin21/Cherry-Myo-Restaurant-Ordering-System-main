@@ -3,17 +3,28 @@ const http = require("http");
 const { Server } = require("socket.io");
 const mongoose = require("mongoose");
 const cors = require("cors");
-require("dotenv").config();
+require("dotenv").config({ path: "../.env" });
 
 const app = express();
 const server = http.createServer(app);
 
 // ✅ Configure CORS properly
+// app.use(cors({
+//   origin: "http://localhost:5173", // ✅ Replace with your frontend URL if deployed
+//   methods: ["GET", "POST", "PUT", "DELETE"],
+//   credentials: true
+// }));
+
+const allowedOrigin = process.env.NODE_ENV === "production"
+  ? "https://your-production-site.com"
+  : "http://localhost:5173";
+
 app.use(cors({
-  origin: "http://localhost:5173", // ✅ Replace with your frontend URL if deployed
+  origin: allowedOrigin,
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
+
 
 app.use(express.json());
 

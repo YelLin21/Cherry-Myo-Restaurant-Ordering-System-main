@@ -61,6 +61,7 @@ export default function KitchenPage() {
       if (!res.ok) throw new Error("Failed to update order");
 
       setOrders((prev) => prev.filter((order) => order._id !== orderId));
+      
       alert("✅ Sending to the admin Checkout...");
     } catch (error) {
       console.error(error);
