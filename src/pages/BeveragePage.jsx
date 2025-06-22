@@ -5,8 +5,10 @@ import { useCart } from "../context/CartContext.jsx";
 import { io } from "socket.io-client";
 
 const APIBASE = import.meta.env.VITE_API_URL;
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000" || "https://cherry-myo-restaurant-ordering-system.onrender.com";
-
+const SOCKET_URL =
+  import.meta.env.VITE_SOCKET_URL ||
+  "http://localhost:5000" ||
+  "https://cherry-myo-restaurant-ordering-system.onrender.com";
 
 export default function BeverageMenuPage() {
   const [menuItems, setMenuItems] = useState([]);
@@ -23,55 +25,55 @@ export default function BeverageMenuPage() {
         return res.json();
       })
       .then((data) => {
-        const beverageItems = data.filter((item) => item.category === "Beverage");
+        const beverageItems = data.filter(
+          (item) => item.category === "Beverage"
+        );
         setMenuItems(beverageItems);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
 
-    // Setup socket connection
     const socket = io(SOCKET_URL, { transports: ["websocket"] });
     socket.on("connect", () => {
       console.log("✅ Socket connected:", socket.id);
     });
     socket.on("menu:new", (newItem) => {
-      console.log("📦 New item received:", newItem);
       if (newItem.category === "Beverage") {
         setMenuItems((prev) => [...prev, newItem]);
       }
     });
     socket.on("menu:update", (updatedItem) => {
-      console.log("✏️ Updated item received:", updatedItem);
       setMenuItems((prev) =>
-        prev.map((item) =>
-          item._id === updatedItem._id ? updatedItem : item
-        )
+        prev.map((item) => (item._id === updatedItem._id ? updatedItem : item))
       );
     });
     socket.on("menu:delete", (id) => {
-      console.log("🗑️ Deleted item ID received:", id);
       setMenuItems((prev) => prev.filter((item) => item._id !== id));
     });
+
     return () => {
       socket.disconnect();
     };
-    
   }, []);
 
   const getQuantity = (id) => cart[id]?.quantity || 0;
 
+  const cartItemsExist = Object.values(cart).length > 0;
+
   return (
     <div>
       <Navbar />
-      <main className="pt-24 p-4 bg-gray-100 min-h-screen">
+      <main className="pt-24 p-4 bg-gray-100 min-h-screen pb-32">
         <div className="max-w-6xl mx-auto">
-          <h1 className="text-3xl font-bold text-center mb-6 text-pink-900">Beverage Menu</h1>
+          <h1 className="text-3xl font-bold text-center mb-6 text-pink-900">
+            Beverage Menu
+          </h1>
 
           {loading && <p className="text-center">Loading...</p>}
           {error && <p className="text-center text-red-500">{error}</p>}
 
           {/* Menu Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
             {menuItems.map((item) => (
               <div
                 key={item._id}
@@ -80,19 +82,21 @@ export default function BeverageMenuPage() {
                 <img
                   src={item.image || "https://via.placeholder.com/150"}
                   alt={item.name}
-                  className="w-28 h-28 sm:w-32 sm:h-32 object-cover rounded mb-3"
+                  className="w-24 h-24 sm:w-32 sm:h-32 object-cover rounded mb-3"
                 />
                 <h2 className="font-semibold text-lg text-center">{item.name}</h2>
                 <p className="text-gray-700">{item.price} Baht</p>
 
                 <div className="flex items-center mt-3 space-x-3">
                   <button
-                    onClick={() => removeFromCart(item)}
-                    className="px-3 py-1 text-white rounded bg-gray-600 hover:bg-gray-700"
+                    onClick={() => removeFromCart(item._id)}
+                    className="px-3 py-1 text-white rounded bg-gray-500 hover:bg-gray-700"
                   >
                     −
                   </button>
-                  <span className="px-2 font-semibold text-lg">{getQuantity(item._id)}</span>
+                  <span className="px-2 font-semibold text-lg">
+                    {getQuantity(item._id)}
+                  </span>
                   <button
                     onClick={() => addToCart(item)}
                     className="px-3 py-1 text-white rounded bg-red-500 hover:bg-red-600"
@@ -104,9 +108,9 @@ export default function BeverageMenuPage() {
             ))}
           </div>
 
-          {/* Cart Summary */}
-          {Object.values(cart).length > 0 && (
-            <div className="mt-10 bg-white p-4 sm:p-6 rounded-lg shadow-md max-w-3xl mx-auto">
+          {/* Desktop Cart Summary */}
+          {cartItemsExist && (
+            <div className="hidden sm:block mt-10 bg-white p-4 sm:p-6 rounded-lg shadow-md max-w-3xl mx-auto">
               <h2 className="text-xl font-bold mb-4 text-pink-900">🛒 Cart</h2>
 
               <div className="hidden md:flex justify-between font-semibold border-b pb-2 mb-2">
@@ -147,6 +151,23 @@ export default function BeverageMenuPage() {
           )}
         </div>
       </main>
+
+      {/* Floating Mobile Cart Summary */}
+      {cartItemsExist && (
+        <div className="fixed bottom-0 left-0 right-0 sm:hidden bg-white border-t shadow-lg p-4 z-50">
+          <div className="flex justify-between items-center">
+            <div>
+              <p className="font-semibold text-pink-900">🛒 Total: {total} Baht</p>
+            </div>
+            <button
+              onClick={() => navigate("/cart")}
+              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+            >
+              Next →
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

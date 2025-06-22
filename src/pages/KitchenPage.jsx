@@ -2,21 +2,44 @@ import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 
 const APIBASE = import.meta.env.VITE_API_URL;
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000" || "https://cherry-myo-restaurant-ordering-system.onrender.com";
+const SOCKET_URL =
+  import.meta.env.VITE_SOCKET_URL ||
+  "http://localhost:5000" ||
+  "https://cherry-myo-restaurant-ordering-system.onrender.com";
 
 export default function KitchenPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const getProcessedIds = () => {
+    const stored = localStorage.getItem("processedOrderIds");
+    return stored ? JSON.parse(stored) : [];
+  };
+
+  const saveProcessedId = (id) => {
+    const current = getProcessedIds();
+    const updated = [...new Set([...current, id])];
+    localStorage.setItem("processedOrderIds", JSON.stringify(updated));
+  };
+
   useEffect(() => {
-    
+    const processedIds = getProcessedIds();
+
+    // Initial fetch
     fetch(`${APIBASE}/orders`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch orders");
         return res.json();
       })
-      .then((data) => setOrders(data))
+      .then((data) => {
+        const visible = data.filter(
+          (order) =>
+            (order.status === "Pending" || order.status === undefined) &&
+            !processedIds.includes(order._id)
+        );
+        setOrders(visible);
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
 
@@ -26,15 +49,22 @@ export default function KitchenPage() {
       console.log("✅ Socket connected:", socket.id);
     });
 
+    // Show order even if status is missing
     socket.on("order:new", (newOrder) => {
-      if (newOrder.status === "Pending") {
+      console.log("📥 New order:", newOrder);
+      const isProcessed = getProcessedIds().includes(newOrder._id);
+      const isPendingOrNoStatus =
+        newOrder.status === "Pending" || newOrder.status === undefined;
+
+      if (!isProcessed && isPendingOrNoStatus) {
         setOrders((prev) => [...prev, newOrder]);
       }
     });
 
     socket.on("order:update", (updatedOrder) => {
       setOrders((prev) => {
-        if (updatedOrder.status !== "Pending") {
+        const isProcessed = getProcessedIds().includes(updatedOrder._id);
+        if (updatedOrder.status !== "Pending" || isProcessed) {
           return prev.filter((order) => order._id !== updatedOrder._id);
         }
         return prev.map((order) =>
@@ -47,12 +77,8 @@ export default function KitchenPage() {
       setOrders((prev) => prev.filter((order) => order._id !== id));
     });
 
-    return () => {
-      socket.disconnect();
-    };
+    return () => socket.disconnect();
   }, []);
-
-
 
   const handleMarkAsProcessing = async (orderId) => {
     try {
@@ -61,15 +87,14 @@ export default function KitchenPage() {
       });
       if (!res.ok) throw new Error("Failed to update order");
 
+      saveProcessedId(orderId);
       setOrders((prev) => prev.filter((order) => order._id !== orderId));
-      
-      alert("✅ Sending to the admin Checkout...");
+      alert("✅ Order sent to admin. It will not return again.");
     } catch (error) {
       console.error(error);
-      alert("❌ Failed to mark as processing.");
+      alert("❌ Failed to mark order as processing.");
     }
   };
-
 
   return (
     <div className="min-h-screen p-6 bg-gray-100">
@@ -98,7 +123,10 @@ export default function KitchenPage() {
               </div>
               <ul>
                 {order.items.map((item, idx) => (
-                  <li key={idx} className="flex justify-between text-sm py-1 border-b border-gray-200">
+                  <li
+                    key={idx}
+                    className="flex justify-between text-sm py-1 border-b border-gray-200"
+                  >
                     <span>{item.name}</span>
                     <span className="text-gray-600">{item.quantity}</span>
                   </li>
@@ -107,7 +135,6 @@ export default function KitchenPage() {
             </div>
 
             <div className="text-right mt-4">
-
               <button
                 onClick={() => handleMarkAsProcessing(order._id)}
                 className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"

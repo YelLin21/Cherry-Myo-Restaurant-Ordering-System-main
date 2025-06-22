@@ -5,8 +5,10 @@ import { useCart } from "../context/CartContext.jsx";
 import { io } from "socket.io-client";
 
 const APIBASE = import.meta.env.VITE_API_URL;
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000" || "https://cherry-myo-restaurant-ordering-system.onrender.com";
-
+const SOCKET_URL =
+  import.meta.env.VITE_SOCKET_URL ||
+  "http://localhost:5000" ||
+  "https://cherry-myo-restaurant-ordering-system.onrender.com";
 
 const TABS = ["Breakfast", "Lunch", "Dinner"];
 
@@ -20,7 +22,6 @@ export default function FoodMenuPage() {
   const { cart, addToCart, removeFromCart, total } = useCart();
 
   useEffect(() => {
-    // Initial fetch
     fetch(`${APIBASE}/menu`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch menu");
@@ -30,7 +31,6 @@ export default function FoodMenuPage() {
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
 
-    // Setup socket connection
     const socket = io(SOCKET_URL, { transports: ["websocket"] });
 
     socket.on("connect", () => {
@@ -38,21 +38,16 @@ export default function FoodMenuPage() {
     });
 
     socket.on("menu:new", (newItem) => {
-      console.log("📦 New item received:", newItem);
       setMenuItems((prev) => [...prev, newItem]);
     });
 
     socket.on("menu:update", (updatedItem) => {
-      console.log("✏️ Updated item received:", updatedItem);
       setMenuItems((prev) =>
-        prev.map((item) =>
-          item._id === updatedItem._id ? updatedItem : item
-        )
+        prev.map((item) => (item._id === updatedItem._id ? updatedItem : item))
       );
     });
 
     socket.on("menu:delete", (id) => {
-      console.log("🗑️ Deleted item ID received:", id);
       setMenuItems((prev) => prev.filter((item) => item._id !== id));
     });
 
@@ -63,16 +58,18 @@ export default function FoodMenuPage() {
 
   const getQuantity = (id) => cart[id]?.quantity || 0;
 
-  const filteredItems = menuItems.filter(
-    (item) => item.category === activeTab
-  );
+  const filteredItems = menuItems.filter((item) => item.category === activeTab);
+
+  const cartItemsExist = Object.values(cart).length > 0;
 
   return (
     <div>
       <Navbar />
-      <main className="p-8 bg-gray-100 min-h-screen pt-10">
-        <div className="pt-16 p-6 bg-pink-50 min-h-screen">
-          <h1 className="text-2xl font-bold text-center mb-6">Our Menu</h1>
+      <main className="p-4 bg-gray-100 min-h-screen pt-24 pb-32">
+        <div className="max-w-6xl mx-auto">
+          <h1 className="text-3xl font-bold text-center mb-6 text-pink-900">
+            Our Menu
+          </h1>
 
           {/* Category Tabs */}
           <div className="flex justify-center mb-6 gap-4">
@@ -98,32 +95,29 @@ export default function FoodMenuPage() {
             {filteredItems.map((item) => (
               <div
                 key={item._id}
-                className="rounded-xl shadow p-4 flex flex-col items-center"
-                style={{ backgroundColor: "#FFC0CB" }}
+                className="rounded-xl shadow p-4 flex flex-col items-center bg-pink-200"
               >
                 <img
                   src={item.image || "https://via.placeholder.com/150"}
                   alt={item.name}
                   className="w-32 h-32 object-cover rounded mb-2"
                 />
-                <h2 className="font-semibold text-lg">{item.name}</h2>
+                <h2 className="font-semibold text-lg text-center">{item.name}</h2>
                 <p className="text-gray-600">{item.price} Baht</p>
 
-                <div className="flex items-center mt-3">
+                <div className="flex items-center mt-3 space-x-3">
                   <button
                     onClick={() => removeFromCart(item._id)}
-                    className="px-3 py-1 text-white rounded"
-                    style={{ backgroundColor: "#9B9B9B" }}
+                    className="px-3 py-1 text-white rounded bg-gray-600 hover:bg-gray-700"
                   >
                     −
                   </button>
-                  <span className="px-4 font-semibold text-lg">
+                  <span className="px-2 font-semibold text-lg">
                     {getQuantity(item._id)}
                   </span>
                   <button
                     onClick={() => addToCart(item)}
-                    className="px-3 py-1 text-white rounded"
-                    style={{ backgroundColor: "#BD3B53" }}
+                    className="px-3 py-1 text-white rounded bg-red-500 hover:bg-red-600"
                   >
                     +
                   </button>
@@ -132,25 +126,28 @@ export default function FoodMenuPage() {
             ))}
           </div>
 
-          {/* Cart Section */}
-          {Object.values(cart).length > 0 && (
-            <div className="mt-10 bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-xl font-bold mb-4">🛒 Cart</h2>
+          {/* Desktop Cart Summary */}
+          {cartItemsExist && (
+            <div className="hidden sm:block mt-10 bg-white p-4 sm:p-6 rounded-lg shadow-md max-w-3xl mx-auto">
+              <h2 className="text-xl font-bold mb-4 text-pink-900">🛒 Cart</h2>
 
-              <div className="flex justify-between font-semibold border-b pb-2 mb-2">
+              <div className="hidden md:flex justify-between font-semibold border-b pb-2 mb-2">
                 <span className="w-1/2">Item</span>
                 <span className="w-1/4 text-right">Price</span>
-                <span className="w-1/4 text-center">Quantity</span>
+                <span className="w-1/4 text-center">Qty</span>
                 <span className="w-1/4 text-right">Total</span>
               </div>
 
-              <ul className="space-y-2">
+              <ul className="space-y-3">
                 {Object.values(cart).map(({ item, quantity }) => (
-                  <li key={item._id} className="flex justify-between">
-                    <span className="w-1/2">{item.name}</span>
-                    <span className="w-1/4 text-right">{item.price}</span>
-                    <span className="w-1/4 text-center">{quantity}</span>
-                    <span className="w-1/4 text-right">
+                  <li
+                    key={item._id}
+                    className="flex flex-col md:flex-row md:justify-between text-sm md:text-base"
+                  >
+                    <span className="md:w-1/2">{item.name}</span>
+                    <span className="md:w-1/4 md:text-right">{item.price}</span>
+                    <span className="md:w-1/4 md:text-center">{quantity}</span>
+                    <span className="md:w-1/4 md:text-right">
                       {item.price * quantity} Baht
                     </span>
                   </li>
@@ -158,13 +155,13 @@ export default function FoodMenuPage() {
               </ul>
 
               <div className="flex justify-between mt-4 font-bold text-lg">
-                <span>Total Price:</span>
+                <span>Total:</span>
                 <span>{total} Baht</span>
               </div>
 
               <button
                 onClick={() => navigate("/cart")}
-                className="mt-4 bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700"
+                className="mt-4 bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 w-full sm:w-auto"
               >
                 Next →
               </button>
@@ -172,6 +169,21 @@ export default function FoodMenuPage() {
           )}
         </div>
       </main>
+
+      {/* Floating Mobile Cart Summary */}
+      {cartItemsExist && (
+        <div className="fixed bottom-0 left-0 right-0 sm:hidden bg-white border-t shadow-lg p-4 z-50">
+          <div className="flex justify-between items-center">
+            <p className="font-semibold text-pink-900">🛒 Total: {total} Baht</p>
+            <button
+              onClick={() => navigate("/cart")}
+              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+            >
+              Next →
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
