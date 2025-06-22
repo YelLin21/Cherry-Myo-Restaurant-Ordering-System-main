@@ -81,20 +81,28 @@ export default function KitchenPage() {
   }, []);
 
   const handleMarkAsProcessing = async (orderId) => {
-    try {
-      const res = await fetch(`${APIBASE}/orders/${orderId}/process`, {
-        method: "PUT",
-      });
-      if (!res.ok) throw new Error("Failed to update order");
+  try {
+    const res = await fetch(`${APIBASE}/orders/${orderId}/process`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        processedAt: new Date().toISOString() // ⏰ send timestamp
+      })
+    });
 
-      saveProcessedId(orderId);
-      setOrders((prev) => prev.filter((order) => order._id !== orderId));
-      alert("✅ Order sent to admin. It will not return again.");
-    } catch (error) {
-      console.error(error);
-      alert("❌ Failed to mark order as processing.");
-    }
-  };
+    if (!res.ok) throw new Error("Failed to update order");
+
+    saveProcessedId(orderId);
+    setOrders((prev) => prev.filter((order) => order._id !== orderId));
+    alert("✅ Order sent to Admin Checkout.");
+  } catch (error) {
+    console.error(error);
+    alert("❌ Failed to mark order as processing.");
+  }
+};
+
 
   return (
     <div className="min-h-screen p-6 bg-gray-100">

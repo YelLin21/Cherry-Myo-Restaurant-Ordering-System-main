@@ -68,7 +68,7 @@ export default function CartPage() {
       setTimeout(() => {
         setOrderSent(false);
         navigate("/"); // Redirect to home page after 3 seconds
-      }, 3000);
+      }, 2000);
     } catch (err) {
       alert("Failed to send order.");
       console.error(err);
