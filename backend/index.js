@@ -3,13 +3,12 @@ const http = require("http");
 const { Server } = require("socket.io");
 const mongoose = require("mongoose");
 const cors = require("cors");
-require("dotenv").config({ path: "../.env" });
-
+require("dotenv").config({ path: "./.env" });
+console.log("MONGO_URI:", process.env.MONGO_URI);
 
 const app = express();
 const server = http.createServer(app);
 
-// ✅ Dynamic CORS: allow both local and production frontend
 const allowedOrigins = [
   "http://localhost:5173",
   "https://cherry-myo-restaurant-ordering-system-main.vercel.app"
@@ -29,7 +28,6 @@ app.use(cors({
 
 app.use(express.json());
 
-// ✅ Set up Socket.io
 const io = new Server(server, {
   cors: {
     origin: allowedOrigins,
@@ -38,14 +36,12 @@ const io = new Server(server, {
   }
 });
 
-app.set("io", io); // Allow access in routes
+app.set("io", io);
 
-// ✅ MongoDB connection
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
-// ✅ Socket.io connection
 io.on("connection", (socket) => {
   console.log("🔌 Socket connected:", socket.id);
 
@@ -54,12 +50,10 @@ io.on("connection", (socket) => {
   });
 });
 
-// ✅ API routes
 app.use("/api/menu", require("./routes/menu"));
 app.use("/api/orders", require("./routes/order"));
 
-// ✅ Start the server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });

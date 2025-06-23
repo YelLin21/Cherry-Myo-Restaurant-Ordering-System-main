@@ -11,7 +11,6 @@ export default function AdminCheckoutPage() {
     const [discounts, setDiscounts] = useState({});
     const [currentTime, setCurrentTime] = useState(new Date());
 
-    // 🕒 Start real-time clock
     useEffect(() => {
         const interval = setInterval(() => {
             setCurrentTime(new Date());

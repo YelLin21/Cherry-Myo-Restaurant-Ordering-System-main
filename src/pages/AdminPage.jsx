@@ -15,12 +15,10 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState("Breakfast");
 
   useEffect(() => {
-    // 1. Initial fetch from API
     fetch(`${APIBASE}/menu`)
       .then((res) => res.json())
       .then((data) => setMenuItems(data));
 
-    // 2. Connect to socket
     const socket = io(SOCKET_URL, {
       transports: ["websocket"],
     });
