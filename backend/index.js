@@ -3,8 +3,9 @@ const http = require("http");
 const { Server } = require("socket.io");
 const mongoose = require("mongoose");
 const cors = require("cors");
-require("dotenv").config({ path: "./.env" });
+require("dotenv").config({ path: "../.env" });
 console.log("MONGO_URI:", process.env.MONGO_URI);
+
 
 const app = express();
 const server = http.createServer(app);
