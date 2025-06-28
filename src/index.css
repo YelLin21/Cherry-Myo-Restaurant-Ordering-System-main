@@ -16,3 +16,28 @@
 .animate-fadeIn {
   animation: fadeIn 0.4s ease-out forwards;
 }
+
+@keyframes fall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@layer utilities {
+  .animate-blossom {
+    animation: fall 12s linear infinite;
+  }
+  .delay-1000 { animation-delay: 1s; }
+  .delay-2000 { animation-delay: 2s; }
+  .delay-3000 { animation-delay: 3s; }
+  .delay-4000 { animation-delay: 4s; }
+  .delay-5000 { animation-delay: 5s; }
+  .delay-6000 { animation-delay: 6s; }
+  .delay-7000 { animation-delay: 7s; }
+  .delay-8000 { animation-delay: 8s; }
+}
