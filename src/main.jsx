@@ -5,6 +5,8 @@ import './index.css' // <-- required to load Tailwind
 import { CartProvider } from "./context/CartContext";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
+import { DarkModeProvider } from "./pages/DarkModeContext.jsx"; // 👈 import
+
 
 
 ReactDOM.createRoot(document.getElementById("root")).render(
@@ -14,7 +16,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   //   </CartProvider>
   // </React.StrictMode>
   <CartProvider>
-    <App />
+    <DarkModeProvider>
+        <App />
+      </DarkModeProvider>
   </CartProvider>
 );
 

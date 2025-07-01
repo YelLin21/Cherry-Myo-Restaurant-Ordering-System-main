@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { io } from "socket.io-client";
+import { useDarkMode } from "./DarkModeContext";
+
 
 const APIBASE = import.meta.env.VITE_API_URL;
 const SOCKET_URL =
@@ -18,6 +20,10 @@ export default function FoodMenuPage() {
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("Breakfast");
   const navigate = useNavigate();
+  const { darkMode, setDarkMode } = useDarkMode();
+  const [cartCount, setCartCount] = useState(2);
+
+
 
   const { cart, addToCart, removeFromCart, total } = useCart();
 
@@ -64,7 +70,7 @@ export default function FoodMenuPage() {
 
   return (
     <div>
-      <Navbar />
+      <Navbar darkMode={darkMode} setDarkMode={setDarkMode} cartCount={cartCount} />
       <main className="p-4 bg-gray-100 min-h-screen pt-24 pb-32">
         <div className="max-w-6xl mx-auto">
           <h1 className="text-3xl font-bold text-center mb-6 text-pink-900">

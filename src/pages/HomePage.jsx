@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaShoppingCart, FaMoon, FaSun } from "react-icons/fa";
 import Slider from "react-slick";
+import Navbar from "../components/Navbar.jsx";
+import { useDarkMode } from "./DarkModeContext.jsx";
 
 export default function HomePage() {
   const navigate = useNavigate();
   const [cartCount, setCartCount] = useState(2);
   const [searchTerm, setSearchTerm] = useState("");
-  const [darkMode, setDarkMode] = useState(false);
+  const { darkMode, setDarkMode } = useDarkMode();
 
   const categories = [
     {
@@ -54,47 +55,22 @@ export default function HomePage() {
   }, [darkMode]);
 
   return (
-    <div className={`min-h-screen font-sans transition duration-300 ${darkMode ? "bg-gray-900 text-white" : "bg-gradient-to-b from-pink-100 via-rose-200 to-red-50 text-gray-800"}`}>
-      
-      {/* NAVBAR */}
-      <nav className={`w-full px-4 py-3 md:px-6 flex justify-between items-center shadow-lg sticky top-0 z-50 ${darkMode ? "bg-gray-800" : "bg-gradient-to-r from-pink-600 to-rose-500"}`}>
-        <div className="flex items-center gap-3">
-          <img
-            src="/image/cherry_myo.png"
-            alt="Logo"
-            className="w-14 h-14 md:w-20 md:h-20 rounded-full shadow-md object-cover"
-          />
-          <span className="text-white font-bold text-2xl md:text-3xl tracking-wide drop-shadow-md">
-            Cherry Myo
-          </span>
-        </div>
-
-        <div className="flex items-center gap-4">
-          {/* Dark Mode Toggle */}
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            className="text-white hover:text-yellow-300 transition text-lg"
-          >
-            {darkMode ? <FaSun /> : <FaMoon />}
-          </button>
-
-          {/* Cart */}
-          <div
-            className="relative cursor-pointer text-white hover:text-pink-100 transition"
-            onClick={() => navigate("/cart")}
-          >
-            <FaShoppingCart className="w-6 h-6" />
-            {cartCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-black text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-md">
-                {cartCount}
-              </span>
-            )}
-          </div>
-        </div>
-      </nav>
+    <div
+      className={`min-h-screen font-sans transition duration-300 ${
+        darkMode
+          ? "bg-gray-900 text-white"
+          : "bg-gradient-to-b from-pink-100 via-rose-200 to-red-50 text-gray-800"
+      }`}
+    >
+      {/* ✅ Use Navbar with props */}
+      <Navbar
+        darkMode={darkMode}
+        setDarkMode={setDarkMode}
+        cartCount={cartCount}
+      />
 
       {/* SLIDER + SEARCH */}
-      <div className="relative">
+      <div className="relative pt-24"> {/* Add pt-24 to avoid overlap with fixed navbar */}
         <Slider
           autoplay
           autoplaySpeed={4000}
@@ -132,7 +108,7 @@ export default function HomePage() {
       {/* CATEGORY MENU */}
       <div className="py-16 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto relative">
         <h2 className="text-2xl sm:text-3xl font-extrabold text-center mb-10 tracking-wide">
-           {darkMode ? "Browse Cherry Delights" : "Explore Our Menu"}
+          {darkMode ? "Browse Cherry Delights" : "Explore Our Menu"}
         </h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">

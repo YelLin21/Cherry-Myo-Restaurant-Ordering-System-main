@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar.jsx";
 import { useCart } from "../context/CartContext.jsx"; // shared cart context
 import { io } from "socket.io-client";
+import { useDarkMode } from "./DarkModeContext.jsx";
 
 const APIBASE = import.meta.env.VITE_API_URL;
 const SOCKET_URL =
@@ -14,9 +15,16 @@ export default function GrillMenuPage() {
   const [menuItems, setMenuItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const { darkMode, setDarkMode } = useDarkMode();
 
   const navigate = useNavigate();
   const { cart, addToCart, removeFromCart, total } = useCart();
+
+  const [cartCount, setCartCount] = useState(2);
+
+  useEffect(() => {
+    document.body.classList.toggle("dark", darkMode);
+  }, [darkMode]);
 
   useEffect(() => {
     fetch(`${APIBASE}/menu`)
@@ -63,7 +71,7 @@ export default function GrillMenuPage() {
 
   return (
     <div>
-      <Navbar />
+      <Navbar darkMode={darkMode} setDarkMode={setDarkMode} cartCount={cartCount} />
       <main className="p-4 bg-gray-100 min-h-screen pt-24 pb-32">
         <div className="max-w-6xl mx-auto">
           <h1 className="text-3xl font-bold text-center mb-6 text-pink-900">Grill Menu</h1>

@@ -3,7 +3,7 @@ const http = require("http");
 const { Server } = require("socket.io");
 const mongoose = require("mongoose");
 const cors = require("cors");
-require("dotenv").config({ path: "../.env" });
+require("dotenv").config({ path: "../..env" });
 console.log("MONGO_URI:", process.env.MONGO_URI);
 
 
@@ -53,6 +53,8 @@ io.on("connection", (socket) => {
 
 app.use("/api/menu", require("./routes/menu"));
 app.use("/api/orders", require("./routes/order"));
+app.use("/api/qr", require("./routes/qrCode"));
+
 
 const PORT = process.env.PORT || 5001;
 server.listen(PORT, () => {
