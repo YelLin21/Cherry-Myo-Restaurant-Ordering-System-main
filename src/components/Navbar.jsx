@@ -76,8 +76,16 @@ export default function Navbar({ darkMode, setDarkMode, cartCount }) {
   return (
     <nav
       className={`p-2 shadow-lg fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
-        darkMode ? "bg-gray-800 text-white" : "bg-pink-200 text-pink-900"
+        darkMode 
+          ? "bg-gradient-to-r from-red-900 via-red-800 to-red-900 text-white" 
+          : "bg-gradient-to-r from-red-500 via-pink-500 to-red-600 text-white"
       }`}
+      style={{
+        backdropFilter: 'blur(10px)',
+        background: darkMode 
+          ? 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 50%, #7f1d1d 100%)' 
+          : 'linear-gradient(135deg, #dc2626 0%, #ec4899 25%, #f43f5e 50%, #ec4899 75%, #dc2626 100%)'
+      }}
     >
       <div className="container mx-auto flex justify-between items-center">
         {/* Logo and title */}
@@ -85,39 +93,42 @@ export default function Navbar({ darkMode, setDarkMode, cartCount }) {
           <img
             src="/image/cherry_myo.png"
             alt="Cherry Myo Logo"
-            className="w-16 h-16 sm:w-20 sm:h-20 rounded-full"
+            className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-white shadow-lg"
           />
-          <h1 className="text-xl sm:text-2xl font-bold">Cherry Myo</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-white drop-shadow-lg">Cherry Myo</h1>
         </div>
 
         {/* Desktop Menu */}
         <div className="hidden md:flex items-center space-x-4">
-          <Link to="/" className="hover:bg-pink-400/50 px-3 py-2 rounded-md">
+          <Link to="/" className="text-white hover:bg-white/20 hover:text-red-100 px-3 py-2 rounded-md transition-all duration-200 font-medium">
             Home
           </Link>
-          <Link to="/food" className="hover:bg-pink-400/50 px-3 py-2 rounded-md">
+          <Link to="/food" className="text-white hover:bg-white/20 hover:text-red-100 px-3 py-2 rounded-md transition-all duration-200 font-medium">
             Food Menu
           </Link>
-          <Link to="/grill" className="hover:bg-pink-400/50 px-3 py-2 rounded-md">
+          <Link to="/grill" className="text-white hover:bg-white/20 hover:text-red-100 px-3 py-2 rounded-md transition-all duration-200 font-medium">
             Grill
           </Link>
-          <Link to="/beverages" className="hover:bg-pink-400/50 px-3 py-2 rounded-md">
+          <Link to="/beverages" className="text-white hover:bg-white/20 hover:text-red-100 px-3 py-2 rounded-md transition-all duration-200 font-medium">
             Beverage
           </Link>
 
           {/* Dark Mode Toggle */}
-          <button onClick={() => setDarkMode(!darkMode)} className="text-xl hover:text-yellow-300">
+          <button 
+            onClick={() => setDarkMode(!darkMode)}
+            className="text-xl hover:text-yellow-300 hover:bg-white/20 p-2 rounded-md transition-all duration-200"
+          >
             {darkMode ? <FaSun /> : <FaMoon />}
           </button>
 
           {/* Cart */}
           <div
-            className="relative cursor-pointer hover:text-pink-500 transition"
+            className="relative cursor-pointer hover:text-yellow-300 hover:bg-white/20 p-2 rounded-md transition-all duration-200"
             onClick={() => navigate("/cart")}
           >
             <FaShoppingCart className="w-6 h-6" />
             {cartCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-black text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-md">
+              <span className="absolute -top-1 -right-1 bg-yellow-400 text-red-800 text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-md border border-white">
                 {cartCount}
               </span>
             )}
@@ -125,31 +136,44 @@ export default function Navbar({ darkMode, setDarkMode, cartCount }) {
         </div>
 
         {/* Mobile menu button */}
-        <button onClick={() => setIsOpen(!isOpen)} className="md:hidden">
+        <button 
+          onClick={() => setIsOpen(!isOpen)} 
+          className="md:hidden text-white hover:bg-white/20 p-2 rounded-md transition-all duration-200"
+        >
           {isOpen ? <X size={30} /> : <Menu size={30} />}
         </button>
       </div>
 
       {/* Mobile Dropdown Menu */}
       {isOpen && (
-        <div className={`md:hidden px-4 pt-2 pb-4 space-y-2 transition-all duration-300 ${
-          darkMode ? "bg-gray-700 text-white" : "bg-pink-100 text-pink-900"
-        }`}>
-          <Link to="/" onClick={() => setIsOpen(false)} className="block px-3 py-2 rounded-md hover:bg-pink-300">
+        <div 
+          className={`md:hidden px-4 pt-2 pb-4 space-y-2 transition-all duration-300 ${
+            darkMode 
+              ? "bg-red-900/95 text-white border-t border-red-700" 
+              : "bg-red-600/95 text-white border-t border-red-400"
+          }`}
+          style={{
+            backdropFilter: 'blur(10px)',
+            background: darkMode 
+              ? 'rgba(127, 29, 29, 0.95)' 
+              : 'rgba(220, 38, 38, 0.95)'
+          }}
+        >
+          <Link to="/" onClick={() => setIsOpen(false)} className="block px-3 py-2 rounded-md hover:bg-white/20 transition-all duration-200">
             Home
           </Link>
-          <Link to="/food" onClick={() => setIsOpen(false)} className="block px-3 py-2 rounded-md hover:bg-pink-300">
+          <Link to="/food" onClick={() => setIsOpen(false)} className="block px-3 py-2 rounded-md hover:bg-white/20 transition-all duration-200">
             Food Menu
           </Link>
-          <Link to="/grill" onClick={() => setIsOpen(false)} className="block px-3 py-2 rounded-md hover:bg-pink-300">
+          <Link to="/grill" onClick={() => setIsOpen(false)} className="block px-3 py-2 rounded-md hover:bg-white/20 transition-all duration-200">
             Grill
           </Link>
-          <Link to="/beverages" onClick={() => setIsOpen(false)} className="block px-3 py-2 rounded-md hover:bg-pink-300">
+          <Link to="/beverages" onClick={() => setIsOpen(false)} className="block px-3 py-2 rounded-md hover:bg-white/20 transition-all duration-200">
             Beverage
           </Link>
 
           {/* Dark Mode Toggle */}
-          <button onClick={() => setDarkMode(!darkMode)} className="flex items-center gap-2 px-3 py-2 hover:bg-pink-300 rounded-md">
+          <button onClick={() => setDarkMode(!darkMode)} className="flex items-center gap-2 px-3 py-2 hover:bg-white/20 rounded-md transition-all duration-200">
             {darkMode ? <FaSun /> : <FaMoon />}
             <span>{darkMode ? "Light Mode" : "Dark Mode"}</span>
           </button>
@@ -160,12 +184,12 @@ export default function Navbar({ darkMode, setDarkMode, cartCount }) {
               navigate("/cart");
               setIsOpen(false);
             }}
-            className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-pink-300 rounded-md"
+            className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-white/20 rounded-md transition-all duration-200"
           >
             <FaShoppingCart />
             <span>Cart</span>
             {cartCount > 0 && (
-              <span className="ml-auto bg-black text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-md">
+              <span className="ml-auto bg-yellow-400 text-red-800 text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-md border border-white">
                 {cartCount}
               </span>
             )}

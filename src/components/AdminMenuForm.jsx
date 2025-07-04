@@ -7,19 +7,37 @@ export default function AdminMenuForm({
   editingItem,
   clearEdit,
   activeTab,
+  isOpen,
+  onClose,
 }) {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [image, setImage] = useState("");
   const [imageFile, setImageFile] = useState(null);
 
+  // Clear form when activeTab changes
+  useEffect(() => {
+    if (!editingItem) {
+      clearForm();
+    }
+  }, [activeTab]);
+
   useEffect(() => {
     if (editingItem) {
       setName(editingItem.name);
       setPrice(editingItem.price);
       setImage(editingItem.image);
+    } else {
+      clearForm();
     }
   }, [editingItem]);
+
+  const clearForm = () => {
+    setName("");
+    setPrice("");
+    setImage("");
+    setImageFile(null);
+  };
 
   const uploadImageToSupabase = async () => {
     if (!imageFile) return null;
@@ -77,78 +95,116 @@ export default function AdminMenuForm({
       onAdd({ ...item, category: activeTab });
     }
 
-    // Clear form
-    setName("");
-    setPrice("");
-    setImage("");
-    setImageFile(null);
+    // Clear form and close modal
+    clearForm();
     clearEdit();
+    onClose();
   };
 
+  const handleClose = () => {
+    clearForm();
+    clearEdit();
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
   return (
-    <form onSubmit={handleSubmit} className="mb-6 bg-white p-4 rounded shadow">
-      <h2 className="text-lg font-semibold mb-4">
-        {editingItem ? "Edit Menu Item" : `Add to ${activeTab}`}
-      </h2>
-      <div className="flex flex-col space-y-3">
-        <input
-          type="text"
-          placeholder="Food Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="border p-2 rounded"
-        />
-        <input
-          type="number"
-          placeholder="Price"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          className="border p-2 rounded"
-        />
-        <input
-          type="text"
-          placeholder="Image URL (optional)"
-          value={image}
-          onChange={(e) => setImage(e.target.value)}
-          className="border p-2 rounded"
-        />
-
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => setImageFile(e.target.files[0])}
-        />
-        {imageFile && (
-          <img
-            src={URL.createObjectURL(imageFile)}
-            alt="Preview"
-            style={{
-              width: "100%",
-              maxHeight: 200,
-              objectFit: "cover",
-              marginTop: 8,
-            }}
-          />
-        )}
-
-        <div className="flex gap-2">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b">
+          <h2 className="text-xl font-semibold text-gray-800">
+            {editingItem ? "Edit Menu Item" : `Add to ${activeTab}`}
+          </h2>
           <button
-            type="submit"
-            className="bg-pink-700 text-white py-2 px-4 rounded hover:bg-pink-800"
+            onClick={handleClose}
+            className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
           >
-            {editingItem ? "Update Item" : "Add Item"}
+            ×
           </button>
-          {editingItem && (
-            <button
-              type="button"
-              onClick={clearEdit}
-              className="bg-gray-300 text-black py-2 px-4 rounded hover:bg-gray-400"
-            >
-              Cancel
-            </button>
-          )}
         </div>
+        
+        <form onSubmit={handleSubmit} className="p-6">
+          <div className="flex flex-col space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Food Name
+              </label>
+              <input
+                type="text"
+                placeholder="Enter food name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Price
+              </label>
+              <input
+                type="number"
+                placeholder="Enter price"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Image URL (optional)
+              </label>
+              <input
+                type="text"
+                placeholder="Enter image URL"
+                value={image}
+                onChange={(e) => setImage(e.target.value)}
+                className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Upload Image
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setImageFile(e.target.files[0])}
+                className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+              />
+            </div>
+            
+            {imageFile && (
+              <div className="mt-2">
+                <img
+                  src={URL.createObjectURL(imageFile)}
+                  alt="Preview"
+                  className="w-full max-h-48 object-cover rounded-lg border"
+                />
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-4">
+              <button
+                type="submit"
+                className="flex-1 bg-pink-700 text-white py-3 px-4 rounded-lg hover:bg-pink-800 transition-colors font-medium"
+              >
+                {editingItem ? "Update Item" : "Add Item"}
+              </button>
+              <button
+                type="button"
+                onClick={handleClose}
+                className="flex-1 bg-gray-300 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-400 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </form>
       </div>
-    </form>
+    </div>
   );
 }

@@ -13,6 +13,7 @@ export default function AdminPage() {
   const [menuItems, setMenuItems] = useState([]);
   const [editingItem, setEditingItem] = useState(null);
   const [activeTab, setActiveTab] = useState("Breakfast");
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   useEffect(() => {
     fetch(`${APIBASE}/menu`)
@@ -67,10 +68,27 @@ export default function AdminPage() {
       body: JSON.stringify(updatedItem),
     });
     setEditingItem(null);
+    setIsFormOpen(false);
     // Don't update state here — socket will handle it
   };
 
+  const openAddForm = () => {
+    setEditingItem(null);
+    setIsFormOpen(true);
+  };
+
+  const openEditForm = (item) => {
+    setEditingItem(item);
+    setIsFormOpen(true);
+  };
+
+  const closeForm = () => {
+    setIsFormOpen(false);
+    setEditingItem(null);
+  };
+
   return (
+    
     <div className="p-8 bg-gray-100 min-h-screen">
       <h1 className="text-2xl font-bold mb-6 text-pink-700">Admin Panel</h1>
 
@@ -89,20 +107,33 @@ export default function AdminPage() {
         ))}
       </div>
 
-      {/* Form to add/update menu */}
+      {/* Add Item Button */}
+      <div className="mb-6">
+        <button
+          onClick={openAddForm}
+          className="bg-pink-700 text-white py-3 px-6 rounded-lg hover:bg-pink-800 transition-colors font-medium flex items-center gap-2"
+        >
+          <span className="text-xl">+</span>
+          Add {activeTab} Item
+        </button>
+      </div>
+
+      {/* Popup Form */}
       <AdminMenuForm
         onAdd={handleAdd}
         onUpdate={handleUpdate}
         editingItem={editingItem}
         clearEdit={() => setEditingItem(null)}
         activeTab={activeTab}
+        isOpen={isFormOpen}
+        onClose={closeForm}
       />
 
       {/* List of menu items */}
       <AdminMenuList
         items={menuItems.filter((item) => item.category === activeTab)}
         onDelete={handleDelete}
-        onEdit={setEditingItem}
+        onEdit={openEditForm}
       />
     </div>
   );

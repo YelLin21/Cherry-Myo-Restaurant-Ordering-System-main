@@ -10,7 +10,14 @@ export function DarkModeProvider({ children }) {
   });
 
   useEffect(() => {
-    document.body.classList.toggle("dark", darkMode);
+    // Apply dark class to html element for Tailwind dark mode
+    if (darkMode) {
+      document.documentElement.classList.add("dark");
+      document.body.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      document.body.classList.remove("dark");
+    }
     localStorage.setItem("darkMode", darkMode);
   }, [darkMode]);
 

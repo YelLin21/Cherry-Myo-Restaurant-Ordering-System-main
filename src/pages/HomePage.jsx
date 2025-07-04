@@ -117,7 +117,7 @@ export default function HomePage() {
               <div
                 key={index}
                 onClick={() => item.route && navigate(item.route)}
-                className="relative cursor-pointer bg-white dark:bg-pink-600 rounded-xl overflow-hidden shadow-md hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300"
+                className="relative cursor-pointer bg-pink-600 dark:bg-pink-600 rounded-xl overflow-hidden shadow-md hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300"
               >
                 <img
                   src={item.img}
