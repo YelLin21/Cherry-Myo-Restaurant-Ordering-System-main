@@ -70,40 +70,70 @@ export default function GrillMenuPage() {
   const cartItemsExist = Object.values(cart).length > 0;
 
   return (
-    <div>
+    <div className={`min-h-screen transition-colors duration-300 ${
+      darkMode ? 'dark bg-gray-900' : 'bg-gray-50'
+    }`}>
       <Navbar darkMode={darkMode} setDarkMode={setDarkMode} cartCount={cartCount} />
-      <main className="p-4 bg-gray-100 min-h-screen pt-24 pb-32">
+      <main className={`p-4 min-h-screen pt-24 pb-32 transition-colors duration-300 ${
+        darkMode ? 'bg-gray-900' : 'bg-gray-100'
+      }`}>
         <div className="max-w-6xl mx-auto">
-          <h1 className="text-3xl font-bold text-center mb-6 text-pink-900">Grill Menu</h1>
+          <h1 className={`text-3xl font-bold text-center mb-6 transition-colors duration-300 ${
+            darkMode ? 'text-pink-300' : 'text-pink-900'
+          }`}>Grill Menu</h1>
 
-          {loading && <p className="text-center">Loading...</p>}
+          {loading && <p className={`text-center ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Loading...</p>}
           {error && <p className="text-center text-red-500">{error}</p>}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {menuItems.map((item) => (
               <div
                 key={item._id}
-                className="rounded-xl shadow p-4 flex flex-col items-center bg-pink-200"
+                className={`rounded-xl shadow-lg p-4 flex flex-col items-center transition-all duration-300 hover:shadow-xl hover:scale-105 ${
+                  darkMode 
+                    ? 'bg-gray-800 border border-gray-700' 
+                    : 'bg-pink-300 border border-pink-100'
+                }`}
               >
                 <img
                   src={item.image || "https://via.placeholder.com/150"}
                   alt={item.name}
-                  className="w-32 h-32 object-cover rounded mb-2"
+                  className="w-32 h-32 object-cover rounded-lg mb-3 shadow-md"
                 />
-                <h2 className="font-semibold text-lg text-center">{item.name}</h2>
-                <p className="text-gray-600">{item.price} Baht</p>
+                <h2 className={`font-semibold text-lg text-center mb-2 ${
+                  darkMode ? 'text-white' : 'text-gray-800'
+                }`}>
+                  {item.name}
+                </h2>
+                <p className={`mb-4 font-bold ${
+                  darkMode ? 'text-pink-300' : 'text-pink-600'
+                }`}>
+                  {item.price} Baht
+                </p>
 
                 <div className="flex items-center mt-3 space-x-3">
                   <button
                     onClick={() => removeFromCart(item._id)}
-                    className="px-3 py-1 text-white rounded bg-gray-600 hover:bg-gray-700"
+                    className={`px-3 py-1 text-white rounded transition-colors duration-200 ${
+                      darkMode 
+                        ? 'bg-gray-600 hover:bg-gray-500' 
+                        : 'bg-gray-600 hover:bg-gray-700'
+                    }`}
                   >
                     −
                   </button>
-                  <span className="px-2 font-semibold text-lg">{getQuantity(item._id)}</span>
+                  <span className={`px-2 font-semibold text-lg ${
+                    darkMode ? 'text-white' : 'text-gray-800'
+                  }`}>
+                    {getQuantity(item._id)}
+                  </span>
                   <button
                     onClick={() => addToCart(item)}
-                    className="px-3 py-1 text-white rounded bg-red-500 hover:bg-red-600"
+                    className={`px-3 py-1 text-white rounded transition-colors duration-200 ${
+                      darkMode 
+                        ? 'bg-pink-600 hover:bg-pink-500' 
+                        : 'bg-red-500 hover:bg-red-600'
+                    }`}
                   >
                     +
                   </button>
@@ -114,10 +144,18 @@ export default function GrillMenuPage() {
 
           {/* Desktop Cart Summary */}
           {cartItemsExist && (
-            <div className="hidden sm:block mt-10 bg-white p-4 sm:p-6 rounded-lg shadow-md max-w-3xl mx-auto">
-              <h2 className="text-xl font-bold mb-4 text-pink-900">🛒 Cart</h2>
+            <div className={`hidden sm:block mt-10 p-4 sm:p-6 rounded-lg shadow-md max-w-3xl mx-auto transition-colors duration-300 ${
+              darkMode 
+                ? 'bg-gray-800 border border-gray-700' 
+                : 'bg-white border border-gray-200'
+            }`}>
+              <h2 className={`text-xl font-bold mb-4 ${
+                darkMode ? 'text-pink-300' : 'text-pink-900'
+              }`}>🛒 Cart</h2>
 
-              <div className="hidden md:flex justify-between font-semibold border-b pb-2 mb-2">
+              <div className={`hidden md:flex justify-between font-semibold border-b pb-2 mb-2 ${
+                darkMode ? 'border-gray-600 text-gray-300' : 'border-gray-200 text-gray-800'
+              }`}>
                 <span className="w-1/2">Item</span>
                 <span className="w-1/4 text-right">Price</span>
                 <span className="w-1/4 text-center">Qty</span>
@@ -128,7 +166,9 @@ export default function GrillMenuPage() {
                 {Object.values(cart).map(({ item, quantity }) => (
                   <li
                     key={item._id}
-                    className="flex flex-col md:flex-row md:justify-between text-sm md:text-base"
+                    className={`flex flex-col md:flex-row md:justify-between text-sm md:text-base ${
+                      darkMode ? 'text-gray-300' : 'text-gray-700'
+                    }`}
                   >
                     <span className="md:w-1/2">{item.name}</span>
                     <span className="md:w-1/4 md:text-right">{item.price}</span>
@@ -140,14 +180,20 @@ export default function GrillMenuPage() {
                 ))}
               </ul>
 
-              <div className="flex justify-between mt-4 font-bold text-lg">
+              <div className={`flex justify-between mt-4 font-bold text-lg ${
+                darkMode ? 'text-white' : 'text-gray-800'
+              }`}>
                 <span>Total:</span>
                 <span>{total} Baht</span>
               </div>
 
               <button
                 onClick={() => navigate("/cart")}
-                className="mt-4 bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 w-full sm:w-auto"
+                className={`mt-4 px-6 py-2 rounded w-full sm:w-auto transition-colors duration-200 ${
+                  darkMode 
+                    ? 'bg-green-600 text-white hover:bg-green-500' 
+                    : 'bg-green-600 text-white hover:bg-green-700'
+                }`}
               >
                 Next →
               </button>
@@ -158,12 +204,22 @@ export default function GrillMenuPage() {
 
       {/* Floating Mobile Cart Summary */}
       {cartItemsExist && (
-        <div className="fixed bottom-0 left-0 right-0 sm:hidden bg-white border-t shadow-lg p-4 z-50">
+        <div className={`fixed bottom-0 left-0 right-0 sm:hidden border-t shadow-lg p-4 z-50 transition-colors duration-300 ${
+          darkMode 
+            ? 'bg-gray-800 border-gray-600' 
+            : 'bg-white border-gray-200'
+        }`}>
           <div className="flex justify-between items-center">
-            <p className="font-semibold text-pink-900">🛒 Total: {total} Baht</p>
+            <p className={`font-semibold ${
+              darkMode ? 'text-pink-300' : 'text-pink-900'
+            }`}>🛒 Total: {total} Baht</p>
             <button
               onClick={() => navigate("/cart")}
-              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+              className={`px-4 py-2 rounded transition-colors duration-200 ${
+                darkMode 
+                  ? 'bg-green-600 text-white hover:bg-green-500' 
+                  : 'bg-green-600 text-white hover:bg-green-700'
+              }`}
             >
               Next →
             </button>

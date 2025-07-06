@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import AdminMenuForm from "../components/AdminMenuForm";
 import AdminMenuList from "../components/AdminMenuList";
+import { useDarkMode } from "./DarkModeContext.jsx";
+import Navbar from "../components/Navbar.jsx";
 import { io } from "socket.io-client";
 
 const APIBASE = import.meta.env.VITE_API_URL;
@@ -14,6 +16,11 @@ export default function AdminPage() {
   const [editingItem, setEditingItem] = useState(null);
   const [activeTab, setActiveTab] = useState("Breakfast");
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const { darkMode, setDarkMode } = useDarkMode();
+
+  useEffect(() => {
+    document.body.classList.toggle("dark", darkMode);
+  }, [darkMode]);
 
   useEffect(() => {
     fetch(`${APIBASE}/menu`)
@@ -88,53 +95,74 @@ export default function AdminPage() {
   };
 
   return (
-    
-    <div className="p-8 bg-gray-100 min-h-screen">
-      <h1 className="text-2xl font-bold mb-6 text-pink-700">Admin Panel</h1>
+    <div className={`min-h-screen transition-colors duration-300 ${
+      darkMode ? 'dark bg-gray-900' : 'bg-gray-50'
+    }`}>
+      <Navbar darkMode={darkMode} setDarkMode={setDarkMode} />
+      
+      <div className={`p-8 min-h-screen pt-24 transition-colors duration-300 ${
+        darkMode ? 'bg-gray-900' : 'bg-gray-100'
+      }`}>
+        <h1 className={`text-2xl font-bold mb-6 transition-colors duration-300 ${
+          darkMode ? 'text-pink-300' : 'text-pink-700'
+        }`}>Admin Panel</h1>
 
-      {/* Tabs */}
-      <div className="flex gap-4 mb-6">
-        {TABS.map((tab) => (
+        {/* Tabs */}
+        <div className="flex gap-4 mb-6 flex-wrap">
+          {TABS.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-4 py-2 rounded transition-all duration-300 ${
+                activeTab === tab 
+                  ? darkMode 
+                    ? "bg-pink-600 text-white shadow-lg transform scale-105" 
+                    : "bg-pink-700 text-white shadow-lg transform scale-105"
+                  : darkMode
+                    ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                    : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        {/* Add Item Button */}
+        <div className="mb-6">
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded ${
-              activeTab === tab ? "bg-pink-700 text-white" : "bg-gray-200"
+            onClick={openAddForm}
+            className={`px-6 py-3 rounded font-medium transition-colors duration-200 flex items-center gap-2 ${
+              darkMode 
+                ? 'bg-green-600 text-white hover:bg-green-500' 
+                : 'bg-green-600 text-white hover:bg-green-700'
             }`}
           >
-            {tab}
+            <span className="text-xl">+</span>
+            Add {activeTab} Item
           </button>
-        ))}
+        </div>
+
+        {/* Popup Form */}
+        <AdminMenuForm
+          onAdd={handleAdd}
+          onUpdate={handleUpdate}
+          editingItem={editingItem}
+          clearEdit={() => setEditingItem(null)}
+          activeTab={activeTab}
+          isOpen={isFormOpen}
+          onClose={closeForm}
+          darkMode={darkMode}
+        />
+
+        {/* List of menu items */}
+        <AdminMenuList
+          items={menuItems.filter((item) => item.category === activeTab)}
+          onDelete={handleDelete}
+          onEdit={openEditForm}
+          darkMode={darkMode}
+        />
       </div>
-
-      {/* Add Item Button */}
-      <div className="mb-6">
-        <button
-          onClick={openAddForm}
-          className="bg-pink-700 text-white py-3 px-6 rounded-lg hover:bg-pink-800 transition-colors font-medium flex items-center gap-2"
-        >
-          <span className="text-xl">+</span>
-          Add {activeTab} Item
-        </button>
-      </div>
-
-      {/* Popup Form */}
-      <AdminMenuForm
-        onAdd={handleAdd}
-        onUpdate={handleUpdate}
-        editingItem={editingItem}
-        clearEdit={() => setEditingItem(null)}
-        activeTab={activeTab}
-        isOpen={isFormOpen}
-        onClose={closeForm}
-      />
-
-      {/* List of menu items */}
-      <AdminMenuList
-        items={menuItems.filter((item) => item.category === activeTab)}
-        onDelete={handleDelete}
-        onEdit={openEditForm}
-      />
     </div>
   );
 }
