@@ -12,6 +12,20 @@ router.get("/", async (req, res) => {
   }
 });
 
+// GET orders ready for checkout
+router.get("/checkout", async (req, res) => {
+  try {
+    const orders = await Order.find({
+      status: "readyForCheckout",
+      paid: { $ne: true },
+    }).sort({ createdAt: -1 });
+
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch checkout orders" });
+  }
+});
+
 // POST create a new order
 router.post("/", async (req, res) => {
   try {
@@ -25,7 +39,9 @@ router.post("/", async (req, res) => {
       tableNumber,
       items,
       createdAt: new Date(),
+      status: "pending",
     });
+
     await newOrder.save();
 
     const io = req.app.get("io");
@@ -70,7 +86,10 @@ router.put("/:id/process", async (req, res) => {
   try {
     const updated = await Order.findByIdAndUpdate(
       req.params.id,
-      { status: "readyForCheckout" },
+      {
+        status: "readyForCheckout",
+        processedAt: new Date(),
+      },
       { new: true }
     );
 
@@ -83,6 +102,31 @@ router.put("/:id/process", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).send("Server error");
+  }
+});
+
+// POST mark order as paid
+router.post("/mark-paid", async (req, res) => {
+  const { orderId } = req.body;
+  if (!orderId) {
+    return res.status(400).json({ error: "Missing orderId" });
+  }
+
+  try {
+    const updated = await Order.findByIdAndUpdate(
+      orderId,
+      { paid: true },
+      { new: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    res.json({ message: "Order marked as paid", order: updated });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to mark as paid" });
   }
 });
 
