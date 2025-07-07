@@ -35,7 +35,7 @@ export default function KitchenPage() {
       .then((data) => {
         const visible = data.filter(
           (order) =>
-            (order.status === "Pending" || order.status === undefined) &&
+            (!order.status || order.status.toLowerCase() === "pending") &&
             !processedIds.includes(order._id)
         );
         setOrders(visible);
@@ -49,12 +49,11 @@ export default function KitchenPage() {
       console.log("✅ Socket connected:", socket.id);
     });
 
-    // Show order even if status is missing
     socket.on("order:new", (newOrder) => {
       console.log("📥 New order:", newOrder);
       const isProcessed = getProcessedIds().includes(newOrder._id);
       const isPendingOrNoStatus =
-        newOrder.status === "Pending" || newOrder.status === undefined;
+        !newOrder.status || newOrder.status.toLowerCase() === "pending";
 
       if (!isProcessed && isPendingOrNoStatus) {
         setOrders((prev) => [...prev, newOrder]);
@@ -64,7 +63,9 @@ export default function KitchenPage() {
     socket.on("order:update", (updatedOrder) => {
       setOrders((prev) => {
         const isProcessed = getProcessedIds().includes(updatedOrder._id);
-        if (updatedOrder.status !== "Pending" || isProcessed) {
+        const isPending =
+          updatedOrder.status && updatedOrder.status.toLowerCase() === "pending";
+        if (!isPending || isProcessed) {
           return prev.filter((order) => order._id !== updatedOrder._id);
         }
         return prev.map((order) =>
@@ -81,28 +82,27 @@ export default function KitchenPage() {
   }, []);
 
   const handleMarkAsProcessing = async (orderId) => {
-  try {
-    const res = await fetch(`${APIBASE}/orders/${orderId}/process`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        processedAt: new Date().toISOString() // ⏰ send timestamp
-      })
-    });
+    try {
+      const res = await fetch(`${APIBASE}/orders/${orderId}/process`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          processedAt: new Date().toISOString(),
+        }),
+      });
 
-    if (!res.ok) throw new Error("Failed to update order");
+      if (!res.ok) throw new Error("Failed to update order");
 
-    saveProcessedId(orderId);
-    setOrders((prev) => prev.filter((order) => order._id !== orderId));
-    alert("✅ Order sent to Admin Checkout.");
-  } catch (error) {
-    console.error(error);
-    alert("❌ Failed to mark order as processing.");
-  }
-};
-
+      saveProcessedId(orderId);
+      setOrders((prev) => prev.filter((order) => order._id !== orderId));
+      alert("✅ Order sent to Admin Checkout.");
+    } catch (error) {
+      console.error(error);
+      alert("❌ Failed to mark order as processing.");
+    }
+  };
 
   return (
     <div className="min-h-screen p-6 bg-gray-100">

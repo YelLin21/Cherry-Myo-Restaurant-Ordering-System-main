@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Order = require("../models/Order");
 
+// GET all orders
 router.get("/", async (req, res) => {
   try {
     const orders = await Order.find().sort({ createdAt: -1 });
@@ -11,6 +12,7 @@ router.get("/", async (req, res) => {
   }
 });
 
+// POST create a new order
 router.post("/", async (req, res) => {
   try {
     const { tableNumber, items } = req.body;

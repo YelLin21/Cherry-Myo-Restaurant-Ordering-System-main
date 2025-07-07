@@ -8,8 +8,7 @@ console.log("MONGO_URI:", process.env.MONGO_URI);
 
 // Import the enhanced order cleanup scheduler
 const orderCleanup = require("./scheduler");
-
-
+ 
 const app = express();
 const server = http.createServer(app);
 
