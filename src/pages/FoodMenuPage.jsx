@@ -132,7 +132,7 @@ export default function FoodMenuPage() {
                   {item.name}
                 </h2>
                 <p className={`mb-4 font-bold ${
-                  darkMode ? 'text-pink-300' : 'text-pink-600'
+                  darkMode ? 'text-pink-300' : 'text-black'
                 }`}>
                   {item.price} Baht
                 </p>
