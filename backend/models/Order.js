@@ -1,18 +1,18 @@
-// models/Order.js
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 
-const orderSchema = new mongoose.Schema({
+
+const OrderSchema = new mongoose.Schema({
   tableNumber: String,
   items: [
     {
       name: String,
       price: Number,
-      quantity: Number,
-    },
+      quantity: Number
+    }
   ],
-  processedAt: Date,
-  paid: { type: Boolean, default: false },
-  createdAt: { type: Date, default: Date.now },
+  status: String,
+  createdAt: Date
+
 });
 
-export default mongoose.model("Order", orderSchema);
+module.exports = mongoose.model("Order", OrderSchema);

@@ -15,6 +15,7 @@ const server = http.createServer(app);
 const allowedOrigins = [
   "http://localhost:5173",
   "https://cherry-myo-restaurant-ordering-system-main.vercel.app"
+  
 ];
 
 app.use(cors({
