@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
 
-
 const OrderSchema = new mongoose.Schema({
   tableNumber: String,
   items: [

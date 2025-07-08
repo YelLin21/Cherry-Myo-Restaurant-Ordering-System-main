@@ -6,8 +6,6 @@ const cors = require("cors");
 require("dotenv").config({ path: "../.env" });
 console.log("MONGO_URI:", process.env.MONGO_URI);
 
-// Import the enhanced order cleanup scheduler
-const orderCleanup = require("./scheduler");
  
 const app = express();
 const server = http.createServer(app);
@@ -57,7 +55,7 @@ io.on("connection", (socket) => {
 app.use("/api/menu", require("./routes/menu"));
 app.use("/api/orders", require("./routes/order"));
 app.use("/api/qr", require("./routes/qrCode"));
-app.use("/api/admin", require("./routes/admin")); // Add admin routes for order management
+
 
 
 const PORT = process.env.PORT || 5001;
