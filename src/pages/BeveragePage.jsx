@@ -15,6 +15,7 @@ export default function BeverageMenuPage() {
   const [menuItems, setMenuItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const { darkMode, setDarkMode } = useDarkMode();
 
   const navigate = useNavigate();
@@ -64,6 +65,10 @@ export default function BeverageMenuPage() {
 
   const getQuantity = (id) => cart[id]?.quantity || 0;
 
+  const filteredItems = menuItems.filter((item) => 
+    item.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const cartItemsExist = Object.values(cart).length > 0;
 
   return (
@@ -85,12 +90,34 @@ export default function BeverageMenuPage() {
             Beverage Menu
           </h1>
 
+          {/* Search Bar */}
+          <div className="max-w-md mx-auto mb-6">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search beverages..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className={`w-full px-4 py-2 pl-10 rounded-lg border focus:outline-none focus:ring-2 focus:ring-pink-400 transition-colors duration-200 ${
+                  darkMode 
+                    ? 'bg-gray-800 text-white border-gray-600 placeholder-gray-400' 
+                    : 'bg-white border-gray-300 text-black placeholder-gray-500'
+                }`}
+              />
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className={`h-5 w-5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
           {loading && <p className={`text-center ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Loading...</p>}
           {error && <p className="text-center text-red-500">{error}</p>}
 
           {/* Desktop Grid View */}
           <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
-            {menuItems.map((item) => (
+            {filteredItems.map((item) => (
               <div
                 key={item._id}
                 className={`rounded-xl shadow-lg p-4 flex flex-col items-center transition-all duration-300 hover:shadow-xl hover:scale-105 ${
@@ -148,7 +175,7 @@ export default function BeverageMenuPage() {
 
           {/* Mobile List View */}
           <div className="sm:hidden space-y-4">
-            {menuItems.map((item) => (
+            {filteredItems.map((item) => (
               <div
                 key={item._id}
                 className={`flex items-center gap-4 p-4 rounded-xl border shadow-sm transition-all duration-200 hover:shadow-md ${

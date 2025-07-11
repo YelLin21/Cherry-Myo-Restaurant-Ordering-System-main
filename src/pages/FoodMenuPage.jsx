@@ -19,6 +19,7 @@ export default function FoodMenuPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("Breakfast");
+  const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
   const { darkMode, setDarkMode } = useDarkMode();
   const { cart, addToCart, removeFromCart, total, totalItems } = useCart();
@@ -64,7 +65,11 @@ export default function FoodMenuPage() {
 
   const getQuantity = (id) => cart[id]?.quantity || 0;
 
-  const filteredItems = menuItems.filter((item) => item.category === activeTab);
+  const filteredItems = menuItems.filter((item) => {
+    const matchesCategory = item.category === activeTab;
+    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
 
   const cartItemsExist = Object.values(cart).length > 0;
 
@@ -105,6 +110,28 @@ export default function FoodMenuPage() {
                 {tab}
               </button>
             ))}
+          </div>
+
+          {/* Search Bar */}
+          <div className="max-w-md mx-auto mb-6">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search menu items..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className={`w-full px-4 py-2 pl-10 rounded-lg border focus:outline-none focus:ring-2 focus:ring-pink-400 transition-colors duration-200 ${
+                  darkMode 
+                    ? 'bg-gray-800 text-white border-gray-600 placeholder-gray-400' 
+                    : 'bg-white border-gray-300 text-black placeholder-gray-500'
+                }`}
+              />
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className={`h-5 w-5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+            </div>
           </div>
 
           {loading && <p className={`text-center ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Loading...</p>}
