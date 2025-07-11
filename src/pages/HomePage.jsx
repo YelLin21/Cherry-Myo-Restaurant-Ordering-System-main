@@ -3,12 +3,13 @@ import { useNavigate } from "react-router-dom";
 import Slider from "react-slick";
 import Navbar from "../components/Navbar.jsx";
 import { useDarkMode } from "./DarkModeContext.jsx";
+import { useCart } from "../context/CartContext.jsx";
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const [cartCount, setCartCount] = useState(2);
   const [searchTerm, setSearchTerm] = useState("");
   const { darkMode, setDarkMode } = useDarkMode();
+  const { totalItems } = useCart();
 
   const categories = [
     {
@@ -66,7 +67,7 @@ export default function HomePage() {
       <Navbar
         darkMode={darkMode}
         setDarkMode={setDarkMode}
-        cartCount={cartCount}
+        cartCount={totalItems}
       />
 
       {/* SLIDER + SEARCH */}

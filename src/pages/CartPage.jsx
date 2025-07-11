@@ -13,9 +13,10 @@ export default function CartPage() {
   const [tableNumber, setTableNumber] = useState("");
   const [orderSent, setOrderSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showOrderModal, setShowOrderModal] = useState(false);
 
   const navigate = useNavigate();
-  const { cart, addToCart, removeFromCart, total, clearCart } = useCart();
+  const { cart, addToCart, removeFromCart, total, totalItems, clearCart } = useCart();
   const { darkMode, setDarkMode } = useDarkMode();
 
   useEffect(() => {
@@ -73,7 +74,18 @@ export default function CartPage() {
     return "฿" + price.toLocaleString("en-US");
   };
 
-  const handlePlaceOrder = async () => {
+  const calculateSelectedTotal = () => {
+    return Object.values(cart).reduce((total, { item, quantity }) => {
+      if (selectedItems[item._id]) {
+        return total + (item.price * quantity);
+      }
+      return total;
+    }, 0);
+  };
+
+  const selectedTotal = calculateSelectedTotal();
+
+  const handleCheckoutClick = () => {
     if (!tableNumber.trim()) {
       alert("Please enter your table number.");
       return;
@@ -86,7 +98,14 @@ export default function CartPage() {
       return;
     }
 
+    setShowOrderModal(true);
+  };
+
+  const handlePlaceOrder = async () => {
+    const selectedCartItems = Object.values(cart).filter(({ item }) => selectedItems[item._id]);
+
     setLoading(true);
+    setShowOrderModal(false);
 
     const order = {
       tableNumber,
@@ -111,6 +130,7 @@ export default function CartPage() {
       clearCart();
       setSelectedItems({});
       localStorage.removeItem("selectedItems");
+      localStorage.removeItem("tableNumber");
 
       setTimeout(() => {
         setOrderSent(false);
@@ -135,34 +155,57 @@ export default function CartPage() {
       )}
 
       <main className={`pt-20 px-4 sm:px-6 lg:px-8 transition-colors duration-300 ${darkMode ? "bg-gray-900" : "bg-gray-100"}`}>
-        <h1 className={`text-2xl font-bold text-center mb-6 ${darkMode ? "text-pink-300" : "text-gray-800"}`}>🛒 Your Cart</h1>
+        <h1 className={`text-2xl font-bold text-center mb-6 ${darkMode ? "text-pink-300" : "text-gray-800"}`}>
+          🛒 Your Cart ({totalItems} items)
+        </h1>
 
         {Object.values(cart).length > 0 ? (
           <ul className="space-y-4">
             {Object.values(cart).map(({ item, quantity }) => (
-              <li key={item._id} className={`flex items-start gap-4 p-4 rounded-xl border ${darkMode ? "bg-gray-800 border-gray-600" : "bg-pink-300 border-gray-200"}`}>
+              <li key={item._id} className={`flex items-center gap-4 p-4 rounded-xl border shadow-sm transition-all duration-200 hover:shadow-md ${darkMode ? "bg-gray-800 border-gray-600" : "bg-pink-300 border-pink-100"}`}>
+                {/* Checkbox */}
                 <input
                   type="checkbox"
-                  className="mt-8 ml-2 mr-2 h-5 w-5 rounded border-gray-300 focus:ring-pink-500"
+                  className="h-5 w-5 rounded border-gray-300 focus:ring-pink-500 flex-shrink-0"
                   checked={!!selectedItems[item._id]}
                   onChange={() => handleCheckboxChange(item._id)}
                 />
-                <img src={item.image || "https://via.placeholder.com/80"} alt={item.name} className="w-20 h-20 object-cover rounded" />
-                <div className="flex-1 space-y-1">
-                  <h2 className={`font-medium ${darkMode ? "text-white" : "text-gray-900"}`}>{item.name}</h2>
-                  <div className="flex justify-between items-center mt-2">
-                    <span className={`font-bold ${darkMode ? "text-white" : "text-gray-900"}`}>{formatPrice(item.price)}</span>
-                    <div className="flex items-center gap-2">
+                
+                {/* Image */}
+                <img 
+                  src={item.image || "https://via.placeholder.com/80"} 
+                  alt={item.name} 
+                  className="w-20 h-20 object-cover rounded-lg shadow-sm flex-shrink-0" 
+                />
+                
+                {/* Content Container */}
+                <div className="flex-1 min-w-0">
+                  {/* Item Name */}
+                  <h2 className={`font-semibold text-lg mb-2 truncate ${darkMode ? "text-white" : "text-gray-900"}`}>
+                    {item.name}
+                  </h2>
+                  
+                  {/* Price and Quantity Container */}
+                  <div className="flex items-center justify-between">
+                    {/* Price */}
+                    <span className={`font-bold text-lg ${darkMode ? "text-pink-300" : "text-pink-600"}`}>
+                      {formatPrice(item.price)}
+                    </span>
+                    
+                    {/* Quantity Controls */}
+                    <div className="flex items-center gap-3">
                       <button
                         onClick={() => removeFromCart(item._id)}
-                        className={`px-2 text-white rounded ${darkMode ? "bg-gray-600 hover:bg-gray-500" : "bg-gray-600 hover:bg-gray-700"}`}
+                        className={`w-8 h-8 flex items-center justify-center text-white rounded-full transition-all duration-200 hover:scale-110 ${darkMode ? "bg-gray-600 hover:bg-gray-500" : "bg-gray-600 hover:bg-gray-700"}`}
                       >
                         −
                       </button>
-                      <span className={`px-2 font-semibold text-lg ${darkMode ? "text-white" : "text-gray-800"}`}>{quantity}</span>
+                      <span className={`min-w-[2rem] text-center font-bold text-lg ${darkMode ? "text-white" : "text-gray-800"}`}>
+                        {quantity}
+                      </span>
                       <button
                         onClick={() => addToCart(item)}
-                        className={`px-2 text-white rounded ${darkMode ? "bg-pink-600 hover:bg-pink-500" : "bg-red-500 hover:bg-red-600"}`}
+                        className={`w-8 h-8 flex items-center justify-center text-white rounded-full transition-all duration-200 hover:scale-110 ${darkMode ? "bg-pink-600 hover:bg-pink-500" : "bg-red-500 hover:bg-red-600"}`}
                       >
                         +
                       </button>
@@ -202,14 +245,122 @@ export default function CartPage() {
             }`}
           />
 
-          <div className="text-sm font-medium">Subtotal: <span className="text-pink-600 font-bold">{formatPrice(total)}</span></div>
+          <div className="text-sm font-medium">Subtotal: <span className="text-pink-600 font-bold">{formatPrice(selectedTotal)}</span></div>
           <button
-            onClick={handlePlaceOrder}
+            onClick={handleCheckoutClick}
             className={`px-5 py-2 rounded-xl text-white text-sm font-semibold shadow ${loading || orderSent ? "bg-gray-400 cursor-not-allowed" : "bg-pink-600 hover:bg-pink-700"}`}
             disabled={loading || orderSent}
           >
             {loading ? "Sending..." : `Check Out (${Object.keys(selectedItems).filter((id) => selectedItems[id]).length})`}
           </button>
+        </div>
+      )}
+
+      {/* Order Details Modal */}
+      {showOrderModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className={`max-w-md w-full rounded-xl shadow-2xl max-h-[80vh] overflow-y-auto ${
+            darkMode ? 'bg-gray-800 border border-gray-600' : 'bg-white border border-gray-200'
+          }`}>
+            <div className="p-6">
+              <h2 className={`text-xl font-bold mb-4 text-center ${
+                darkMode ? 'text-pink-300' : 'text-pink-900'
+              }`}>
+                Order Confirmation
+              </h2>
+
+              <div className={`mb-4 p-3 rounded-lg ${
+                darkMode ? 'bg-gray-700' : 'bg-gray-50'
+              }`}>
+                <p className={`text-sm font-medium mb-1 ${
+                  darkMode ? 'text-gray-300' : 'text-gray-600'
+                }`}>
+                  Table Number
+                </p>
+                <p className={`text-lg font-bold ${
+                  darkMode ? 'text-white' : 'text-gray-900'
+                }`}>
+                  {tableNumber}
+                </p>
+              </div>
+
+              <div className="mb-4">
+                <h3 className={`text-lg font-semibold mb-3 ${
+                  darkMode ? 'text-white' : 'text-gray-900'
+                }`}>
+                  Order Details
+                </h3>
+                <div className="space-y-3">
+                  {Object.values(cart)
+                    .filter(({ item }) => selectedItems[item._id])
+                    .map(({ item, quantity }) => (
+                      <div key={item._id} className={`flex justify-between items-center p-3 rounded-lg ${
+                        darkMode ? 'bg-gray-700' : 'bg-gray-50'
+                      }`}>
+                        <div className="flex-1">
+                          <h4 className={`font-medium ${
+                            darkMode ? 'text-white' : 'text-gray-900'
+                          }`}>
+                            {item.name}
+                          </h4>
+                          <p className={`text-sm ${
+                            darkMode ? 'text-gray-300' : 'text-gray-600'
+                          }`}>
+                            {formatPrice(item.price)} × {quantity}
+                          </p>
+                        </div>
+                        <div className={`font-bold ${
+                          darkMode ? 'text-pink-300' : 'text-pink-600'
+                        }`}>
+                          {formatPrice(item.price * quantity)}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              <div className={`border-t pt-4 mb-6 ${
+                darkMode ? 'border-gray-600' : 'border-gray-200'
+              }`}>
+                <div className="flex justify-between items-center">
+                  <span className={`text-lg font-bold ${
+                    darkMode ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    Total
+                  </span>
+                  <span className={`text-xl font-bold ${
+                    darkMode ? 'text-pink-300' : 'text-pink-600'
+                  }`}>
+                    {formatPrice(selectedTotal)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowOrderModal(false)}
+                  className={`flex-1 py-3 px-4 rounded-lg font-medium transition-colors ${
+                    darkMode 
+                      ? 'bg-gray-600 text-white hover:bg-gray-500' 
+                      : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                  }`}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handlePlaceOrder}
+                  className={`flex-1 py-3 px-4 rounded-lg font-medium text-white transition-colors ${
+                    loading 
+                      ? 'bg-gray-400 cursor-not-allowed' 
+                      : 'bg-pink-600 hover:bg-pink-700'
+                  }`}
+                  disabled={loading}
+                >
+                  {loading ? "Sending..." : "Confirm Order"}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

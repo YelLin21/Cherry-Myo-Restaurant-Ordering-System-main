@@ -112,6 +112,9 @@ export default function Navbar({ darkMode, setDarkMode, cartCount }) {
           <Link to="/beverages" className="text-white hover:bg-white/20 hover:text-red-100 px-3 py-2 rounded-md transition-all duration-200 font-medium">
             Beverage
           </Link>
+          <Link to="/order-history" className="text-white hover:bg-white/20 hover:text-red-100 px-3 py-2 rounded-md transition-all duration-200 font-medium">
+            Order History
+          </Link>
 
           {/* Dark Mode Toggle */}
           <button 
@@ -170,6 +173,9 @@ export default function Navbar({ darkMode, setDarkMode, cartCount }) {
           </Link>
           <Link to="/beverages" onClick={() => setIsOpen(false)} className="block px-3 py-2 rounded-md hover:bg-white/20 transition-all duration-200">
             Beverage
+          </Link>
+          <Link to="/order-history" onClick={() => setIsOpen(false)} className="block px-3 py-2 rounded-md hover:bg-white/20 transition-all duration-200">
+            Order History
           </Link>
 
           {/* Dark Mode Toggle */}

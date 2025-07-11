@@ -16,10 +16,9 @@ export default function BeverageMenuPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const { darkMode, setDarkMode } = useDarkMode();
-  const [cartCount, setCartCount] = useState(2);
 
   const navigate = useNavigate();
-  const { cart, addToCart, removeFromCart, total } = useCart();
+  const { cart, addToCart, removeFromCart, total, totalItems } = useCart();
 
   useEffect(() => {
     document.body.classList.toggle("dark", darkMode);
@@ -74,7 +73,7 @@ export default function BeverageMenuPage() {
       <Navbar
         darkMode={darkMode}
         setDarkMode={setDarkMode}
-        cartCount={cartCount}
+        cartCount={totalItems}
       />
       <main className={`pt-24 p-4 min-h-screen pb-32 transition-colors duration-300 ${
         darkMode ? 'bg-gray-900' : 'bg-gray-100'
@@ -89,8 +88,8 @@ export default function BeverageMenuPage() {
           {loading && <p className={`text-center ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Loading...</p>}
           {error && <p className="text-center text-red-500">{error}</p>}
 
-          {/* Menu Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
+          {/* Desktop Grid View */}
+          <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
             {menuItems.map((item) => (
               <div
                 key={item._id}
@@ -111,7 +110,7 @@ export default function BeverageMenuPage() {
                   {item.name}
                 </h2>
                 <p className={`mb-4 font-bold ${
-                  darkMode ? 'text-pink-300' : 'text-black'
+                  darkMode ? 'text-pink-300' : 'text-pink-900'
                 }`}>
                   {item.price} Baht
                 </p>
@@ -147,12 +146,73 @@ export default function BeverageMenuPage() {
             ))}
           </div>
 
+          {/* Mobile List View */}
+          <div className="sm:hidden space-y-4">
+            {menuItems.map((item) => (
+              <div
+                key={item._id}
+                className={`flex items-center gap-4 p-4 rounded-xl border shadow-sm transition-all duration-200 hover:shadow-md ${
+                  darkMode 
+                    ? 'bg-gray-800 border-gray-600' 
+                    : 'bg-pink-300 border-pink-100'
+                }`}
+              >
+                <img
+                  src={item.image || "https://via.placeholder.com/80"}
+                  alt={item.name}
+                  className="w-20 h-20 object-cover rounded-lg shadow-sm flex-shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <h2 className={`font-semibold text-lg mb-2 truncate ${
+                    darkMode ? 'text-white' : 'text-gray-800'
+                  }`}>
+                    {item.name}
+                  </h2>
+                  <div className="flex items-center justify-between">
+                    <span className={`font-bold text-lg ${
+                      darkMode ? 'text-pink-300' : 'text-pink-600'
+                    }`}>
+                      {item.price} Baht
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => removeFromCart(item._id)}
+                        className={`w-8 h-8 flex items-center justify-center text-white rounded-full transition-all duration-200 hover:scale-110 ${
+                          darkMode 
+                            ? 'bg-gray-600 hover:bg-gray-500' 
+                            : 'bg-gray-500 hover:bg-gray-600'
+                        }`}
+                      >
+                        −
+                      </button>
+                      <span className={`min-w-[2rem] text-center font-bold text-lg ${
+                        darkMode ? 'text-white' : 'text-gray-800'
+                      }`}>
+                        {getQuantity(item._id)}
+                      </span>
+                      <button
+                        onClick={() => addToCart(item)}
+                        className={`w-8 h-8 flex items-center justify-center text-white rounded-full transition-all duration-200 hover:scale-110 ${
+                          darkMode 
+                            ? 'bg-pink-600 hover:bg-pink-500' 
+                            : 'bg-red-500 hover:bg-red-600'
+                        }`}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
           {/* Desktop Cart Summary */}
           {cartItemsExist && (
             <div className={`hidden sm:block mt-10 p-4 sm:p-6 rounded-lg shadow-md max-w-3xl mx-auto transition-colors duration-300 ${
               darkMode 
                 ? 'bg-gray-800 border border-gray-700' 
-                : 'bg-white border border-gray-200'
+                : 'bg-pink-300 border border-pink-100'
             }`}>
               <h2 className={`text-xl font-bold mb-4 ${
                 darkMode ? 'text-pink-300' : 'text-pink-900'
@@ -212,7 +272,7 @@ export default function BeverageMenuPage() {
         <div className={`fixed bottom-0 left-0 right-0 sm:hidden border-t shadow-lg p-4 z-50 transition-colors duration-300 ${
           darkMode 
             ? 'bg-gray-800 border-gray-600' 
-            : 'bg-white border-gray-200'
+            : 'bg-pink-300 border-pink-100'
         }`}>
           <div className="flex justify-between items-center">
             <div>
