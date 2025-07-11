@@ -34,10 +34,18 @@ export default function HomePage() {
       route: "/beverages",
     },
     {
+      title: "Special",
+      subtitle: "Chef's special dishes",
+      img: "/image/food menu.jpg",
+      icon: "🌟",
+      route: "/special",
+    },
+    {
       title: "Promotion",
-      subtitle: "Today's special",
+      subtitle: "Today's special offers",
       img: "/image/promotion.jpg",
-      icon: "🎁",
+      icon: "�",
+      route: "/promotion",
     },
   ];
 

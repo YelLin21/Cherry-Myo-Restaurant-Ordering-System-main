@@ -112,6 +112,12 @@ export default function Navbar({ darkMode, setDarkMode, cartCount }) {
           <Link to="/beverages" className="text-white hover:bg-white/20 hover:text-red-100 px-3 py-2 rounded-md transition-all duration-200 font-medium">
             Beverage
           </Link>
+          <Link to="/special" className="text-white hover:bg-white/20 hover:text-red-100 px-3 py-2 rounded-md transition-all duration-200 font-medium">
+            Special
+          </Link>
+          <Link to="/promotion" className="text-white hover:bg-white/20 hover:text-red-100 px-3 py-2 rounded-md transition-all duration-200 font-medium">
+            Promotion
+          </Link>
           <Link to="/order-history" className="text-white hover:bg-white/20 hover:text-red-100 px-3 py-2 rounded-md transition-all duration-200 font-medium">
             Order History
           </Link>
@@ -174,12 +180,18 @@ export default function Navbar({ darkMode, setDarkMode, cartCount }) {
           <Link to="/beverages" onClick={() => setIsOpen(false)} className="block px-3 py-2 rounded-md hover:bg-white/20 transition-all duration-200">
             Beverage
           </Link>
+          <Link to="/special" onClick={() => setIsOpen(false)} className="block px-3 py-2 rounded-md hover:bg-white/20 transition-all duration-200">
+            Special
+          </Link>
+          <Link to="/promotion" onClick={() => setIsOpen(false)} className="block px-3 py-2 rounded-md hover:bg-white/20 transition-all duration-200">
+            Promotion
+          </Link>
           <Link to="/order-history" onClick={() => setIsOpen(false)} className="block px-3 py-2 rounded-md hover:bg-white/20 transition-all duration-200">
             Order History
           </Link>
 
           {/* Dark Mode Toggle */}
-          <button onClick={() => setDarkMode(!darkMode)} className="flex items-center gap-2 px-3 py-2 hover:bg-white/20 rounded-md transition-all duration-200">
+          <button onClick={() => setDarkMode(!darkMode)} className="flex items-center gap-2 w-full px-3 py-2 hover:bg-white/20 rounded-md transition-all duration-200">
             {darkMode ? <FaSun /> : <FaMoon />}
             <span>{darkMode ? "Light Mode" : "Dark Mode"}</span>
           </button>

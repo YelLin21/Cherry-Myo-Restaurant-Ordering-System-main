@@ -143,6 +143,39 @@ export default function AdminPage() {
           </button>
         </div>
 
+        {/* Special Admin Menu Links */}
+        <div className="mb-6 p-4 rounded-lg border-2 border-dashed border-pink-300">
+          <h3 className={`text-lg font-semibold mb-3 ${
+            darkMode ? 'text-pink-300' : 'text-pink-700'
+          }`}>
+            Special Menu Management
+          </h3>
+          <div className="flex gap-4 flex-wrap">
+            <a
+              href="/admin/special"
+              className={`px-6 py-3 rounded font-medium transition-colors duration-200 flex items-center gap-2 ${
+                darkMode 
+                  ? 'bg-yellow-600 text-white hover:bg-yellow-500' 
+                  : 'bg-yellow-600 text-white hover:bg-yellow-700'
+              }`}
+            >
+              <span className="text-xl">🌟</span>
+              Manage Special Menu
+            </a>
+            <a
+              href="/admin/promotion"
+              className={`px-6 py-3 rounded font-medium transition-colors duration-200 flex items-center gap-2 ${
+                darkMode 
+                  ? 'bg-red-600 text-white hover:bg-red-500' 
+                  : 'bg-red-600 text-white hover:bg-red-700'
+              }`}
+            >
+              <span className="text-xl">🎉</span>
+              Manage Promotion Menu
+            </a>
+          </div>
+        </div>
+
         {/* Popup Form */}
         <AdminMenuForm
           onAdd={handleAdd}
