@@ -12,6 +12,9 @@ export default function AdminCheckoutPage() {
     const [checkoutOrders, setCheckoutOrders] = useState([]);
     const [discounts, setDiscounts] = useState({});
     const [currentTime, setCurrentTime] = useState(new Date());
+    const [paymentMethods, setPaymentMethods] = useState({}); // 'scan' or 'cash'
+    const [cashAmounts, setCashAmounts] = useState({}); // cash received amounts
+    const [showQrCode, setShowQrCode] = useState({}); // QR code visibility per order
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -94,10 +97,84 @@ export default function AdminCheckoutPage() {
         }));
     };
 
+    const handlePaymentMethodChange = (orderId, method) => {
+        setPaymentMethods((prev) => ({
+            ...prev,
+            [orderId]: method,
+        }));
+        
+        // Reset related states when changing payment method
+        if (method === 'scan') {
+            setCashAmounts((prev) => {
+                const updated = { ...prev };
+                delete updated[orderId];
+                return updated;
+            });
+        } else {
+            setShowQrCode((prev) => ({
+                ...prev,
+                [orderId]: false,
+            }));
+        }
+    };
+
+    const handleCashAmountChange = (orderId, amount) => {
+        const numeric = parseFloat(amount);
+        setCashAmounts((prev) => ({
+            ...prev,
+            [orderId]: isNaN(numeric) ? 0 : numeric,
+        }));
+    };
+
+    const generateQrCode = (orderId, amount) => {
+        setShowQrCode((prev) => ({
+            ...prev,
+            [orderId]: true,
+        }));
+    };
+
+    const generateThaiQrCode = (amount) => {
+        // Thai QR Code format (PromptPay)
+        // This is a simplified version - you might want to use a proper library
+        const merchantId = "0123456789012"; // Replace with actual merchant ID
+        const qrData = `00020101021229370016A000000677010111011${merchantId}520454045802TH5909Cherry Myo6007Bangkok62070503***6304`;
+        
+        // Add amount to QR code
+        const amountStr = amount.toFixed(2);
+        const qrWithAmount = qrData.replace('***', amountStr);
+        
+        return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrWithAmount)}`;
+    };
+
     const handleMarkAsPaid = async (tableOrder) => {
         try {
             const orderIds = tableOrder.orderIds || [tableOrder._id];
+            const paymentMethod = paymentMethods[tableOrder._id];
+            const finalTotal = calculateFinalTotal(tableOrder);
+            
+            // Validate payment method selection
+            if (!paymentMethod) {
+                alert('⚠️ Please select a payment method (QR Scan or Cash)');
+                return;
+            }
+
+            // Validate cash payment
+            if (paymentMethod === 'cash') {
+                const cashReceived = cashAmounts[tableOrder._id];
+                if (!cashReceived || cashReceived < finalTotal) {
+                    alert('⚠️ Insufficient cash amount received');
+                    return;
+                }
+            }
+
+            // Validate QR payment
+            if (paymentMethod === 'scan' && !showQrCode[tableOrder._id]) {
+                alert('⚠️ Please generate QR code before marking as paid');
+                return;
+            }
+
             console.log("💰 Marking orders as paid for table", tableOrder.tableNumber, ":", orderIds);
+            console.log("💳 Payment method:", paymentMethod);
             
             // Mark all orders for this table as paid
             const markPaidPromises = orderIds.map(orderId => 
@@ -106,7 +183,13 @@ export default function AdminCheckoutPage() {
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ orderId }),
+                    body: JSON.stringify({ 
+                        orderId,
+                        paymentMethod,
+                        finalAmount: finalTotal,
+                        cashReceived: paymentMethod === 'cash' ? cashAmounts[tableOrder._id] : null,
+                        changeGiven: paymentMethod === 'cash' ? (cashAmounts[tableOrder._id] - finalTotal) : null
+                    }),
                 })
             );
 
@@ -126,14 +209,46 @@ export default function AdminCheckoutPage() {
                 localStorage.setItem("checkoutOrders", JSON.stringify(updated));
                 return updated;
             });
+
+            // Clean up state for this order
+            setPaymentMethods((prev) => {
+                const updated = { ...prev };
+                delete updated[tableOrder._id];
+                return updated;
+            });
+            setCashAmounts((prev) => {
+                const updated = { ...prev };
+                delete updated[tableOrder._id];
+                return updated;
+            });
+            setShowQrCode((prev) => {
+                const updated = { ...prev };
+                delete updated[tableOrder._id];
+                return updated;
+            });
             
             const orderCount = orderIds.length;
             const orderText = orderCount === 1 ? 'order' : 'orders';
-            alert(`💰 Table ${tableOrder.tableNumber} - ${orderCount} ${orderText} marked as paid and removed from customer order history.`);
+            const paymentText = paymentMethod === 'cash' 
+                ? `Cash: ฿${cashAmounts[tableOrder._id]}, Change: ฿${(cashAmounts[tableOrder._id] - finalTotal).toFixed(2)}`
+                : 'QR Scan payment';
+            
+            alert(`💰 Table ${tableOrder.tableNumber} - ${orderCount} ${orderText} marked as paid\n💳 ${paymentText}\n✅ Removed from customer order history.`);
         } catch (error) {
             console.error('Error marking orders as paid:', error);
             alert('❌ Failed to mark orders as paid. Please try again.');
         }
+    };
+
+    const calculateFinalTotal = (order) => {
+        const orderItems = Array.isArray(order.items) ? order.items : [];
+        const total = orderItems.reduce(
+            (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
+            0
+        );
+        const discountPercent = discounts[order._id] || 0;
+        const discountAmount = (discountPercent / 100) * total;
+        return Math.max(total - discountAmount, 0);
     };
 
     // Debug log for checkout orders
@@ -314,20 +429,156 @@ export default function AdminCheckoutPage() {
                                         <span>Final Total</span>
                                         <span>฿{finalTotal.toFixed(2)}</span>
                                     </div>
+
+                                    {/* Payment Method Selection */}
+                                    <div className="mt-4 pt-3 border-t border-gray-200">
+                                        <label className="font-medium text-gray-700 block mb-2">
+                                            Payment Method
+                                        </label>
+                                        <div className="flex gap-3 mb-3">
+                                            <button
+                                                onClick={() => handlePaymentMethodChange(order._id, 'scan')}
+                                                className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
+                                                    paymentMethods[order._id] === 'scan'
+                                                        ? 'bg-blue-500 text-white border-blue-500'
+                                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                                }`}
+                                            >
+                                                📱 QR Scan
+                                            </button>
+                                            <button
+                                                onClick={() => handlePaymentMethodChange(order._id, 'cash')}
+                                                className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
+                                                    paymentMethods[order._id] === 'cash'
+                                                        ? 'bg-green-500 text-white border-green-500'
+                                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                                }`}
+                                            >
+                                                💵 Cash
+                                            </button>
+                                        </div>
+
+                                        {/* QR Code Section */}
+                                        {paymentMethods[order._id] === 'scan' && (
+                                            <div className="bg-white p-3 rounded-lg border">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span className="text-sm font-medium text-gray-700">
+                                                        QR Code Payment: ฿{finalTotal.toFixed(2)}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => generateQrCode(order._id, finalTotal)}
+                                                        className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200"
+                                                    >
+                                                        Generate QR
+                                                    </button>
+                                                </div>
+                                                
+                                                {showQrCode[order._id] && (
+                                                    <div className="text-center py-3">
+                                                        <img
+                                                            src={generateThaiQrCode(finalTotal)}
+                                                            alt="Thai QR Code"
+                                                            className="mx-auto border rounded-lg shadow-sm"
+                                                            style={{ maxWidth: '200px', height: 'auto' }}
+                                                        />
+                                                        <p className="text-xs text-gray-600 mt-2">
+                                                            Scan to pay ฿{finalTotal.toFixed(2)}
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* Cash Payment Section */}
+                                        {paymentMethods[order._id] === 'cash' && (
+                                            <div className="bg-white p-3 rounded-lg border">
+                                                <div className="flex flex-col gap-2">
+                                                    <div className="flex justify-between items-center">
+                                                        <label className="text-sm font-medium text-gray-700">
+                                                            Cash Received (฿)
+                                                        </label>
+                                                        <input
+                                                            type="number"
+                                                            className="border border-gray-300 px-2 py-1 rounded w-24 text-right text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-400"
+                                                            value={cashAmounts[order._id] || ""}
+                                                            placeholder="0.00"
+                                                            min="0"
+                                                            step="0.01"
+                                                            onChange={(e) =>
+                                                                handleCashAmountChange(order._id, e.target.value)
+                                                            }
+                                                        />
+                                                    </div>
+                                                    
+                                                    {cashAmounts[order._id] && (
+                                                        <div className="flex justify-between items-center pt-2 border-t">
+                                                            <span className="text-sm font-medium text-gray-700">
+                                                                Change
+                                                            </span>
+                                                            <span className={`text-sm font-bold ${
+                                                                (cashAmounts[order._id] - finalTotal) >= 0 
+                                                                    ? 'text-green-600' 
+                                                                    : 'text-red-600'
+                                                            }`}>
+                                                                ฿{Math.max(0, (cashAmounts[order._id] - finalTotal)).toFixed(2)}
+                                                                {(cashAmounts[order._id] - finalTotal) < 0 && (
+                                                                    <span className="text-xs text-red-500 ml-1">
+                                                                        (Insufficient)
+                                                                    </span>
+                                                                )}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div className="text-center sm:text-right mt-6">
-                                    <button
-                                        onClick={() => handleMarkAsPaid(order)}
-                                        className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 sm:px-8 py-3 sm:py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-semibold text-base shadow-lg transform hover:scale-105 active:scale-95"
-                                    >
-                                        💰 Mark as Paid
-                                        {(order.orderIds && order.orderIds.length > 1) && (
-                                            <span className="ml-2 text-xs bg-blue-800 px-2 py-1 rounded">
-                                                {order.orderIds.length} orders
-                                            </span>
+                                    {(() => {
+                                        const paymentMethod = paymentMethods[order._id];
+                                        const cashReceived = cashAmounts[order._id];
+                                        const isValidPayment = paymentMethod === 'scan' 
+                                            ? showQrCode[order._id] 
+                                            : paymentMethod === 'cash' && cashReceived >= finalTotal;
+                                        
+                                        return (
+                                            <button
+                                                onClick={() => handleMarkAsPaid(order)}
+                                                disabled={!paymentMethod || (paymentMethod === 'cash' && (!cashReceived || cashReceived < finalTotal))}
+                                                className={`w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-3 rounded-lg transition-all duration-200 font-semibold text-base shadow-lg transform hover:scale-105 active:scale-95 ${
+                                                    !paymentMethod || (paymentMethod === 'cash' && (!cashReceived || cashReceived < finalTotal))
+                                                        ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                                                        : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800'
+                                                }`}
+                                            >
+                                                💰 Mark as Paid
+                                                {(order.orderIds && order.orderIds.length > 1) && (
+                                                    <span className="ml-2 text-xs bg-blue-800 px-2 py-1 rounded">
+                                                        {order.orderIds.length} orders
+                                                    </span>
+                                                )}
+                                            </button>
+                                        );
+                                    })()}
+                                    
+                                    {/* Payment Status Indicator */}
+                                    <div className="mt-2 text-xs">
+                                        {!paymentMethods[order._id] && (
+                                            <span className="text-orange-600">⚠️ Select payment method</span>
                                         )}
-                                    </button>
+                                        {paymentMethods[order._id] === 'cash' && (!cashAmounts[order._id] || cashAmounts[order._id] < finalTotal) && (
+                                            <span className="text-red-600">⚠️ Enter sufficient cash amount</span>
+                                        )}
+                                        {paymentMethods[order._id] === 'scan' && !showQrCode[order._id] && (
+                                            <span className="text-blue-600">ℹ️ Generate QR code to proceed</span>
+                                        )}
+                                        {((paymentMethods[order._id] === 'scan' && showQrCode[order._id]) || 
+                                          (paymentMethods[order._id] === 'cash' && cashAmounts[order._id] >= finalTotal)) && (
+                                            <span className="text-green-600">✅ Ready to mark as paid</span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         );
