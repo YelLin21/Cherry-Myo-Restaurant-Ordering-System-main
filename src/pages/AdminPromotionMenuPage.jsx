@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import Navbar from "../components/Navbar.jsx";
+import AdminNavbar from "../components/AdminNavbar.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { useDarkMode } from "./DarkModeContext.jsx";
 import { io } from "socket.io-client";
@@ -152,7 +152,7 @@ export default function AdminPromotionMenuPage() {
     <div className={`min-h-screen transition-colors duration-300 ${
       darkMode ? "bg-gray-900 text-white" : "bg-gray-50 text-gray-900"
     }`}>
-      <Navbar darkMode={darkMode} setDarkMode={setDarkMode} cartCount={totalItems} />
+      <AdminNavbar />
       
       <main className="pt-24 pb-32 px-4">
         <div className="max-w-6xl mx-auto">

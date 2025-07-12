@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import AdminMenuForm from "../components/AdminMenuForm";
 import AdminMenuList from "../components/AdminMenuList";
 import { useDarkMode } from "./DarkModeContext.jsx";
-import Navbar from "../components/Navbar.jsx";
+import AdminNavbar from "../components/AdminNavbar.jsx";
 import { io } from "socket.io-client";
 
 const APIBASE = import.meta.env.VITE_API_URL;
@@ -98,7 +98,7 @@ export default function AdminPage() {
     <div className={`min-h-screen transition-colors duration-300 ${
       darkMode ? 'dark bg-gray-900' : 'bg-gray-50'
     }`}>
-      <Navbar darkMode={darkMode} setDarkMode={setDarkMode} />
+      <AdminNavbar />
       
       <div className={`p-8 min-h-screen pt-24 transition-colors duration-300 ${
         darkMode ? 'bg-gray-900' : 'bg-gray-100'

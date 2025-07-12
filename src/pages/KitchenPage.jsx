@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
+import AdminNavbar from "../components/AdminNavbar.jsx";
 
 const APIBASE = import.meta.env.VITE_API_URL;
 const SOCKET_URL =
@@ -105,8 +106,10 @@ export default function KitchenPage() {
   };
 
   return (
-    <div className="min-h-screen p-6 bg-gray-100">
-      <h1 className="text-3xl font-bold text-center mb-6">👨‍🍳 Kitchen View</h1>
+    <div className="min-h-screen bg-gray-100">
+      <AdminNavbar />
+      <div className="pt-24 p-6">
+        <h1 className="text-3xl font-bold text-center mb-6">👨‍🍳 Kitchen View</h1>
 
       {loading && <p className="text-center">Loading orders...</p>}
       {error && <p className="text-center text-red-500">{error}</p>}
@@ -152,6 +155,7 @@ export default function KitchenPage() {
             </div>
           </div>
         ))}
+        </div>
       </div>
     </div>
   );

@@ -4,8 +4,10 @@ import { Calendar, Clock, ShoppingBag } from "lucide-react";
 import Navbar from "../components/Navbar.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { useDarkMode } from "./DarkModeContext.jsx";
+import { io } from "socket.io-client";
 
 const APIBASE = import.meta.env.VITE_API_URL;
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
 
 export default function OrderHistoryPage() {
   const [orders, setOrders] = useState([]);
@@ -24,15 +26,58 @@ export default function OrderHistoryPage() {
 
   useEffect(() => {
     fetchOrderHistory();
+    
+    // Set up real-time updates to remove paid orders
+    const socket = io(SOCKET_URL, {
+      transports: ["websocket"],
+    });
+
+    console.log("🔌 Socket connected to:", SOCKET_URL);
+
+    // Listen for order updates (when orders are marked as paid)
+    socket.on("order:paid", (paidOrderId) => {
+      console.log("📦 Order marked as paid - PERMANENTLY removing from customer view:", paidOrderId);
+      setOrders((prev) => {
+        const filteredOrders = prev.filter(order => order._id !== paidOrderId);
+        console.log("📋 Orders before filtering:", prev.length, "After filtering:", filteredOrders.length);
+        console.log("🗑️ Order permanently removed from customer history");
+        return filteredOrders;
+      });
+    });
+
+    // Also listen for any order updates to double-check paid status
+    socket.on("order:update", (updatedOrder) => {
+      if (updatedOrder.paid === true) {
+        console.log("🔄 Order update detected - removing paid order:", updatedOrder._id);
+        setOrders((prev) => prev.filter(order => order._id !== updatedOrder._id));
+      }
+    });
+
+    socket.on("connect", () => {
+      console.log("✅ Socket connected successfully");
+    });
+
+    socket.on("disconnect", () => {
+      console.log("❌ Socket disconnected");
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
   const fetchOrderHistory = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${APIBASE}/orders`);
+      // Use customer-specific endpoint that only returns unpaid orders
+      const res = await fetch(`${APIBASE}/orders/customer`);
       if (!res.ok) throw new Error("Failed to fetch order history");
-      const data = await res.json();
-      setOrders(data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+      const unpaidOrders = await res.json();
+      
+      console.log("📊 Customer orders fetched:", unpaidOrders.length, "unpaid orders");
+      console.log("✅ Paid orders are filtered at API level - will never appear on reload");
+      
+      setOrders(unpaidOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -111,10 +156,10 @@ export default function OrderHistoryPage() {
         darkMode ? "bg-gray-900" : "bg-gray-100"
       }`}>
         <div className="max-w-4xl mx-auto">
-          <h1 className={`text-3xl font-bold text-center mb-8 ${
+          <h1 className={`text-3xl font-bold text-center mb-4 ${
             darkMode ? "text-pink-300" : "text-pink-900"
           }`}>
-            Order History
+            Pending Orders
           </h1>
 
           {loading && (
@@ -148,10 +193,10 @@ export default function OrderHistoryPage() {
                 darkMode ? "text-gray-600" : "text-gray-400"
               }`} />
               <p className={`text-xl mb-4 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
-                No orders found
+                No pending orders
               </p>
               <p className={`mb-6 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                Start ordering to see your history here
+                All your orders have been completed and paid for, or you haven't placed any orders yet
               </p>
               <button
                 onClick={() => navigate("/")}

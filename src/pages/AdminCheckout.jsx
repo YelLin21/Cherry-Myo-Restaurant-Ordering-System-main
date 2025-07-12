@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
+import AdminNavbar from "../components/AdminNavbar.jsx";
 
+const APIBASE = import.meta.env.VITE_API_URL;
 const SOCKET_URL =
     import.meta.env.VITE_SOCKET_URL ||
     "http://localhost:5000" ||
@@ -38,8 +40,43 @@ export default function AdminCheckoutPage() {
             console.log("📥 Checkout order received:", order);
             console.log("📱 Order items:", order.items);
             console.log("📱 Order table:", order.tableNumber);
+            
             setCheckoutOrders((prev) => {
-                const updated = [...prev, order];
+                // Check if there's already an order for this table
+                const existingTableOrderIndex = prev.findIndex(
+                    existingOrder => existingOrder.tableNumber === order.tableNumber
+                );
+
+                let updated;
+                if (existingTableOrderIndex !== -1) {
+                    // Merge with existing table order
+                    updated = [...prev];
+                    const existingOrder = updated[existingTableOrderIndex];
+                    
+                    // Combine items from both orders
+                    const combinedItems = [...existingOrder.items, ...order.items];
+                    
+                    // Update the existing order with combined items and latest timestamp
+                    updated[existingTableOrderIndex] = {
+                        ...existingOrder,
+                        items: combinedItems,
+                        processedAt: order.processedAt, // Use latest processed time
+                        orderIds: [
+                            ...(existingOrder.orderIds || [existingOrder._id]),
+                            order._id
+                        ] // Track all order IDs for this table
+                    };
+                    
+                    console.log(`🔄 Merged order ${order._id} with existing table ${order.tableNumber} order`);
+                } else {
+                    // Add as new table order
+                    updated = [...prev, {
+                        ...order,
+                        orderIds: [order._id] // Track the original order ID
+                    }];
+                    console.log(`➕ Added new order for table ${order.tableNumber}`);
+                }
+                
                 console.log("📱 Updated checkout orders:", updated);
                 localStorage.setItem("checkoutOrders", JSON.stringify(updated));
                 return updated;
@@ -57,14 +94,46 @@ export default function AdminCheckoutPage() {
         }));
     };
 
-    const handleMarkAsPaid = (orderId) => {
-        console.log("💰 Marking order as paid:", orderId);
-        setCheckoutOrders((prev) => {
-            const updated = prev.filter((order) => order._id !== orderId);
-            localStorage.setItem("checkoutOrders", JSON.stringify(updated));
-            return updated;
-        });
-        alert(`💰 Order ${orderId} marked as paid.`);
+    const handleMarkAsPaid = async (tableOrder) => {
+        try {
+            const orderIds = tableOrder.orderIds || [tableOrder._id];
+            console.log("💰 Marking orders as paid for table", tableOrder.tableNumber, ":", orderIds);
+            
+            // Mark all orders for this table as paid
+            const markPaidPromises = orderIds.map(orderId => 
+                fetch(`${APIBASE}/orders/mark-paid`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ orderId }),
+                })
+            );
+
+            const responses = await Promise.all(markPaidPromises);
+            
+            // Check if all requests were successful
+            const failedResponses = responses.filter(response => !response.ok);
+            if (failedResponses.length > 0) {
+                throw new Error(`Failed to mark ${failedResponses.length} order(s) as paid`);
+            }
+
+            console.log("✅ All orders marked as paid successfully for table", tableOrder.tableNumber);
+
+            // Remove from local checkout orders list
+            setCheckoutOrders((prev) => {
+                const updated = prev.filter((order) => order.tableNumber !== tableOrder.tableNumber);
+                localStorage.setItem("checkoutOrders", JSON.stringify(updated));
+                return updated;
+            });
+            
+            const orderCount = orderIds.length;
+            const orderText = orderCount === 1 ? 'order' : 'orders';
+            alert(`💰 Table ${tableOrder.tableNumber} - ${orderCount} ${orderText} marked as paid and removed from customer order history.`);
+        } catch (error) {
+            console.error('Error marking orders as paid:', error);
+            alert('❌ Failed to mark orders as paid. Please try again.');
+        }
     };
 
     // Debug log for checkout orders
@@ -72,13 +141,15 @@ export default function AdminCheckoutPage() {
     console.log("📱 Orders count:", checkoutOrders.length);
 
     return (
-        <div className="min-h-screen p-3 sm:p-4 md:p-6 bg-gray-100">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-2 sm:gap-0">
-                <h1 className="text-2xl sm:text-3xl font-bold">🧾 Admin Checkout</h1>
-                <p className="text-gray-600 font-mono text-xs sm:text-sm">
-                    {currentTime.toLocaleDateString()} {currentTime.toLocaleTimeString()}
-                </p>
-            </div>
+        <div className="min-h-screen bg-gray-100">
+            <AdminNavbar />
+            <div className="pt-24 p-3 sm:p-4 md:p-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-2 sm:gap-0">
+                    <h1 className="text-2xl sm:text-3xl font-bold">🧾 Admin Checkout</h1>
+                    <p className="text-gray-600 font-mono text-xs sm:text-sm">
+                        {currentTime.toLocaleDateString()} {currentTime.toLocaleTimeString()}
+                    </p>
+                </div>
 
             {checkoutOrders.length === 0 ? (
                 <div className="text-center py-8 sm:py-12">
@@ -119,9 +190,16 @@ export default function AdminCheckoutPage() {
                                 </div>
                                 
                                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 pt-6 sm:pt-0">
-                                    <h2 className="text-lg sm:text-xl font-bold mb-1 sm:mb-0 text-gray-900">
-                                        🍽️ Table: {order.tableNumber}
-                                    </h2>
+                                    <div className="flex items-center gap-3 mb-1 sm:mb-0">
+                                        <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+                                            🍽️ Table: {order.tableNumber}
+                                        </h2>
+                                        {(order.orderIds && order.orderIds.length > 1) && (
+                                            <span className="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full font-medium">
+                                                {order.orderIds.length} merged orders
+                                            </span>
+                                        )}
+                                    </div>
                                     {order.processedAt && (
                                         <p className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
                                             ✅ Processed: {new Date(order.processedAt).toLocaleString()}
@@ -240,10 +318,15 @@ export default function AdminCheckoutPage() {
 
                                 <div className="text-center sm:text-right mt-6">
                                     <button
-                                        onClick={() => handleMarkAsPaid(order._id)}
+                                        onClick={() => handleMarkAsPaid(order)}
                                         className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 sm:px-8 py-3 sm:py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-semibold text-base shadow-lg transform hover:scale-105 active:scale-95"
                                     >
                                         💰 Mark as Paid
+                                        {(order.orderIds && order.orderIds.length > 1) && (
+                                            <span className="ml-2 text-xs bg-blue-800 px-2 py-1 rounded">
+                                                {order.orderIds.length} orders
+                                            </span>
+                                        )}
                                     </button>
                                 </div>
                             </div>
@@ -251,6 +334,7 @@ export default function AdminCheckoutPage() {
                     })}
                 </div>
             )}
+            </div>
         </div>
     );
 }

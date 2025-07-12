@@ -12,6 +12,25 @@ router.get("/", async (req, res) => {
   }
 });
 
+// GET customer orders (only unpaid orders - for customer view)
+router.get("/customer", async (req, res) => {
+  try {
+    // Only return orders that are NOT paid - customers should never see paid orders
+    const unpaidOrders = await Order.find({ 
+      $or: [
+        { paid: { $ne: true } },
+        { paid: { $exists: false } }
+      ]
+    }).sort({ createdAt: -1 });
+    
+    console.log(`📋 Customer orders fetched: ${unpaidOrders.length} unpaid orders`);
+    res.json(unpaidOrders);
+  } catch (error) {
+    console.error("Error fetching customer orders:", error);
+    res.status(500).json({ error: "Failed to fetch customer orders" });
+  }
+});
+
 // GET orders ready for checkout
 router.get("/checkout", async (req, res) => {
   try {
@@ -122,6 +141,10 @@ router.post("/mark-paid", async (req, res) => {
     if (!updated) {
       return res.status(404).json({ error: "Order not found" });
     }
+
+    // Emit socket event for real-time updates
+    const io = req.app.get("io");
+    io.emit("order:paid", orderId);
 
     res.json({ message: "Order marked as paid", order: updated });
   } catch (err) {
