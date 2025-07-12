@@ -180,7 +180,7 @@ export default function AdminCheckoutPage() {
                                                     key={idx}
                                                     className="grid grid-cols-4 text-sm lg:text-base text-gray-700 py-3 px-2 border-b border-gray-100 hover:bg-gray-50"
                                                 >
-                                                    <div className="truncate pr-2 font-medium">{item.name}</div>
+                                                    <div className="pr-2 font-medium">{item.name}</div>
                                                     <div className="text-center">{item.quantity}</div>
                                                     <div className="text-center">฿{item.price.toFixed(2)}</div>
                                                     <div className="text-right font-semibold">

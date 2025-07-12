@@ -186,7 +186,7 @@ export default function GrillMenuPage() {
                   className="w-20 h-20 object-cover rounded-lg shadow-sm flex-shrink-0"
                 />
                 <div className="flex-1 min-w-0">
-                  <h2 className={`font-semibold text-lg mb-2 truncate ${
+                  <h2 className={`font-semibold text-lg mb-2 ${
                     darkMode ? 'text-white' : 'text-gray-800'
                   }`}>
                     {item.name}
