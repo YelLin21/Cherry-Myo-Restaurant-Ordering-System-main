@@ -53,6 +53,7 @@ io.on("connection", (socket) => {
 app.use("/api/menu", require("./routes/menu"));
 app.use("/api/orders", require("./routes/order"));
 app.use("/api/qr", require("./routes/qrCode"));
+app.use("/api/session", require("./routes/session"));
 
 
 

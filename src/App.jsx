@@ -12,6 +12,7 @@ import AdminSpecialMenuPage from "./pages/AdminSpecialMenuPage";
 import AdminPromotionMenuPage from "./pages/AdminPromotionMenuPage";
 import KitchenPage from "./pages/KitchenPage";
 import AdminCheckoutPage from "./pages/AdminCheckout"; 
+import TableViewPage from "./pages/TableView";
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
         <Route path="/admin/promotion" element={<AdminPromotionMenuPage />} />
         <Route path="/kitchen" element={<KitchenPage />} />
         <Route path="/checkout" element={<AdminCheckoutPage />} />
+        <Route path="/table/:tableId" element={<TableViewPage />} />
       </Routes>
     </Router>
   );
