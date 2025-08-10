@@ -18,6 +18,7 @@
     "fdir": "^6.4.4",
     "lucide-react": "^0.509.0",
     "mongoose": "^8.14.1",
+    "nanoid": "^5.1.5",
     "next": "^15.3.1",
     "node-cron": "^4.2.0",
     "nodemon": "^3.1.10",
