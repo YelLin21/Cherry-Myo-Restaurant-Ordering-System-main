@@ -10,7 +10,12 @@ const OrderSchema = new mongoose.Schema({
     }
   ],
   status: String,
-  createdAt: Date
+  createdAt: Date,
+  paid: {
+    type: Boolean,
+    default: false
+  },
+  processedAt: Date
 
 });
 

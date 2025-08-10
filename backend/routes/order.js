@@ -23,7 +23,16 @@ router.get("/customer", async (req, res) => {
       ]
     }).sort({ createdAt: -1 });
     
-    console.log(`📋 Customer orders fetched: ${unpaidOrders.length} unpaid orders`);
+    console.log(`📋 Customer orders endpoint called - Total orders in DB: ${await Order.countDocuments()}`);
+    console.log(`📋 Paid orders in DB: ${await Order.countDocuments({ paid: true })}`);
+    console.log(`📋 Unpaid orders returned: ${unpaidOrders.length}`);
+    console.log(`📋 Order details:`, unpaidOrders.map(order => ({
+      id: order._id.toString(),
+      table: order.tableNumber,
+      paid: order.paid,
+      status: order.status
+    })));
+    
     res.json(unpaidOrders);
   } catch (error) {
     console.error("Error fetching customer orders:", error);
@@ -132,23 +141,41 @@ router.post("/mark-paid", async (req, res) => {
   }
 
   try {
+    console.log(`💰 Marking order ${orderId} as paid...`);
+    
+    // First check if order exists and current paid status
+    const existingOrder = await Order.findById(orderId);
+    if (!existingOrder) {
+      console.log(`❌ Order ${orderId} not found`);
+      return res.status(404).json({ error: "Order not found" });
+    }
+    
+    console.log(`📋 Order ${orderId} current status:`, {
+      table: existingOrder.tableNumber,
+      paid: existingOrder.paid,
+      status: existingOrder.status
+    });
+
     const updated = await Order.findByIdAndUpdate(
       orderId,
       { paid: true },
       { new: true }
     );
 
-    if (!updated) {
-      return res.status(404).json({ error: "Order not found" });
-    }
+    console.log(`✅ Order ${orderId} marked as paid successfully:`, {
+      table: updated.tableNumber,
+      paid: updated.paid,
+      status: updated.status
+    });
 
     // Emit socket event for real-time updates
     const io = req.app.get("io");
+    console.log(`📡 Emitting order:paid event for order ${orderId}`);
     io.emit("order:paid", orderId);
 
     res.json({ message: "Order marked as paid", order: updated });
   } catch (err) {
-    console.error(err);
+    console.error(`❌ Error marking order ${orderId} as paid:`, err);
     res.status(500).json({ error: "Failed to mark as paid" });
   }
 });

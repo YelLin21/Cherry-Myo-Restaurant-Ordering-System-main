@@ -75,10 +75,18 @@ export default function OrderHistoryPage() {
       const unpaidOrders = await res.json();
       
       console.log("📊 Customer orders fetched:", unpaidOrders.length, "unpaid orders");
+      console.log("📋 Detailed orders:", unpaidOrders.map(order => ({
+        id: order._id,
+        table: order.tableNumber,
+        status: order.status,
+        paid: order.paid,
+        items: order.items?.length || 0
+      })));
       console.log("✅ Paid orders are filtered at API level - will never appear on reload");
       
       setOrders(unpaidOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
     } catch (err) {
+      console.error("❌ Error fetching order history:", err);
       setError(err.message);
     } finally {
       setLoading(false);
