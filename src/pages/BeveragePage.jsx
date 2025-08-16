@@ -236,59 +236,34 @@ export default function BeverageMenuPage() {
 
           {/* Desktop Cart Summary */}
           {cartItemsExist && (
-            <div className={`hidden sm:block mt-10 p-4 sm:p-6 rounded-lg shadow-md max-w-3xl mx-auto transition-colors duration-300 ${
-              darkMode 
-                ? 'bg-gray-800 border border-gray-700' 
-                : 'bg-pink-300 border border-pink-100'
-            }`}>
-              <h2 className={`text-xl font-bold mb-4 ${
-                darkMode ? 'text-pink-300' : 'text-pink-900'
-              }`}>🛒 Cart</h2>
+            <div
+              className={`hidden sm:block sm:fixed sm:inset-x-0 sm:bottom-0 border-t shadow-lg z-50 transition-colors duration-300
+      ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-pink-300 border-pink-100'}
+    `}
+            >
+              <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+                {/* Left: Totals */}
+                <div className={`${darkMode ? 'text-gray-200' : 'text-gray-800'} flex items-center gap-6`}>
+                  <span className="font-semibold">
+                    Items:{' '}
+                    {Object.values(cart).reduce((sum, { quantity }) => sum + quantity, 0)}
+                  </span>
+                  <span className="font-bold text-lg">
+                    Total:{' '}
+                    {Number(total).toLocaleString()} Baht
+                  </span>
+                </div>
 
-              <div className={`hidden md:flex justify-between font-semibold border-b pb-2 mb-2 ${
-                darkMode ? 'border-gray-600 text-gray-300' : 'border-gray-200 text-gray-800'
-              }`}>
-                <span className="w-1/2">Item</span>
-                <span className="w-1/4 text-right">Price</span>
-                <span className="w-1/4 text-center">Qty</span>
-                <span className="w-1/4 text-right">Total</span>
+                {/* Right: Next button */}
+                <button
+                  onClick={() => navigate('/cart')}
+                  className={`px-6 py-2 rounded-md font-medium transition-colors duration-200
+          ${darkMode ? 'bg-green-600 hover:bg-green-500 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}
+        `}
+                >
+                  Next →
+                </button>
               </div>
-
-              <ul className="space-y-3">
-                {Object.values(cart).map(({ item, quantity }) => (
-                  <li
-                    key={item._id}
-                    className={`flex flex-col md:flex-row md:justify-between text-sm md:text-base ${
-                      darkMode ? 'text-gray-300' : 'text-gray-700'
-                    }`}
-                  >
-                    <span className="md:w-1/2">{item.name}</span>
-                    <span className="md:w-1/4 md:text-right">{item.price}</span>
-                    <span className="md:w-1/4 md:text-center">{quantity}</span>
-                    <span className="md:w-1/4 md:text-right">
-                      {item.price * quantity} Baht
-                    </span>
-                  </li>
-                ))}
-              </ul>
-
-              <div className={`flex justify-between mt-4 font-bold text-lg ${
-                darkMode ? 'text-white' : 'text-gray-800'
-              }`}>
-                <span>Total:</span>
-                <span>{total} Baht</span>
-              </div>
-
-              <button
-                onClick={() => navigate("/cart")}
-                className={`mt-4 px-6 py-2 rounded w-full sm:w-auto transition-colors duration-200 ${
-                  darkMode 
-                    ? 'bg-green-600 text-white hover:bg-green-500' 
-                    : 'bg-green-600 text-white hover:bg-green-700'
-                }`}
-              >
-                Next →
-              </button>
             </div>
           )}
         </div>
@@ -302,11 +277,12 @@ export default function BeverageMenuPage() {
             : 'bg-pink-300 border-pink-100'
         }`}>
           <div className="flex justify-between items-center">
-            <div>
-              <p className={`font-semibold ${
-                darkMode ? 'text-pink-300' : 'text-pink-900'
-              }`}>🛒 Total: {total} Baht</p>
-            </div>
+            <p className={`font-semibold ${
+              darkMode ? 'text-pink-300' : 'text-pink-900'
+            }`}>Item: {totalItems}</p>
+            <p className={`font-semibold ${
+              darkMode ? 'text-pink-300' : 'text-pink-900'
+            }`}>🛒 Total: {total} Baht</p>
             <button
               onClick={() => navigate("/cart")}
               className={`px-4 py-2 rounded transition-colors duration-200 ${

@@ -53,6 +53,22 @@ export default function OrderHistoryPage() {
       }
     });
 
+    // Listen for new orders
+    socket.on("order:new", (newOrder) => {
+      console.log("📦 New order received:", newOrder);
+      setOrders((prev) => [newOrder, ...prev]);
+    });
+
+    // Listen for orders ready for checkout
+    socket.on("order:readyForCheckout", (updatedOrder) => {
+      console.log("🔄 Order ready for checkout:", updatedOrder);
+      setOrders((prev) =>
+        prev.map((order) =>
+          order._id === updatedOrder._id ? { ...order, status: updatedOrder.status } : order
+        )
+      );
+    });
+
     socket.on("connect", () => {
       console.log("✅ Socket connected successfully");
     });
@@ -144,8 +160,22 @@ export default function OrderHistoryPage() {
         return `${baseClasses} ${darkMode ? "bg-green-900 text-green-300" : "bg-green-100 text-green-800"}`;
       case "completed":
         return `${baseClasses} ${darkMode ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-800"}`;
+      case "readyForCheckout":
+        return `${baseClasses} ${darkMode ? "bg-purple-900 text-purple-300" : "bg-purple-100 text-purple-800"}`;
       default:
         return `${baseClasses} ${darkMode ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-800"}`;
+    }
+  };
+
+  // Update the display text for statuses
+  const displayStatusText = (status) => {
+    switch (status) {
+      case "readyForCheckout":
+        return "Your order is sending to your table";
+      case "pending":
+        return "Preparing your order";
+      default:
+        return status.charAt(0).toUpperCase() + status.slice(1);
     }
   };
 
@@ -240,7 +270,7 @@ export default function OrderHistoryPage() {
                           Order #{order._id.slice(-8)}
                         </h3>
                         <span className={getStatusBadge(order.status)}>
-                          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                          {displayStatusText(order.status)}
                         </span>
                       </div>
                       
@@ -335,7 +365,7 @@ export default function OrderHistoryPage() {
                     Order #{selectedOrder._id.slice(-8)}
                   </span>
                   <span className={getStatusBadge(selectedOrder.status)}>
-                    {selectedOrder.status.charAt(0).toUpperCase() + selectedOrder.status.slice(1)}
+                    {displayStatusText(selectedOrder.status)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
