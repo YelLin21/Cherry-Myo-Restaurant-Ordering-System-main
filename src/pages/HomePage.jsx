@@ -71,7 +71,7 @@ export default function HomePage() {
           : "bg-gradient-to-b from-pink-100 via-rose-200 to-red-50 text-gray-800"
       }`}
     >
-      {/* ✅ Use Navbar with props */}
+      {/*  Use Navbar with props */}
       <Navbar
         darkMode={darkMode}
         setDarkMode={setDarkMode}
