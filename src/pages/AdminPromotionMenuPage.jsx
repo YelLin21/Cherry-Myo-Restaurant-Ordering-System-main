@@ -100,7 +100,7 @@ export default function AdminPromotionMenuPage() {
     const socket = io(SOCKET_URL, { transports: ["websocket"] });
     
     socket.on("connect", () => {
-      console.log("✅ Admin Promotion Menu socket connected:", socket.id);
+      console.log("Admin Promotion Menu socket connected:", socket.id);
     });
 
     socket.on("menu:new", (newItem) => {

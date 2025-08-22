@@ -15,6 +15,63 @@ export default function AdminCheckoutPage() {
     const [paymentMethods, setPaymentMethods] = useState({}); // 'scan' or 'cash'
     const [cashAmounts, setCashAmounts] = useState({}); // cash received amounts
     const [showQrCode, setShowQrCode] = useState({}); // QR code visibility per order
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    // Function to sync with database
+    const syncWithDatabase = async () => {
+        setIsRefreshing(true);
+        try {
+            console.log("🔄 Starting database sync...");
+            const response = await fetch(`${APIBASE}/orders/checkout`);
+            if (response.ok) {
+                const dbOrders = await response.json();
+                console.log("🔄 Manual sync - Database orders:", dbOrders.length);
+                console.log("🔄 Raw database orders:", dbOrders.map(o => ({
+                    id: o._id,
+                    table: o.tableNumber,
+                    status: o.status,
+                    paid: o.paid,
+                    items: o.items?.length || 0,
+                    processedAt: o.processedAt
+                })));
+                
+                // Group orders by table (same logic as socket handler)
+                const groupedOrders = dbOrders.reduce((acc, order) => {
+                    const existingTable = acc.find(o => o.tableNumber === order.tableNumber);
+                    if (existingTable) {
+                        existingTable.items.push(...order.items);
+                        existingTable.orderIds = [...(existingTable.orderIds || [existingTable._id]), order._id];
+                        existingTable.processedAt = order.processedAt; // Use latest
+                    } else {
+                        acc.push({
+                            ...order,
+                            orderIds: [order._id]
+                        });
+                    }
+                    return acc;
+                }, []);
+                
+                console.log("🔄 Grouped orders for checkout:", groupedOrders.length);
+                console.log("🔄 Final grouped orders:", groupedOrders.map(o => ({
+                    id: o._id,
+                    table: o.tableNumber,
+                    status: o.status,
+                    items: o.items?.length || 0,
+                    orderIds: o.orderIds
+                })));
+                
+                setCheckoutOrders(groupedOrders);
+                localStorage.setItem("checkoutOrders", JSON.stringify(groupedOrders));
+                console.log("✅ Successfully synced with database");
+            } else {
+                console.error("❌ Failed to fetch from /orders/checkout, status:", response.status);
+            }
+        } catch (error) {
+            console.error("❌ Failed to sync with database:", error);
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -24,6 +81,7 @@ export default function AdminCheckoutPage() {
     }, []);
 
     useEffect(() => {
+        // Load saved orders first
         const saved = localStorage.getItem("checkoutOrders");
         if (saved) {
             try {
@@ -33,18 +91,40 @@ export default function AdminCheckoutPage() {
             }
         }
 
+        // Fetch current checkout orders from database to sync with reality
+        const fetchCheckoutOrders = async () => {
+            await syncWithDatabase();
+        };
+
+        // Initial fetch
+        fetchCheckoutOrders();
+
         const socket = io(SOCKET_URL, { transports: ["websocket"] });
 
         socket.on("connect", () => {
             console.log("🧾 Admin socket connected:", socket.id);
+            console.log("🧾 Socket URL:", SOCKET_URL);
         });
 
+        socket.on("disconnect", () => {
+            console.log("❌ Admin socket disconnected");
+        });
+
+        socket.on("connect_error", (error) => {
+            console.error("❌ Socket connection error:", error);
+        });
+
+        // Listen for new orders ready for checkout
         socket.on("order:readyForCheckout", (order) => {
             console.log("📥 Checkout order received:", order);
             console.log("📱 Order items:", order.items);
             console.log("📱 Order table:", order.tableNumber);
+            console.log("📱 Order status:", order.status);
+            console.log("📱 Order processedAt:", order.processedAt);
             
             setCheckoutOrders((prev) => {
+                console.log("📋 Current checkout orders before update:", prev.length);
+                
                 // Check if there's already an order for this table
                 const existingTableOrderIndex = prev.findIndex(
                     existingOrder => existingOrder.tableNumber === order.tableNumber
@@ -55,6 +135,8 @@ export default function AdminCheckoutPage() {
                     // Merge with existing table order
                     updated = [...prev];
                     const existingOrder = updated[existingTableOrderIndex];
+                    
+                    console.log("🔄 Found existing order for table", order.tableNumber, "- merging");
                     
                     // Combine items from both orders
                     const combinedItems = [...existingOrder.items, ...order.items];
@@ -80,7 +162,88 @@ export default function AdminCheckoutPage() {
                     console.log(`➕ Added new order for table ${order.tableNumber}`);
                 }
                 
-                console.log("📱 Updated checkout orders:", updated);
+                console.log("📱 Updated checkout orders count:", updated.length);
+                console.log("📱 Updated checkout orders:", updated.map(o => ({
+                    id: o._id,
+                    table: o.tableNumber,
+                    status: o.status,
+                    items: o.items?.length || 0
+                })));
+                localStorage.setItem("checkoutOrders", JSON.stringify(updated));
+                return updated;
+            });
+        });
+
+        // Listen for order deletions/removals
+        socket.on("order:deleted", (deletedOrderId) => {
+            console.log("🗑️ Order deleted:", deletedOrderId);
+            setCheckoutOrders((prev) => {
+                const updated = prev.filter(order => {
+                    // Remove if this is the main order ID
+                    if (order._id === deletedOrderId) {
+                        return false;
+                    }
+                    // Remove if this order ID is in the merged orderIds array
+                    if (order.orderIds && order.orderIds.includes(deletedOrderId)) {
+                        // If this was a merged order, remove just this ID
+                        const remainingIds = order.orderIds.filter(id => id !== deletedOrderId);
+                        if (remainingIds.length === 0) {
+                            return false; // Remove entire table order if no orders left
+                        }
+                        // Update the order to remove the deleted order ID
+                        order.orderIds = remainingIds;
+                    }
+                    return true;
+                });
+                localStorage.setItem("checkoutOrders", JSON.stringify(updated));
+                return updated;
+            });
+        });
+
+        // Listen for order updates (including status changes that might remove from checkout)
+        socket.on("order:update", (updatedOrder) => {
+            console.log("🔄 Order update received:", updatedOrder);
+            
+            // If order is no longer in readyForCheckout status, remove it
+            if (updatedOrder.status !== "readyForCheckout") {
+                console.log(`🔄 Order ${updatedOrder._id} status changed to ${updatedOrder.status}, removing from checkout`);
+                setCheckoutOrders((prev) => {
+                    const updated = prev.filter(order => {
+                        if (order._id === updatedOrder._id) {
+                            return false;
+                        }
+                        if (order.orderIds && order.orderIds.includes(updatedOrder._id)) {
+                            const remainingIds = order.orderIds.filter(id => id !== updatedOrder._id);
+                            if (remainingIds.length === 0) {
+                                return false;
+                            }
+                            order.orderIds = remainingIds;
+                        }
+                        return true;
+                    });
+                    localStorage.setItem("checkoutOrders", JSON.stringify(updated));
+                    return updated;
+                });
+            }
+        });
+
+        // Listen for paid orders (should be removed from checkout)
+        socket.on("order:paid", (paidOrderId) => {
+            console.log("💰 Order marked as paid, removing from checkout:", paidOrderId);
+            setCheckoutOrders((prev) => {
+                const updated = prev.filter(order => {
+                    if (order._id === paidOrderId) {
+                        return false;
+                    }
+                    if (order.orderIds && order.orderIds.includes(paidOrderId)) {
+                        const remainingIds = order.orderIds.filter(id => id !== paidOrderId);
+                        if (remainingIds.length === 0) {
+                            return false;
+                        }
+                        order.orderIds = remainingIds;
+                    }
+                    return true;
+                });
                 localStorage.setItem("checkoutOrders", JSON.stringify(updated));
                 return updated;
             });
@@ -261,9 +424,22 @@ export default function AdminCheckoutPage() {
             <div className="pt-24 p-3 sm:p-4 md:p-6">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-2 sm:gap-0">
                     <h1 className="text-2xl sm:text-3xl font-bold">🧾 Admin Checkout</h1>
-                    <p className="text-gray-600 font-mono text-xs sm:text-sm">
-                        {currentTime.toLocaleDateString()} {currentTime.toLocaleTimeString()}
-                    </p>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={syncWithDatabase}
+                            disabled={isRefreshing}
+                            className={`px-3 py-1 rounded-lg text-sm font-medium transition-all ${
+                                isRefreshing
+                                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                                    : 'bg-blue-500 text-white hover:bg-blue-600'
+                            }`}
+                        >
+                            {isRefreshing ? '🔄 Syncing...' : '🔄 Sync DB'}
+                        </button>
+                        <p className="text-gray-600 font-mono text-xs sm:text-sm">
+                            {currentTime.toLocaleDateString()} {currentTime.toLocaleTimeString()}
+                        </p>
+                    </div>
                 </div>
 
             {checkoutOrders.length === 0 ? (

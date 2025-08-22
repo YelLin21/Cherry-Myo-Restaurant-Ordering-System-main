@@ -50,6 +50,14 @@ export default function OrderHistoryPage() {
       if (updatedOrder.paid === true) {
         console.log("🔄 Order update detected - removing paid order:", updatedOrder._id);
         setOrders((prev) => prev.filter(order => order._id !== updatedOrder._id));
+      } else {
+        // Update order status in real-time (including status changes like "sent")
+        console.log("🔄 Order status update detected:", updatedOrder._id, "->", updatedOrder.status);
+        setOrders((prev) =>
+          prev.map((order) =>
+            order._id === updatedOrder._id ? { ...order, status: updatedOrder.status } : order
+          )
+        );
       }
     });
 
@@ -144,6 +152,8 @@ export default function OrderHistoryPage() {
         return darkMode ? "text-green-400" : "text-green-600";
       case "completed":
         return darkMode ? "text-gray-400" : "text-gray-600";
+      case "sent":
+        return darkMode ? "text-green-400" : "text-green-600";
       default:
         return darkMode ? "text-gray-400" : "text-gray-600";
     }
@@ -162,16 +172,78 @@ export default function OrderHistoryPage() {
         return `${baseClasses} ${darkMode ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-800"}`;
       case "readyForCheckout":
         return `${baseClasses} ${darkMode ? "bg-purple-900 text-purple-300" : "bg-purple-100 text-purple-800"}`;
+      case "sent":
+        return `${baseClasses} ${darkMode ? "bg-green-900 text-green-300" : "bg-green-100 text-green-800"}`;
       default:
         return `${baseClasses} ${darkMode ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-800"}`;
     }
   };
+
+  // Function to update order status in backend
+  const updateOrderStatus = async (orderId, newStatus) => {
+    try {
+      const response = await fetch(`${APIBASE}/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to update order status in backend');
+        return false;
+      }
+
+      console.log(`✅ Order ${orderId} status updated to "${newStatus}" in backend`);
+      return true;
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      return false;
+    }
+  };
+
+  // Automatically update status from "readyForCheckout" to "sent" after 10 seconds
+  useEffect(() => {
+    const timers = {};
+
+    orders.forEach(order => {
+      if (order.status === "readyForCheckout" && !timers[order._id]) {
+        timers[order._id] = setTimeout(async () => {
+          console.log(`🕐 Automatically updating order ${order._id} status to "sent" after 10 seconds`);
+          
+          // Update status in backend first
+          const success = await updateOrderStatus(order._id, "sent");
+          
+          if (success) {
+            // Only update local state if backend update was successful
+            setOrders(prevOrders =>
+              prevOrders.map(prevOrder =>
+                prevOrder._id === order._id
+                  ? { ...prevOrder, status: "sent" }
+                  : prevOrder
+              )
+            );
+          }
+          
+          delete timers[order._id];
+        }, 10000); // 10 seconds
+      }
+    });
+
+    // Clean up timers when component unmounts or orders change
+    return () => {
+      Object.values(timers).forEach(timer => clearTimeout(timer));
+    };
+  }, [orders]);
 
   // Update the display text for statuses
   const displayStatusText = (status) => {
     switch (status) {
       case "readyForCheckout":
         return "Your order is sending to your table";
+      case "sent":
+        return "Sent";
       case "pending":
         return "Preparing your order";
       default:
@@ -197,7 +269,7 @@ export default function OrderHistoryPage() {
           <h1 className={`text-3xl font-bold text-center mb-4 ${
             darkMode ? "text-pink-300" : "text-pink-900"
           }`}>
-            Pending Orders
+           Orders History
           </h1>
 
           {loading && (
