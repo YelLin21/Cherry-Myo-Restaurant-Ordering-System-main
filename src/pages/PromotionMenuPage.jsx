@@ -86,7 +86,7 @@ export default function PromotionMenuPage() {
         darkMode ? "bg-gray-900" : "bg-gray-100"
       }`}>
         <div className="max-w-6xl mx-auto">
-          <h1 className={`text-3xl font-bold text-center mb-6 transition-colors duration-300 ${
+          <h1 className={`text-2xl sm:text-3xl lg:text-3xl xl:text-4xl font-bold text-center mb-6 transition-colors duration-300 leading-tight ${
             darkMode ? "text-pink-300" : "text-pink-900"
           }`}>
             🎉 Promotion Menu

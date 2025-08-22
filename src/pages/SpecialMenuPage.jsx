@@ -134,7 +134,7 @@ export default function SpecialMenuPage() {
                 className={`relative rounded-xl shadow-lg p-4 flex flex-col items-center transition-all duration-300 hover:shadow-xl hover:scale-105 ${
                   darkMode 
                     ? "bg-gray-800 border border-gray-700"
-                    : "bg-white border border-gray-200"
+                    : "bg-pink-300 border-pink-100"
                 }`}
               >
                 <span className={`absolute top-2 right-2 px-2 py-1 text-xs font-semibold rounded-full ${
@@ -197,7 +197,7 @@ export default function SpecialMenuPage() {
                 className={`relative flex items-center gap-4 p-4 rounded-xl border shadow-sm transition-all duration-200 hover:shadow-md ${
                   darkMode 
                     ? "bg-gray-800 border-gray-600"
-                    : "bg-white border-gray-200"
+                    : "bg-pink-300 border-pink-100"
                 }`}
               >
                 <span className={`absolute top-2 right-2 px-2 py-1 text-xs font-semibold rounded-full ${
