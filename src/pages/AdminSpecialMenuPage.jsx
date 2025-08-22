@@ -39,6 +39,8 @@ export default function AdminSpecialMenuPage() {
     image: "",
     category: "Special"
   });
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
 
   // Auth states
   const [user, setUser] = useState(null);
@@ -235,6 +237,13 @@ export default function AdminSpecialMenuPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      let imageData = formData.image;
+      
+      // If a file is selected, convert it to base64
+      if (selectedFile) {
+        imageData = await convertFileToBase64(selectedFile);
+      }
+
       const url = editingItem 
         ? `${APIBASE}/menu/${editingItem._id}`
         : `${APIBASE}/menu`;
@@ -248,6 +257,7 @@ export default function AdminSpecialMenuPage() {
         },
         body: JSON.stringify({
           ...formData,
+          image: imageData,
           price: parseFloat(formData.price),
         }),
       });
@@ -270,6 +280,8 @@ export default function AdminSpecialMenuPage() {
       image: item.image || "",
       category: "Special"
     });
+    setImagePreview(item.image || "");
+    setSelectedFile(null);
     setShowForm(true);
   };
 
@@ -296,12 +308,66 @@ export default function AdminSpecialMenuPage() {
       image: "",
       category: "Special"
     });
+    setSelectedFile(null);
+    setImagePreview("");
     setEditingItem(null);
   };
 
   const handleCancel = () => {
     resetForm();
     setShowForm(false);
+  };
+
+  // Handle file selection
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        alert('Please select a valid image file (JPEG, PNG, GIF, or WebP)');
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+      if (file.size > maxSize) {
+        alert('File size must be less than 5MB');
+        return;
+      }
+
+      setSelectedFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target.result);
+        setFormData({...formData, image: ""});
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Handle URL input change
+  const handleImageUrlChange = (e) => {
+    const url = e.target.value;
+    setFormData({...formData, image: url});
+    if (url) {
+      setImagePreview(url);
+      setSelectedFile(null);
+    } else {
+      setImagePreview("");
+    }
+  };
+
+  // Convert file to base64 for storage
+  const convertFileToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = error => reject(error);
+    });
   };
 
   if (authLoading) {
@@ -886,30 +952,116 @@ export default function AdminSpecialMenuPage() {
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
-                      <span>Image URL</span>
-                      <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>(Optional)</span>
+                      <span>Special Dish Image</span>
                     </label>
-                    <input
-                      type="url"
-                      value={formData.image}
-                      onChange={(e) => setFormData({...formData, image: e.target.value})}
-                      className={`w-full px-4 py-3 rounded-xl border-2 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-yellow-500/20 ${
-                        darkMode 
-                          ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-yellow-500"
-                          : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-yellow-500"
-                      }`}
-                      placeholder="https://example.com/special-dish.jpg"
-                    />
-                    {formData.image && (
-                      <div className="mt-3 rounded-xl overflow-hidden border-2 border-gray-200 dark:border-gray-600">
-                        <img
-                          src={formData.image}
-                          alt="Preview"
-                          className="w-full h-32 object-cover"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                          }}
+                    
+                    {/* Upload from device option */}
+                    <div className="space-y-4">
+                      <div>
+                        <label className={`block text-xs font-medium mb-2 ${
+                          darkMode ? "text-gray-300" : "text-gray-600"
+                        }`}>
+                          Upload from Device
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleFileSelect}
+                            className="hidden"
+                            id="imageUpload"
+                          />
+                          <label
+                            htmlFor="imageUpload"
+                            className={`flex items-center justify-center w-full px-4 py-3 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-200 hover:border-yellow-500 ${
+                              darkMode 
+                                ? "border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600" 
+                                : "border-gray-300 bg-gray-50 text-gray-600 hover:bg-gray-100"
+                            }`}
+                          >
+                            <div className="text-center">
+                              <svg className="mx-auto h-8 w-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                              </svg>
+                              <span className="text-sm font-medium">
+                                {selectedFile ? selectedFile.name : 'Click to upload image'}
+                              </span>
+                              <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                PNG, JPG, GIF up to 5MB
+                              </p>
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* OR divider */}
+                      <div className="relative">
+                        <div className={`absolute inset-0 flex items-center ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                          <div className={`w-full border-t ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}></div>
+                        </div>
+                        <div className="relative flex justify-center text-xs">
+                          <span className={`px-2 text-xs font-medium ${
+                            darkMode ? 'bg-gray-800 text-gray-400' : 'bg-white text-gray-500'
+                          }`}>
+                            OR
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* URL input option */}
+                      <div>
+                        <label className={`block text-xs font-medium mb-2 ${
+                          darkMode ? "text-gray-300" : "text-gray-600"
+                        }`}>
+                          Image URL
+                        </label>
+                        <input
+                          type="url"
+                          value={formData.image}
+                          onChange={handleImageUrlChange}
+                          className={`w-full px-4 py-3 rounded-xl border-2 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-yellow-500/20 ${
+                            darkMode 
+                              ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-yellow-500"
+                              : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-yellow-500"
+                          }`}
+                          placeholder="https://example.com/special-dish.jpg"
                         />
+                      </div>
+                    </div>
+
+                    {/* Image Preview */}
+                    {imagePreview && (
+                      <div className="mt-4">
+                        <label className={`block text-xs font-medium mb-2 ${
+                          darkMode ? "text-gray-300" : "text-gray-600"
+                        }`}>
+                          Preview
+                        </label>
+                        <div className="relative rounded-xl overflow-hidden border-2 border-gray-200 dark:border-gray-600">
+                          <img
+                            src={imagePreview}
+                            alt="Preview"
+                            className="w-full h-40 object-cover"
+                            onError={(e) => {
+                              setImagePreview("");
+                              setSelectedFile(null);
+                              alert("Failed to load image. Please check the URL or select a different file.");
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setImagePreview("");
+                              setSelectedFile(null);
+                              setFormData({...formData, image: ""});
+                            }}
+                            className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors duration-200"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
