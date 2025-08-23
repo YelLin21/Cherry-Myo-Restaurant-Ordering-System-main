@@ -26,7 +26,7 @@ const SOCKET_URL =
 
 export default function KitchenPage() {
   // Admin email addresses
-  const ADMIN_EMAIL = ["2001yellin@gmail.com", "u6520242@au.edu", "cherrymyo@gmail.com"];
+  const ADMIN_EMAIL = ["2001yellin@gmail.com", "u6520242@au.edu", "cherrymyokitchen@gmail.com"];
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,8 +38,10 @@ export default function KitchenPage() {
   const [loginError, setLoginError] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [resetMessage, setResetMessage] = useState("");
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   // Auto-hide messages after 10 seconds
   useEffect(() => {
@@ -60,21 +62,59 @@ export default function KitchenPage() {
     }
   }, [resetMessage]);
 
+  // Load remembered admin email
+  useEffect(() => {
+    const rememberedAdmin = localStorage.getItem('rememberAdmin');
+    const rememberedEmail = localStorage.getItem('adminEmail');
+    
+    if (rememberedAdmin === 'true' && rememberedEmail) {
+      setEmail(rememberedEmail);
+      setRememberMe(true);
+    }
+  }, []);
+
   // Auth state listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user && !ADMIN_EMAIL.includes(user.email)) {
-        setLoginError("You are not authorized to access the kitchen page.");
+      console.log("Auth state changed:", user?.email);
+      
+      if (user) {
+        // Check if the user email is in the admin list
+        if (!ADMIN_EMAIL.includes(user.email)) {
+          console.log("Non-admin user detected, signing out:", user.email);
+          setLoginError("You are not authorized to access the kitchen page.");
+          setUser(null);
+          
+          // Prevent multiple signOut calls
+          if (!isSigningOut) {
+            setIsSigningOut(true);
+            try {
+              await signOut(auth);
+            } catch (error) {
+              console.error("Error signing out:", error);
+            } finally {
+              setIsSigningOut(false);
+            }
+          }
+          setAuthLoading(false);
+          return;
+        }
+        
+        // User is authorized
+        console.log("Admin user authenticated:", user.email);
+        setUser(user);
+        setLoginError(""); // Clear any previous errors
+      } else {
+        console.log("No user authenticated");
         setUser(null);
-        await signOut(auth);
-        setAuthLoading(false);
-        return;
+        setIsSigningOut(false); // Reset signing out state
       }
-      setUser(user);
+      
       setAuthLoading(false);
     });
+    
     return () => unsubscribe();
-  }, []);
+  }, [isSigningOut]);
 
   const getProcessedIds = () => {
     const stored = localStorage.getItem("processedOrderIds");
@@ -149,10 +189,26 @@ export default function KitchenPage() {
 
   const handleLogin = async () => {
     try {
-      await signInWithGoogle();
+      setLoginError("");
+      const result = await signInWithGoogle();
+      
+      // Check if the signed-in user is an admin
+      if (!ADMIN_EMAIL.includes(result.user.email)) {
+        setLoginError("You are not authorized to access the kitchen page.");
+        await signOut(auth);
+        return;
+      }
+      
+      console.log("Google login successful for admin:", result.user.email);
     } catch (error) {
       console.error("Login error:", error);
-      setLoginError("Failed to sign in with Google. Please try again.");
+      if (error.code === 'auth/popup-closed-by-user') {
+        setLoginError("Login was cancelled. Please try again.");
+      } else if (error.code === 'auth/popup-blocked') {
+        setLoginError("Popup was blocked. Please allow popups for this site.");
+      } else {
+        setLoginError("Failed to sign in with Google. Please try again.");
+      }
     }
   };
 
@@ -160,18 +216,29 @@ export default function KitchenPage() {
     e.preventDefault();
     setLoginError("");
     
+    if (!email || !password) {
+      setLoginError("Please enter both email and password.");
+      return;
+    }
+    
+    // Check if email is in admin list before attempting login
+    if (!ADMIN_EMAIL.includes(email)) {
+      setLoginError("You are not authorized to access the kitchen page.");
+      return;
+    }
+    
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
-      if (!ADMIN_EMAIL.includes(user.email)) {
-        setLoginError("You are not authorized to access the kitchen page.");
-        await signOut(auth);
-        return;
-      }
+      console.log("Email login successful for admin:", user.email);
       
       if (rememberMe) {
         localStorage.setItem('rememberAdmin', 'true');
+        localStorage.setItem('adminEmail', email);
+      } else {
+        localStorage.removeItem('rememberAdmin');
+        localStorage.removeItem('adminEmail');
       }
       
     } catch (error) {
@@ -188,6 +255,9 @@ export default function KitchenPage() {
           break;
         case 'auth/too-many-requests':
           setLoginError("Too many failed attempts. Please try again later.");
+          break;
+        case 'auth/invalid-credential':
+          setLoginError("Invalid credentials. Please check your email and password.");
           break;
         default:
           setLoginError("Login failed. Please check your credentials and try again.");
@@ -232,6 +302,9 @@ export default function KitchenPage() {
 
   const handleLogout = async () => {
     try {
+      console.log("Logging out user:", user?.email);
+      localStorage.removeItem('rememberAdmin');
+      localStorage.removeItem('adminEmail');
       await signOut(auth);
     } catch (error) {
       console.error("Logout error:", error);
@@ -269,7 +342,7 @@ export default function KitchenPage() {
     );
   }
 
-  if (!user || loginError) {
+  if (!user || (loginError && !authLoading)) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden transition-all duration-500 bg-gradient-to-br from-pink-50 via-white to-rose-100">
         {/* Falling Cherries Animation */}
@@ -369,14 +442,33 @@ export default function KitchenPage() {
 
             <div>
               <label className="block text-sm font-medium mb-2 text-gray-700">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                className="w-full px-4 py-3 rounded-xl border bg-white border-gray-300 text-gray-700 placeholder-gray-500 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className="w-full px-4 py-3 pr-12 rounded-xl border bg-white border-gray-300 text-gray-700 placeholder-gray-500 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 rounded transition-colors duration-200 text-gray-500 hover:text-gray-700"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
 
             <div className="flex items-center justify-between">

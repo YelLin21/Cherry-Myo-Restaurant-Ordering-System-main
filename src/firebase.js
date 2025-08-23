@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signInWithPopup, setPersistence, browserLocalPersistence } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDkI1CkJXhxbVs6vhydrCPB209SuHfSAVs",
@@ -16,6 +16,11 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
+
+// Set auth persistence to local storage
+setPersistence(auth, browserLocalPersistence).catch((error) => {
+  console.error("Error setting auth persistence:", error);
+});
 
 const signInWithGoogle = () => {
   return signInWithPopup(auth, provider)

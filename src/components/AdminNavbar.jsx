@@ -34,12 +34,6 @@ export default function AdminNavbar() {
       description: "Manage Promotions"
     },
     {
-      title: "Kitchen Orders",
-      path: "/kitchen",
-      icon: <FaConciergeBell className="w-4 h-4" />,
-      description: "Kitchen Management"
-    },
-    {
       title: "Checkout",
       path: "/checkout",
       icon: <FaCashRegister className="w-4 h-4" />,
@@ -75,7 +69,7 @@ export default function AdminNavbar() {
                 Cherry Myo Admin
               </h1>
               <p className="text-xs sm:text-sm text-red-200 hidden sm:block">
-                Restaurant Management System
+                Restaurant Ordering System
               </p>
             </div>
           </div>
