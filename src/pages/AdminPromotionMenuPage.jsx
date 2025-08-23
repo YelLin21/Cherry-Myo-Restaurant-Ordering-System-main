@@ -851,8 +851,8 @@ export default function AdminPromotionMenuPage() {
 
       {/* Enhanced Add/Edit Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
-          <div className={`max-w-lg w-full rounded-3xl shadow-2xl transform transition-all duration-500 scale-100 ${
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300 overflow-y-auto">
+          <div className={`max-w-lg w-full my-8 rounded-3xl shadow-2xl transform transition-all duration-500 scale-100 max-h-[90vh] overflow-y-auto ${
             darkMode ? "bg-gray-800 border border-gray-600" : "bg-white border border-gray-200"
           }`}>
             {/* Modal Header */}
@@ -888,8 +888,9 @@ export default function AdminPromotionMenuPage() {
             </div>
 
             {/* Modal Body */}
-            <div className="p-6">
-              <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="flex flex-col max-h-[calc(90vh-120px)]">
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="space-y-6">
                 <div className="space-y-4">
                   <div>
                     <label className={`flex items-center gap-2 text-sm font-semibold mb-3 ${
@@ -1068,27 +1069,28 @@ export default function AdminPromotionMenuPage() {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-4 pt-6 border-t border-gray-200 dark:border-gray-600">
-                  <button
-                    type="button"
-                    onClick={handleCancel}
-                    className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all duration-200 border-2 ${
-                      darkMode 
-                        ? "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-gray-500"
-                        : "bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200 hover:border-gray-400"
-                    }`}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 py-3 px-6 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-red-500/50 shadow-lg"
-                  >
-                    {editingItem ? "Update Promotion" : "Create Promotion"}
-                  </button>
                 </div>
-              </form>
-            </div>
+              </div>
+              <div className={`flex gap-4 p-6 border-t sticky bottom-0 bg-inherit ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all duration-200 border-2 ${
+                    darkMode 
+                      ? "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-gray-500"
+                      : "bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200 hover:border-gray-400"
+                  }`}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 px-6 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-red-500/50 shadow-lg"
+                >
+                  {editingItem ? "Update Promotion" : "Create Promotion"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
