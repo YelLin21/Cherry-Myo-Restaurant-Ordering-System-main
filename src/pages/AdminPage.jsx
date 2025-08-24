@@ -621,7 +621,7 @@ export default function AdminPage() {
           </button>
         </div>
 
-        {/* Special Admin Menu Links */}
+        {/* Special Admin Menu Links & Sales Report */}
         <div className="mb-6 p-4 rounded-lg border-2 border-dashed border-pink-300">
           <h3 className={`text-lg font-semibold mb-3 ${
             darkMode ? 'text-pink-300' : 'text-pink-700'
@@ -650,6 +650,18 @@ export default function AdminPage() {
             >
               <span className="text-xl">🎉</span>
               Manage Promotion Menu
+            </a>
+            <a
+              href="/admin/sales-report"
+              className={`px-6 py-3 rounded font-medium transition-colors duration-200 flex items-center gap-2 ${
+                darkMode 
+                  ? 'bg-pink-700 text-white hover:bg-pink-600' 
+                  : 'bg-pink-600 text-white hover:bg-pink-700'
+              }`}
+              aria-label="Sales Report"
+            >
+              <span className="text-xl">🍒</span>
+              Sales Report
             </a>
           </div>
         </div>

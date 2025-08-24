@@ -10,11 +10,15 @@ import OrderHistoryPage from "./pages/OrderHistoryPage";
 import AdminPage from "./pages/AdminPage";
 import AdminSpecialMenuPage from "./pages/AdminSpecialMenuPage";
 import AdminPromotionMenuPage from "./pages/AdminPromotionMenuPage";
+import AdminSalesReport from "./pages/AdminSalesReport";
 import KitchenPage from "./pages/KitchenPage";
 import AdminCheckoutPage from "./pages/AdminCheckout"; 
 import TableViewPage from "./pages/TableView";
+import { useDarkMode } from "./pages/DarkModeContext.jsx";
 
 function App() {
+  const { darkMode } = useDarkMode();
+  
   return (
     <Router>
       <Routes>
@@ -29,13 +33,12 @@ function App() {
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/admin/special" element={<AdminSpecialMenuPage />} />
         <Route path="/admin/promotion" element={<AdminPromotionMenuPage />} />
+        <Route path="/admin/sales-report" element={<AdminSalesReport darkMode={darkMode} />} />
         <Route path="/kitchen" element={<KitchenPage />} />
         <Route path="/checkout" element={<AdminCheckoutPage />} />
         <Route path="/table/:tableId" element={<TableViewPage />} />
       </Routes>
     </Router>
   );
-}
-
-export default App;
+}export default App;
 

@@ -71,7 +71,7 @@ export default function CartPage() {
   };
 
   const formatPrice = (price) => {
-    return "฿" + price.toLocaleString("en-US");
+    return "K" + price.toLocaleString("en-US");
   };
 
   const calculateSelectedTotal = () => {

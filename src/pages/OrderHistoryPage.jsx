@@ -118,7 +118,7 @@ export default function OrderHistoryPage() {
   };
 
   const formatPrice = (price) => {
-    return "฿" + price.toLocaleString("en-US");
+    return "K" + price.toLocaleString("en-US");
   };
 
   const formatDate = (dateString) => {
