@@ -188,18 +188,20 @@ export default function AdminMenuForm({
             )}
 
             <div className="flex gap-3 pt-4">
-              <button
-                type="submit"
-                className="flex-1 bg-pink-700 text-white py-3 px-4 rounded-lg hover:bg-pink-800 transition-colors font-medium"
-              >
-                {editingItem ? "Update Item" : "Add Item"}
-              </button>
+              
               <button
                 type="button"
                 onClick={handleClose}
                 className="flex-1 bg-gray-300 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-400 transition-colors font-medium"
               >
                 Cancel
+              </button>
+
+              <button
+                type="submit"
+                className="flex-1 bg-pink-700 text-white py-3 px-4 rounded-lg hover:bg-pink-800 transition-colors font-medium"
+              >
+                {editingItem ? "Update Item" : "Add Item"}
               </button>
             </div>
           </div>

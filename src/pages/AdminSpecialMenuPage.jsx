@@ -804,7 +804,7 @@ export default function AdminSpecialMenuPage() {
                         <span className={`text-2xl font-bold ${
                           darkMode ? "text-yellow-400" : "text-amber-600"
                         }`}>
-                          ฿{item.price}
+                          {item.price} Kyat
                         </span>
                       </div>
                       
@@ -946,7 +946,7 @@ export default function AdminSpecialMenuPage() {
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                       </svg>
-                      <span>Special Price (฿)</span>
+                      <span>Special Price (Kyat)</span>
                     </label>
                     <div className="relative">
                       <input
@@ -960,12 +960,12 @@ export default function AdminSpecialMenuPage() {
                             ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-yellow-500"
                             : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-yellow-500"
                         }`}
-                        placeholder="149.00"
+                        placeholder="5000.00"
                       />
                       <span className={`absolute left-3 top-1/2 transform -translate-y-1/2 text-lg font-bold ${
                         darkMode ? 'text-gray-400' : 'text-gray-500'
                       }`}>
-                        ฿
+                        K
                       </span>
                     </div>
                   </div>

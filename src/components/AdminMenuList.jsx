@@ -30,7 +30,7 @@ export default function AdminMenuList({ items, onDelete, onEdit }) {
 
             <div>
               <h3 className="font-semibold text-lg">{item.name}</h3>
-              <p className="text-gray-700">{item.price} Baht</p>
+              <p className="text-gray-700">{item.price} Kyat</p>
               <p className="text-sm text-gray-600 italic">
                 Category: {item.category || "Uncategorized"}
               </p>
