@@ -44,12 +44,16 @@ router.get("/customer", async (req, res) => {
 router.get("/checkout", async (req, res) => {
   try {
     const orders = await Order.find({
-      status: "readyForCheckout",
+      status: { $in: ["readyForCheckout", "sent"] },
       paid: { $ne: true },
     }).sort({ createdAt: -1 });
 
+    console.log(`🧾 Checkout endpoint called - Found ${orders.length} orders with status readyForCheckout or sent`);
+    console.log("🧾 Order statuses:", orders.map(o => ({ id: o._id.toString(), table: o.tableNumber, status: o.status, paid: o.paid })));
+
     res.json(orders);
   } catch (error) {
+    console.error("Error fetching checkout orders:", error);
     res.status(500).json({ error: "Failed to fetch checkout orders" });
   }
 });

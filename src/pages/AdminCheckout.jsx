@@ -60,7 +60,7 @@ export default function AdminCheckoutPage() {
             if (response.ok) {
                 const dbOrders = await response.json();
                 console.log("🔄 Manual sync - Database orders:", dbOrders.length);
-                console.log("🔄 Raw database orders:", dbOrders.map(o => ({
+                console.log("🔄 Raw database orders (readyForCheckout + sent):", dbOrders.map(o => ({
                     id: o._id,
                     table: o.tableNumber,
                     status: o.status,
@@ -274,9 +274,11 @@ export default function AdminCheckoutPage() {
         socket.on("order:update", (updatedOrder) => {
             console.log("🔄 Order update received:", updatedOrder);
 
-            // If order is no longer in readyForCheckout status, remove it
-            if (updatedOrder.status !== "readyForCheckout") {
-                console.log(`🔄 Order ${updatedOrder._id} status changed to ${updatedOrder.status}, removing from checkout`);
+            // Keep orders that have status "readyForCheckout" or "sent" and are not paid
+            const shouldKeepInCheckout = (updatedOrder.status === "readyForCheckout" || updatedOrder.status === "sent") && !updatedOrder.paid;
+            
+            if (!shouldKeepInCheckout) {
+                console.log(`🔄 Order ${updatedOrder._id} status changed to ${updatedOrder.status} (paid: ${updatedOrder.paid}), removing from checkout`);
                 setCheckoutOrders((prev) => {
                     const updated = prev.filter(order => {
                         if (order._id === updatedOrder._id) {
@@ -290,6 +292,28 @@ export default function AdminCheckoutPage() {
                             order.orderIds = remainingIds;
                         }
                         return true;
+                    });
+                    localStorage.setItem("checkoutOrders", JSON.stringify(updated));
+                    return updated;
+                });
+            } else {
+                // Update the order in place if it's still valid for checkout
+                console.log(`🔄 Order ${updatedOrder._id} status updated to ${updatedOrder.status}, keeping in checkout`);
+                setCheckoutOrders((prev) => {
+                    const updated = prev.map(order => {
+                        if (order._id === updatedOrder._id) {
+                            return { ...order, ...updatedOrder };
+                        }
+                        // Also check if this order ID is in the merged orderIds array
+                        if (order.orderIds && order.orderIds.includes(updatedOrder._id)) {
+                            // Update the main order properties while keeping the merged structure
+                            return { 
+                                ...order, 
+                                status: updatedOrder.status,
+                                processedAt: updatedOrder.processedAt || order.processedAt
+                            };
+                        }
+                        return order;
                     });
                     localStorage.setItem("checkoutOrders", JSON.stringify(updated));
                     return updated;
@@ -798,6 +822,7 @@ export default function AdminCheckoutPage() {
                                     ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
                                     : 'bg-blue-500 text-white hover:bg-blue-600'
                                 }`}
+                            title="Sync with database to fetch all ready and sent orders"
                         >
                             {isRefreshing ? '🔄 Syncing...' : '🔄 Sync DB'}
                         </button>
@@ -812,7 +837,7 @@ export default function AdminCheckoutPage() {
                         <div className="bg-white rounded-lg p-6 shadow-md border">
                             <div className="text-6xl mb-4">📋</div>
                             <p className="text-gray-600 text-base sm:text-lg mb-2">No orders ready for checkout.</p>
-                            <p className="text-gray-500 text-sm">Waiting for kitchen to send orders...</p>
+                            <p className="text-gray-500 text-sm">Waiting for kitchen to process and send orders...</p>
                         </div>
                     </div>
                 ) : (
@@ -820,7 +845,7 @@ export default function AdminCheckoutPage() {
                         {/* Debug info for mobile */}
                         <div className="sm:hidden bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
                             <p className="text-blue-800 text-sm font-medium">
-                                📱 Mobile View • {checkoutOrders.length} order(s) found
+                                📱 Mobile View • {checkoutOrders.length} order(s) found (Ready + Sent)
                             </p>
                         </div>
 
@@ -850,6 +875,20 @@ export default function AdminCheckoutPage() {
                                             <h2 className="text-lg sm:text-xl font-bold text-gray-900">
                                                 🍽️ Table: {order.tableNumber}
                                             </h2>
+                                            
+                                            {/* Order Status Badge */}
+                                            <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                                                order.status === 'readyForCheckout' 
+                                                    ? 'bg-blue-100 text-blue-800' 
+                                                    : order.status === 'sent' 
+                                                    ? 'bg-green-100 text-green-800' 
+                                                    : 'bg-gray-100 text-gray-800'
+                                            }`}>
+                                                {order.status === 'readyForCheckout' ? '🔵 Ready' : 
+                                                 order.status === 'sent' ? '✅ Sent' : 
+                                                 order.status}
+                                            </span>
+                                            
                                             {(order.orderIds && order.orderIds.length > 1) && (
                                                 <span className="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full font-medium">
                                                     {order.orderIds.length} merged orders
