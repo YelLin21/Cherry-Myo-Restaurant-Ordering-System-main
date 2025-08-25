@@ -583,7 +583,16 @@ export default function AdminCheckoutPage() {
                 ? `Cash: ${cashAmounts[tableOrder._id]}MMK, Change: ${(cashAmounts[tableOrder._id] - finalTotal).toFixed(2)}MMK`
                 : 'QR Scan payment';
 
-            alert(`💰 Table ${tableOrder.tableNumber} - ${orderCount} ${orderText} marked as paid\n💳 ${paymentText}\n✅ Removed from customer order history.`);
+            // Generate PDF receipt automatically after successful payment
+            try {
+                generateReceiptPDF(tableOrder);
+                console.log("📄 Receipt PDF generated successfully");
+            } catch (pdfError) {
+                console.error("Error generating PDF receipt:", pdfError);
+                // Continue even if PDF generation fails
+            }
+
+            alert(`💰 Table ${tableOrder.tableNumber} - ${orderCount} ${orderText} marked as paid\n💳 ${paymentText}\n📄 Receipt downloaded\n✅ Removed from customer order history.`);
         } catch (error) {
             console.error('Error marking orders as paid:', error);
             alert('❌ Failed to mark orders as paid. Please try again.');
@@ -1331,40 +1340,25 @@ export default function AdminCheckoutPage() {
                                                     </div>
                                                 )}
 
-                                                {/* Action Buttons */}
-                                                <div className="mt-6 pt-3">
-                                                    <div className="flex flex-col lg:flex-row gap-3 lg:justify-end">
-                                                        {/* Print Receipt Button */}
-                                                        <button
-                                                            onClick={() => generateReceiptPDF(order)}
-                                                            disabled={!paymentMethods[order._id]}
-                                                            className={`px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 transform hover:scale-105 shadow-lg ${!paymentMethods[order._id]
-                                                                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                                                                    : 'bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-blue-400/50'
-                                                                }`}
-                                                        >
-                                                            📄 Print Receipt
-                                                        </button>
-
-                                                        {/* Mark as Paid Button */}
-                                                        <button
-                                                            onClick={() => handleMarkAsPaid(order)}
-                                                            disabled={!paymentMethods[order._id] ||
-                                                                (paymentMethods[order._id] === 'cash' &&
-                                                                    (!cashAmounts[order._id] || cashAmounts[order._id] < finalTotal))}
-                                                            className={`px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg ${!paymentMethods[order._id]
-                                                                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                                                                    : 'bg-gradient-to-r from-red-500 via-pink-500 to-rose-500 hover:from-red-600 hover:via-pink-600 hover:to-rose-600 text-white shadow-red-400/50'
-                                                                }`}
-                                                        >
-                                                            🍒 Mark as Paid
-                                                            {(order.orderIds && order.orderIds.length > 1) && (
-                                                                <span className="ml-2 px-2 py-1 bg-red-600 rounded text-sm">
-                                                                    {order.orderIds.length} orders
-                                                                </span>
-                                                            )}
-                                                        </button>
-                                                    </div>
+                                                {/* Mark as Paid & Print Receipt */}
+                                                <div className="mt-6 text-right pt-3">
+                                                    <button
+                                                        onClick={() => handleMarkAsPaid(order)}
+                                                        disabled={!paymentMethods[order._id] ||
+                                                            (paymentMethods[order._id] === 'cash' &&
+                                                                (!cashAmounts[order._id] || cashAmounts[order._id] < finalTotal))}
+                                                        className={`px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg ${!paymentMethods[order._id]
+                                                                ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                                                                : 'bg-gradient-to-r from-red-500 via-pink-500 to-rose-500 hover:from-red-600 hover:via-pink-600 hover:to-rose-600 text-white shadow-red-400/50'
+                                                            }`}
+                                                    >
+                                                        🍒 Mark as Paid & Print Receipt
+                                                        {(order.orderIds && order.orderIds.length > 1) && (
+                                                            <span className="ml-2 px-2 py-1 bg-red-600 rounded text-sm">
+                                                                {order.orderIds.length} orders
+                                                            </span>
+                                                        )}
+                                                    </button>
 
                                                     {/* Payment Status */}
                                                     <div className="mt-3 text-right">
@@ -1381,7 +1375,7 @@ export default function AdminCheckoutPage() {
                                                         {((paymentMethods[order._id] === 'scan' && showQrCode[order._id]) ||
                                                             (paymentMethods[order._id] === 'cash' &&
                                                                 cashAmounts[order._id] >= finalTotal)) && (
-                                                                <span className="text-green-600">✅ Ready to mark as paid</span>
+                                                                <span className="text-green-600">✅ Ready to mark as paid & print receipt</span>
                                                             )}
                                                     </div>
                                                 </div>
