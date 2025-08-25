@@ -972,10 +972,10 @@ export default function AdminCheckoutPage() {
                                 <span className="text-3xl relative z-10 filter drop-shadow-lg">🧾</span>
                             </div>
                             <div className="space-y-2">
-                                <h1 className={`text-4xl font-extrabold tracking-tight ${darkMode ? 'text-pink-300' : 'text-red-700'
-                                    } bg-clip-text bg-gradient-to-r ${darkMode ? 'from-pink-300 to-rose-300' : 'from-red-700 to-pink-700'
+                                <h1 className={`text-4xl font-extrabold tracking-tight ${darkMode ? 'text-pink-300' : 'text-pink-700'
+                                    } bg-clip-text bg-gradient-to-r ${darkMode ? 'from-pink-300 to-rose-300' : 'from-pink-300 to-pink-700'
                                     }`}>
-                                    Cherry Checkout
+                                    Cherry Myo Checkout
                                 </h1>
                                 <p className={`text-base font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'
                                     }`}>
