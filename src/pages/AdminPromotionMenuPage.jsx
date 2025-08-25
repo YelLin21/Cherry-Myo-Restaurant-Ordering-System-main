@@ -1,33 +1,15 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminNavbar from "../components/AdminNavbar.jsx";
+import AdminAuth from "../components/AdminAuth.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { useDarkMode } from "./DarkModeContext.jsx";
 import { io } from "socket.io-client";
-import { onAuthStateChanged, signOut, signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
-import { auth, signInWithGoogle } from "../firebase";
-
-
-function GoogleIcon({ className = "w-6 h-6" }) {
-  return (
-    <svg className={className} viewBox="0 0 48 48">
-      <g>
-        <path fill="#4285F4" d="M43.6 20.5h-1.9V20H24v8h11.3c-1.6 4.3-5.7 7-10.3 7-6.1 0-11-4.9-11-11s4.9-11 11-11c2.6 0 5 .9 6.9 2.4l6-6C34.5 6.5 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 19.7-8 19.7-20 0-1.3-.1-2.2-.3-3.5z"/>
-        <path fill="#34A853" d="M6.3 14.7l6.6 4.8C14.5 16.1 18.8 13 24 13c2.6 0 5 .9 6.9 2.4l6-6C34.5 6.5 29.6 4 24 4 15.6 4 8.1 9.7 6.3 14.7z"/>
-        <path fill="#FBBC05" d="M24 44c5.4 0 10.3-1.8 14.1-4.9l-6.5-5.3C29.6 35.5 27 36.5 24 36.5c-4.6 0-8.7-2.7-10.3-7l-6.6 5.1C8.1 38.3 15.6 44 24 44z"/>
-        <path fill="#EA4335" d="M43.6 20.5h-1.9V20H24v8h11.3c-1.1 3-3.6 5.2-6.3 6.3l6.5 5.3C40.7 36.2 44 31.7 44 24c0-1.3-.1-2.2-.4-3.5z"/>
-      </g>
-    </svg>
-  );
-}
 
 const APIBASE = import.meta.env.VITE_API_URL;
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
 
 export default function AdminPromotionMenuPage() {
-  // Admin email addresses
-  const ADMIN_EMAIL = ["2001yellin@gmail.com", "u6520242@au.edu", "cherrymyo@gmail.com"];
-
   const [menuItems, setMenuItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -42,183 +24,13 @@ export default function AdminPromotionMenuPage() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
 
-  // Auth states
-  const [user, setUser] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [loginError, setLoginError] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
-  const [resetMessage, setResetMessage] = useState("");
-
   const navigate = useNavigate();
   const { darkMode, setDarkMode } = useDarkMode();
   const { totalItems } = useCart();
 
-  // Auto-hide messages after 10 seconds
-  useEffect(() => {
-    if (loginError) {
-      const timer = setTimeout(() => {
-        setLoginError("");
-      }, 10000);
-      return () => clearTimeout(timer);
-    }
-  }, [loginError]);
-
-  useEffect(() => {
-    if (resetMessage) {
-      const timer = setTimeout(() => {
-        setResetMessage("");
-      }, 10000);
-      return () => clearTimeout(timer);
-    }
-  }, [resetMessage]);
-
-  // Auth state listener
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user && !ADMIN_EMAIL.includes(user.email)) {
-        setLoginError("You are not authorized to access the promotion menu page.");
-        setUser(null);
-        await signOut(auth);
-        setAuthLoading(false);
-        return;
-      }
-      setUser(user);
-      setAuthLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
   useEffect(() => {
     document.body.classList.toggle("dark", darkMode);
   }, [darkMode]);
-
-  useEffect(() => {
-    if (!user) return;
-    
-    fetchPromotionMenuItems();
-    
-    const socket = io(SOCKET_URL, { transports: ["websocket"] });
-    
-    socket.on("connect", () => {
-      console.log("Admin Promotion Menu socket connected:", socket.id);
-    });
-
-    socket.on("menu:new", (newItem) => {
-      if (newItem.category === "Promotion") {
-        setMenuItems((prev) => [...prev, newItem]);
-      }
-    });
-
-    socket.on("menu:update", (updatedItem) => {
-      if (updatedItem.category === "Promotion") {
-        setMenuItems((prev) =>
-          prev.map((item) => (item._id === updatedItem._id ? updatedItem : item))
-        );
-      }
-    });
-
-    socket.on("menu:delete", (id) => {
-      setMenuItems((prev) => prev.filter((item) => item._id !== id));
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, [user]);
-
-  const handleLogin = async () => {
-    try {
-      await signInWithGoogle();
-    } catch (error) {
-      console.error("Login error:", error);
-      setLoginError("Failed to sign in with Google. Please try again.");
-    }
-  };
-
-  const handleEmailLogin = async (e) => {
-    e.preventDefault();
-    setLoginError("");
-    
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      
-      if (!ADMIN_EMAIL.includes(user.email)) {
-        setLoginError("You are not authorized to access the promotion menu page.");
-        await signOut(auth);
-        return;
-      }
-      
-      if (rememberMe) {
-        localStorage.setItem('rememberAdmin', 'true');
-      }
-      
-    } catch (error) {
-      console.error("Email login error:", error);
-      switch (error.code) {
-        case 'auth/user-not-found':
-          setLoginError("No admin account found with this email address.");
-          break;
-        case 'auth/wrong-password':
-          setLoginError("Incorrect password. Please try again.");
-          break;
-        case 'auth/invalid-email':
-          setLoginError("Invalid email address format.");
-          break;
-        case 'auth/too-many-requests':
-          setLoginError("Too many failed attempts. Please try again later.");
-          break;
-        default:
-          setLoginError("Login failed. Please check your credentials and try again.");
-      }
-    }
-  };
-
-  const handleForgotPassword = async () => {
-    if (!email) {
-      setLoginError("Please enter your email address first.");
-      return;
-    }
-
-    if (!ADMIN_EMAIL.includes(email)) {
-      setLoginError("This email is not authorized for admin access.");
-      return;
-    }
-
-    setLoginError("");
-    setResetMessage("");
-
-    try {
-      await sendPasswordResetEmail(auth, email);
-      setResetMessage("Password reset email sent! Check your inbox and follow the instructions.");
-    } catch (error) {
-      console.error("Password reset error:", error);
-      switch (error.code) {
-        case 'auth/user-not-found':
-          setLoginError("No admin account found with this email address.");
-          break;
-        case 'auth/invalid-email':
-          setLoginError("Invalid email address format.");
-          break;
-        case 'auth/too-many-requests':
-          setLoginError("Too many reset requests. Please try again later.");
-          break;
-        default:
-          setLoginError("Failed to send reset email. Please try again.");
-      }
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
-  };
 
   const fetchPromotionMenuItems = async () => {
     try {
@@ -238,6 +50,18 @@ export default function AdminPromotionMenuPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Check for duplicate names when creating a new item or editing with a different name
+      const trimmedName = formData.name.trim().toLowerCase();
+      const existingItem = menuItems.find(item => 
+        item.name.trim().toLowerCase() === trimmedName && 
+        (!editingItem || item._id !== editingItem._id)
+      );
+      
+      if (existingItem) {
+        alert("You already have that item. Please choose a different name.");
+        return;
+      }
+      
       let imageData = formData.image;
       
       // If a file is selected, convert it to base64
@@ -371,221 +195,117 @@ export default function AdminPromotionMenuPage() {
     });
   };
 
-  if (authLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <span>Loading...</span>
-      </div>
-    );
-  }
+  return (
+    <AdminAuth>
+      {({ user, handleLogout }) => (
+        <AdminPromotionMenuContent 
+          user={user} 
+          handleLogout={handleLogout}
+          menuItems={menuItems}
+          setMenuItems={setMenuItems}
+          loading={loading}
+          setLoading={setLoading}
+          error={error}
+          setError={setError}
+          showForm={showForm}
+          setShowForm={setShowForm}
+          editingItem={editingItem}
+          setEditingItem={setEditingItem}
+          formData={formData}
+          setFormData={setFormData}
+          selectedFile={selectedFile}
+          setSelectedFile={setSelectedFile}
+          imagePreview={imagePreview}
+          setImagePreview={setImagePreview}
+          fetchPromotionMenuItems={fetchPromotionMenuItems}
+          handleSubmit={handleSubmit}
+          handleEdit={handleEdit}
+          handleDelete={handleDelete}
+          resetForm={resetForm}
+          handleCancel={handleCancel}
+          handleFileSelect={handleFileSelect}
+          handleImageUrlChange={handleImageUrlChange}
+          convertFileToBase64={convertFileToBase64}
+          navigate={navigate}
+          darkMode={darkMode}
+          totalItems={totalItems}
+        />
+      )}
+    </AdminAuth>
+  );
+}
 
-  if (!user || loginError) {
-    return (
-      <div className={`min-h-screen flex flex-col items-center justify-center relative overflow-hidden transition-all duration-500 ${
-        darkMode 
-          ? 'bg-gradient-to-br from-gray-900 via-red-900 to-pink-900' 
-          : 'bg-gradient-to-br from-pink-50 via-white to-rose-100'
-      }`}>
-        <div className="absolute inset-0 pointer-events-none">
-          {[...Array(15)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute"
-              style={{
-                left: `${Math.random() * 100}%`,
-                animationName: 'fall',
-                animationDuration: `${5 + Math.random() * 5}s`,
-                animationDelay: `${Math.random() * 10}s`,
-                animationIterationCount: 'infinite',
-                animationTimingFunction: 'linear'
-              }}
-            >
-              <div 
-                className="text-red-500 opacity-60"
-                style={{
-                  fontSize: `${12 + Math.random() * 8}px`,
-                  transform: `rotate(${Math.random() * 360}deg)`
-                }}
-              >
-                🍒
-              </div>
-            </div>
-          ))}
-        </div>
+function AdminPromotionMenuContent({ 
+  user, 
+  handleLogout, 
+  menuItems, 
+  setMenuItems, 
+  loading, 
+  setLoading, 
+  error, 
+  setError, 
+  showForm, 
+  setShowForm, 
+  editingItem, 
+  setEditingItem, 
+  formData, 
+  setFormData, 
+  selectedFile, 
+  setSelectedFile, 
+  imagePreview, 
+  setImagePreview, 
+  fetchPromotionMenuItems, 
+  handleSubmit, 
+  handleEdit, 
+  handleDelete, 
+  resetForm, 
+  handleCancel, 
+  handleFileSelect, 
+  handleImageUrlChange, 
+  convertFileToBase64, 
+  navigate, 
+  darkMode, 
+  totalItems 
+}) {
+  
+  useEffect(() => {
+    if (!user) return;
+    
+    fetchPromotionMenuItems();
+    
+    const socket = io(SOCKET_URL, { transports: ["websocket"] });
+    
+    socket.on("connect", () => {
+      console.log("Admin Promotion Menu socket connected:", socket.id);
+    });
 
-        <style jsx>{`
-          @keyframes fall {
-            0% { transform: translateY(-100vh) rotate(0deg); opacity: 0; }
-            10% { opacity: 0.8; }
-            90% { opacity: 0.8; }
-            100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
-          }
-        `}</style>
-        
-        <div className={`relative z-10 w-full max-w-md p-8 rounded-3xl shadow-2xl backdrop-blur-lg border transition-all duration-300 hover:shadow-xl ${
-          darkMode 
-            ? 'bg-gray-800/70 border-pink-500/20 shadow-pink-500/10' 
-            : 'bg-white/80 border-pink-200/50 shadow-pink-500/20'
-        } transform hover:scale-105`}>
-          
-          <div className="flex flex-col items-center mb-8">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center mb-4 shadow-lg relative overflow-hidden">
-              <span className="text-white text-2xl font-bold">🎉</span>
-              <div className="absolute inset-0 bg-gradient-to-t from-red-600/20 to-transparent"></div>
-            </div>
-            <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent" style={{fontFamily: 'ui-rounded, system-ui, sans-serif'}}>
-              Promotion Menu
-            </h1>
-            <h2 className={`text-xl font-semibold mb-1 ${darkMode ? 'text-pink-300' : 'text-red-700'}`} style={{fontFamily: 'ui-rounded, system-ui, sans-serif'}}>
-              Admin Access
-            </h2>
-          </div>
+    socket.on("menu:new", (newItem) => {
+      if (newItem.category === "Promotion") {
+        setMenuItems((prev) => [...prev, newItem]);
+      }
+    });
 
-          <div className="space-y-6">
-            {resetMessage && (
-              <div className="p-4 rounded-xl bg-green-50 border border-green-200 dark:bg-green-900/30 dark:border-green-800">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-green-800 dark:text-green-200">{resetMessage}</p>
-                  </div>
-                </div>
-              </div>
-            )}
+    socket.on("menu:update", (updatedItem) => {
+      if (updatedItem.category === "Promotion") {
+        setMenuItems((prev) =>
+          prev.map((item) => (item._id === updatedItem._id ? updatedItem : item))
+        );
+      }
+    });
 
-            {loginError && (
-              <div className="p-4 rounded-xl bg-red-50 border border-red-200 dark:bg-red-900/30 dark:border-red-800 animate-bounce">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-red-800 dark:text-red-200">{loginError}</p>
-                  </div>
-                </div>
-              </div>
-            )}
+    socket.on("menu:delete", (id) => {
+      setMenuItems((prev) => prev.filter((item) => item._id !== id));
+    });
 
-            <div>
-              <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Admin Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@cherrymyo.com"
-                required
-                className={`w-full px-4 py-3 rounded-xl border transition-all duration-200 ${
-                  darkMode 
-                    ? 'bg-gray-700/50 border-gray-600 text-gray-300 placeholder-gray-500' 
-                    : 'bg-white border-gray-300 text-gray-700 placeholder-gray-500'
-                } focus:ring-2 focus:ring-red-500 focus:border-red-500`}
-              />
-            </div>
-
-            <div>
-              <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Password</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  className={`w-full px-4 py-3 pr-12 rounded-xl border transition-all duration-200 ${
-                    darkMode 
-                      ? 'bg-gray-700/50 border-gray-600 text-gray-300 placeholder-gray-500' 
-                      : 'bg-white border-gray-300 text-gray-700 placeholder-gray-500'
-                  } focus:ring-2 focus:ring-red-500 focus:border-red-500`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className={`absolute right-3 top-1/2 transform -translate-y-1/2 p-1 rounded transition-colors duration-200 ${
-                    darkMode
-                      ? 'text-gray-400 hover:text-gray-300'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
-                />
-                <span className={`ml-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Remember me</span>
-              </label>
-              <button
-                type="button"
-                onClick={handleForgotPassword}
-                className={`text-sm hover:underline transition-colors duration-200 ${
-                  darkMode ? 'text-pink-400 hover:text-pink-300' : 'text-red-600 hover:text-red-800'
-                }`}
-              >
-                Forgot password?
-              </button>
-            </div>
-
-            <button
-              onClick={handleEmailLogin}
-              className="w-full bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-red-500/50 flex items-center justify-center gap-2 text-lg"
-              style={{fontFamily: 'ui-rounded, system-ui, sans-serif'}}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-              <span>Login with Email</span>
-            </button>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className={`w-full border-t ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className={`px-2 ${darkMode ? 'bg-gray-800 text-gray-400' : 'bg-white text-gray-500'}`}>Or continue with</span>
-              </div>
-            </div>
-
-            <button
-              onClick={handleLogin}
-              className="w-full bg-white hover:bg-gray-50 text-gray-900 font-semibold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-gray-500/50 flex items-center justify-center gap-3 text-lg border border-gray-300"
-              style={{fontFamily: 'ui-rounded, system-ui, sans-serif'}}
-            >
-              <GoogleIcon className="w-6 h-6" />
-              <span>Continue with Google</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+    return () => {
+      socket.disconnect();
+    };
+  }, [user]);
 
   return (
     <div className={`min-h-screen transition-all duration-500 relative overflow-hidden ${
       darkMode 
-        ? "bg-gradient-to-br from-gray-900 via-red-950 to-pink-950 text-white" 
+        ? "bg-gradient-to-br from-gray-900 via-pink-950 to-red-950 text-white" 
         : "bg-gradient-to-br from-pink-50 via-red-50 to-rose-100 text-gray-900"
     }`}>
       {/* Animated Cherry Background */}
@@ -612,7 +332,8 @@ export default function AdminPromotionMenuPage() {
         ))}
       </div>
 
-      <style jsx>{`
+      {/* CSS Animations */}
+      <style>{`
         @keyframes float {
           0% { transform: translateY(0px) rotate(0deg); opacity: 0.1; }
           50% { transform: translateY(-20px) rotate(180deg); opacity: 0.3; }
@@ -637,15 +358,15 @@ export default function AdminPromotionMenuPage() {
           <div className={`relative mb-12 p-8 rounded-3xl shadow-2xl backdrop-blur-lg border transition-all duration-500 ${
             darkMode 
               ? 'bg-gray-800/30 border-red-500/20 shadow-red-500/10' 
-              : 'bg-white/70 border-pink-200/50 shadow-pink-500/20'
+              : 'bg-white/70 border-red-200/50 shadow-red-500/20'
           }`}>
             <div className="flex flex-col lg:flex-row justify-between items-center gap-6">
               <div className="text-center lg:text-left">
-                <h1 className={`text-3xl sm:text-4xl lg:text-4xl xl:text-5xl font-bold mb-4 bg-gradient-to-r from-red-600 via-pink-500 to-red-500 bg-clip-text text-transparent leading-tight`}>
-                  🎉 Promotion Menu
+                <h1 className={`text-3xl sm:text-4xl lg:text-4xl xl:text-5xl font-bold mb-4 bg-gradient-to-r from-red-600 via-pink-500 to-rose-500 bg-clip-text text-transparent leading-tight`}>
+                  🍒 Promotion Menu
                 </h1>
                 <p className={`text-base sm:text-lg ${darkMode ? 'text-red-300' : 'text-red-700'} font-medium`}>
-                  Create and manage special promotional offers
+                  Create and manage exciting promotional offers
                 </p>
                 
               </div>
@@ -701,10 +422,10 @@ export default function AdminPromotionMenuPage() {
               </div>
               <div className="mt-8 space-y-2">
                 <p className={`text-xl font-semibold ${darkMode ? "text-red-300" : "text-red-600"}`}>
-                  Loading Promotions
+                  Loading Promotion Menu
                 </p>
                 <p className={`${darkMode ? "text-gray-300" : "text-gray-600"}`}>
-                  Fetching your promotional menu items...
+                  Fetching your promotional items...
                 </p>
               </div>
             </div>
@@ -740,18 +461,18 @@ export default function AdminPromotionMenuPage() {
                   className={`group relative rounded-2xl shadow-xl overflow-hidden transition-all duration-500 hover:shadow-2xl transform hover:scale-105 hover:-translate-y-2 ${
                     darkMode 
                       ? "bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700"
-                      : "bg-gradient-to-br from-pink-100 to-pink-300 border border-pink-100"
+                      : "bg-gradient-to-br from-white to-red-50 border border-red-100"
                   }`}
                   style={{
                     animationDelay: `${index * 100}ms`
                   }}
                 >
-                  {/* Promotional Badge */}
+                  {/* Promotion Badge */}
                   <div className="absolute top-4 left-4 z-20">
                     <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold shadow-lg ${
                       darkMode ? 'bg-gradient-to-r from-red-600 to-pink-600 text-white' : 'bg-gradient-to-r from-red-500 to-pink-500 text-white'
                     }`}>
-                      <span>🎉</span>
+                      <span>🍒</span>
                       <span>PROMO</span>
                     </div>
                   </div>
@@ -781,7 +502,7 @@ export default function AdminPromotionMenuPage() {
                   {/* Image Section */}
                   <div className="relative overflow-hidden">
                     <img
-                      src={item.image || "https://via.placeholder.com/300x200/ff6b9d/ffffff?text=Promotion"}
+                      src={item.image || "https://via.placeholder.com/300x200/ef4444/ffffff?text=Promo+Dish"}
                       alt={item.name}
                       className="w-full h-56 object-cover transition-all duration-500 group-hover:scale-110"
                     />
@@ -799,7 +520,7 @@ export default function AdminPromotionMenuPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex flex-col">
                         <span className={`text-sm font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                          Special Price
+                          Promo Price
                         </span>
                         <span className={`text-2xl font-bold ${
                           darkMode ? "text-red-400" : "text-red-600"
@@ -846,16 +567,16 @@ export default function AdminPromotionMenuPage() {
           {/* Enhanced Empty State */}
           {!loading && !error && menuItems.length === 0 && (
             <div className={`text-center py-20 rounded-3xl ${
-              darkMode ? 'bg-gray-800/30 border border-gray-700' : 'bg-white/70 border border-pink-200'
+              darkMode ? 'bg-gray-800/30 border border-gray-700' : 'bg-white/70 border border-red-200'
             } backdrop-blur-lg`}>
-              <div className="text-8xl mb-6 animate-bounce">🎉</div>
+              <div className="text-8xl mb-6 animate-bounce">🍒</div>
               <h3 className={`text-3xl font-bold mb-4 ${
                 darkMode ? "text-gray-200" : "text-gray-700"
               }`}>
                 No Promotions Yet
               </h3>
               <p className={`text-lg mb-8 max-w-md mx-auto ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                Start creating amazing promotional offers to attract more customers and boost your sales!
+                Start creating exciting promotional offers that will attract customers and boost your sales!
               </p>
               <button
                 onClick={() => setShowForm(true)}
@@ -885,7 +606,7 @@ export default function AdminPromotionMenuPage() {
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-gradient-to-r from-red-500 to-pink-500 rounded-xl flex items-center justify-center">
-                    <span className="text-white text-lg">🎉</span>
+                    <span className="text-white text-lg">🍒</span>
                   </div>
                   <div>
                     <h2 className={`text-2xl font-bold ${
@@ -894,7 +615,7 @@ export default function AdminPromotionMenuPage() {
                       {editingItem ? "Edit Promotion" : "Create New Promotion"}
                     </h2>
                     <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                      {editingItem ? "Update your promotional item" : "Add a new promotional offer"}
+                      {editingItem ? "Update your promotional offer" : "Add a new exciting promotion"}
                     </p>
                   </div>
                 </div>
@@ -935,7 +656,7 @@ export default function AdminPromotionMenuPage() {
                           ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-red-500"
                           : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-red-500"
                       }`}
-                      placeholder="e.g.,Special Deal"
+                      placeholder="e.g., Weekend Special Combo"
                     />
                   </div>
 
@@ -946,7 +667,7 @@ export default function AdminPromotionMenuPage() {
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                       </svg>
-                      <span>Special Price (Kyat)</span>
+                      <span>Promotion Price (Kyat)</span>
                     </label>
                     <div className="relative">
                       <input
@@ -960,7 +681,7 @@ export default function AdminPromotionMenuPage() {
                             ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-red-500"
                             : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-red-500"
                         }`}
-                        placeholder="5000"
+                        placeholder="3500.00"
                       />
                       <span className={`absolute left-3 top-1/2 transform -translate-y-1/2 text-lg font-bold ${
                         darkMode ? 'text-gray-400' : 'text-gray-500'
@@ -1049,7 +770,7 @@ export default function AdminPromotionMenuPage() {
                               ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-red-500"
                               : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-red-500"
                           }`}
-                          placeholder="https://example.com/image.jpg"
+                          placeholder="https://example.com/promotion-image.jpg"
                         />
                       </div>
                     </div>

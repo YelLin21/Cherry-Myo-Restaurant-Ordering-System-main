@@ -6,6 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line, CartesianGrid
 } from "recharts";
 import { Link } from "react-router-dom";
+import AdminAuth from "../components/AdminAuth.jsx";
 
 const TABS = ["Daily", "Weekly", "Monthly", "Yearly"];
 const CHERRY_COLORS = ["#e11d48", "#f472b6", "#be185d", "#fbbf24", "#a21caf", "#f43f5e"];
@@ -93,9 +94,11 @@ export default function AdminSalesReport({ darkMode = false }) {
   };
 
   return (
-    <div className={`min-h-screen p-4 md:p-8 transition-colors duration-300 ${darkMode ? 'bg-gray-900' : 'bg-pink-50'}`}
-      aria-label="Admin Sales Report"
-    >
+    <AdminAuth>
+      {({ user, handleLogout }) => (
+        <div className={`min-h-screen p-4 md:p-8 transition-colors duration-300 ${darkMode ? 'bg-gray-900' : 'bg-pink-50'}`}
+          aria-label="Admin Sales Report"
+        >
       {/* Navigation Bar */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
@@ -329,5 +332,7 @@ export default function AdminSalesReport({ darkMode = false }) {
         </>
       )}
     </div>
+      )}
+    </AdminAuth>
   );
 }

@@ -146,7 +146,7 @@ export default function CartPage() {
 
   return (
     <div className={`min-h-screen pt-10 pb-28 transition-colors duration-300 ${darkMode ? "dark bg-gray-900" : "bg-gray-50"}`}>
-      <Navbar darkMode={darkMode} setDarkMode={setDarkMode} />
+      <Navbar darkMode={darkMode} setDarkMode={setDarkMode} cartCount={totalItems} />
 
       {orderSent && (
         <div className={`fixed top-24 left-1/2 transform -translate-x-1/2 border px-6 py-3 rounded shadow-lg z-50 animate-fadeIn ${darkMode ? "bg-green-800 border-green-600 text-green-200" : "bg-green-100 border-green-400 text-green-800"}`}>
