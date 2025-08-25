@@ -5,6 +5,7 @@ import AdminNavbar from "../components/AdminNavbar.jsx";
 import { useDarkMode } from "./DarkModeContext.jsx";
 import { onAuthStateChanged, signOut, signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { auth, signInWithGoogle } from "../firebase";
+import jsPDF from 'jspdf';
 
 function GoogleIcon({ className = "w-6 h-6" }) {
     return (
@@ -598,6 +599,115 @@ export default function AdminCheckoutPage() {
         const discountPercent = discounts[order._id] || 0;
         const discountAmount = (discountPercent / 100) * total;
         return Math.max(total - discountAmount, 0);
+    };
+
+    const generateReceiptPDF = (order) => {
+        const doc = new jsPDF();
+        const orderItems = Array.isArray(order.items) ? order.items : [];
+        const total = orderItems.reduce(
+            (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
+            0
+        );
+        const discountPercent = discounts[order._id] || 0;
+        const discountAmount = (discountPercent / 100) * total;
+        const finalTotal = Math.max(total - discountAmount, 0);
+        const paymentMethod = paymentMethods[order._id];
+        const cashReceived = cashAmounts[order._id];
+        const change = paymentMethod === 'cash' ? (cashReceived - finalTotal) : 0;
+
+        // Set up the PDF with header
+        doc.setFontSize(22);
+        doc.text('Cherry Myo Restaurant', 105, 25, { align: 'center' });
+        
+        // Add space for logo (you can add logo image here later)
+        doc.setFontSize(10);
+        doc.text('[Logo Here]', 105, 15, { align: 'center' });
+        
+        doc.setFontSize(16);
+        doc.text('Payment Receipt', 105, 40, { align: 'center' });
+        
+        // Add cherry decorations
+        doc.setFontSize(12);
+        doc.text('🍒', 20, 25);
+        doc.text('🍒', 180, 25);
+        
+        // Receipt details
+        doc.setFontSize(12);
+        doc.text(`Table: ${order.tableNumber}`, 20, 60);
+        doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 70);
+        doc.text(`Time: ${new Date().toLocaleTimeString()}`, 20, 80);
+        
+        // Order items section with proper table headers
+        doc.setFontSize(14);
+        doc.text('Order Items:', 20, 100);
+        doc.line(20, 105, 190, 105);
+        
+        // Table headers
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'bold');
+        doc.text('Item Name', 20, 115);
+        doc.text('Qty', 120, 115);
+        doc.text('Price', 140, 115);
+        doc.text('Total', 170, 115);
+        doc.line(20, 118, 190, 118);
+        
+        // Order items with proper formatting
+        let yPosition = 128;
+        doc.setFont(undefined, 'normal');
+        orderItems.forEach((item, index) => {
+            const itemTotal = (item.price || 0) * (item.quantity || 0);
+            doc.text(`${item.name}`, 20, yPosition);
+            doc.text(`${item.quantity}`, 120, yPosition);
+            doc.text(`${(item.price || 0).toFixed(2)} MMK`, 140, yPosition);
+            doc.text(`${itemTotal.toFixed(2)} MMK`, 170, yPosition);
+            yPosition += 8;
+        });
+        
+        // Summary section
+        yPosition += 10;
+        doc.line(20, yPosition, 190, yPosition);
+        yPosition += 10;
+        
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'bold');
+        doc.text(`Subtotal:`, 120, yPosition);
+        doc.text(`${total.toFixed(2)} MMK`, 170, yPosition);
+        yPosition += 10;
+        
+        if (discountPercent > 0) {
+            doc.text(`Discount (${discountPercent}%):`, 120, yPosition);
+            doc.text(`-${discountAmount.toFixed(2)} MMK`, 170, yPosition);
+            yPosition += 10;
+        }
+        
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.text(`Final Total:`, 120, yPosition);
+        doc.text(`${finalTotal.toFixed(2)} MMK`, 170, yPosition);
+        yPosition += 15;
+        
+        // Payment details
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'normal');
+        doc.text(`Payment Method: ${paymentMethod === 'cash' ? 'Cash' : 'QR Scan'}`, 20, yPosition);
+        yPosition += 10;
+        
+        if (paymentMethod === 'cash') {
+            doc.text(`Cash Received: ${cashReceived.toFixed(2)} MMK`, 20, yPosition);
+            yPosition += 10;
+            doc.text(`Change: ${change.toFixed(2)} MMK`, 20, yPosition);
+            yPosition += 10;
+        }
+        
+        // Footer
+        yPosition += 15;
+        doc.setFontSize(10);
+        doc.text('Thank you for dining with us!', 105, yPosition, { align: 'center' });
+        doc.text('🍒 Cherry Myo Restaurant 🍒', 105, yPosition + 10, { align: 'center' });
+        doc.text('Visit us again soon!', 105, yPosition + 20, { align: 'center' });
+        
+        // Save the PDF
+        doc.save(`Cherry-Myo-Receipt-Table-${order.tableNumber}-${new Date().toISOString().slice(0, 10)}.pdf`);
     };
 
     // Debug log for checkout orders
@@ -1221,25 +1331,40 @@ export default function AdminCheckoutPage() {
                                                     </div>
                                                 )}
 
-                                                {/* Mark as Paid Button */}
-                                                <div className="mt-6 text-right pt-3">
-                                                    <button
-                                                        onClick={() => handleMarkAsPaid(order)}
-                                                        disabled={!paymentMethods[order._id] ||
-                                                            (paymentMethods[order._id] === 'cash' &&
-                                                                (!cashAmounts[order._id] || cashAmounts[order._id] < finalTotal))}
-                                                        className={`px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg ${!paymentMethods[order._id]
-                                                                ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                                                                : 'bg-gradient-to-r from-red-500 via-pink-500 to-rose-500 hover:from-red-600 hover:via-pink-600 hover:to-rose-600 text-white shadow-red-400/50'
-                                                            }`}
-                                                    >
-                                                        🍒 Mark as Paid
-                                                        {(order.orderIds && order.orderIds.length > 1) && (
-                                                            <span className="ml-2 px-2 py-1 bg-red-600 rounded text-sm">
-                                                                {order.orderIds.length} orders
-                                                            </span>
-                                                        )}
-                                                    </button>
+                                                {/* Action Buttons */}
+                                                <div className="mt-6 pt-3">
+                                                    <div className="flex flex-col lg:flex-row gap-3 lg:justify-end">
+                                                        {/* Print Receipt Button */}
+                                                        <button
+                                                            onClick={() => generateReceiptPDF(order)}
+                                                            disabled={!paymentMethods[order._id]}
+                                                            className={`px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 transform hover:scale-105 shadow-lg ${!paymentMethods[order._id]
+                                                                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                                                                    : 'bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-blue-400/50'
+                                                                }`}
+                                                        >
+                                                            📄 Print Receipt
+                                                        </button>
+
+                                                        {/* Mark as Paid Button */}
+                                                        <button
+                                                            onClick={() => handleMarkAsPaid(order)}
+                                                            disabled={!paymentMethods[order._id] ||
+                                                                (paymentMethods[order._id] === 'cash' &&
+                                                                    (!cashAmounts[order._id] || cashAmounts[order._id] < finalTotal))}
+                                                            className={`px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg ${!paymentMethods[order._id]
+                                                                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                                                                    : 'bg-gradient-to-r from-red-500 via-pink-500 to-rose-500 hover:from-red-600 hover:via-pink-600 hover:to-rose-600 text-white shadow-red-400/50'
+                                                                }`}
+                                                        >
+                                                            🍒 Mark as Paid
+                                                            {(order.orderIds && order.orderIds.length > 1) && (
+                                                                <span className="ml-2 px-2 py-1 bg-red-600 rounded text-sm">
+                                                                    {order.orderIds.length} orders
+                                                                </span>
+                                                            )}
+                                                        </button>
+                                                    </div>
 
                                                     {/* Payment Status */}
                                                     <div className="mt-3 text-sm">
