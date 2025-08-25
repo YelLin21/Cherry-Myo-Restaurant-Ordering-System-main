@@ -1,18 +1,26 @@
 import { createContext, useContext, useState, useEffect } from "react";
+import { useTable } from "./TableContext";
 
 const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
-  const [cart, setCart] = useState(() => {
-    // Load cart from localStorage on initialization
-    const savedCart = localStorage.getItem("cart");
-    return savedCart ? JSON.parse(savedCart) : {};
-  });
+  const { tableId } = useTable(); // 👈 use current tableId
+  const [cart, setCart] = useState({});
 
-  // Save cart to localStorage whenever it changes
+  // Load cart for this table from sessionStorage
   useEffect(() => {
-    localStorage.setItem("cart", JSON.stringify(cart));
-  }, [cart]);
+    if (tableId) {
+      const savedCart = sessionStorage.getItem(`cart_${tableId}`);
+      setCart(savedCart ? JSON.parse(savedCart) : {});
+    }
+  }, [tableId]);
+
+  // Save cart for this table into sessionStorage
+  useEffect(() => {
+    if (tableId) {
+      sessionStorage.setItem(`cart_${tableId}`, JSON.stringify(cart));
+    }
+  }, [cart, tableId]);
 
   const addToCart = (item) => {
     setCart((prev) => {
@@ -25,44 +33,47 @@ export const CartProvider = ({ children }) => {
     });
   };
 
-  function removeFromCart(id, force = false) {
-  setCart((prev) => {
-    const newCart = { ...prev };
-    const item = newCart[id];
+  const removeFromCart = (id, force = false) => {
+    setCart((prev) => {
+      const newCart = { ...prev };
+      const entry = newCart[id];
 
-    if (!item) return newCart;
+      if (!entry) return newCart;
 
-    if (force || item.quantity === 1) {
-      delete newCart[id];
-    }
-    else {
-    newCart[id] = {
-        ...item,
-        quantity: item.quantity - 1,
-      };
-    }
+      if (force || entry.quantity === 1) {
+        delete newCart[id];
+      } else {
+        newCart[id] = {
+          ...entry,
+          quantity: entry.quantity - 1,
+        };
+      }
 
-    return newCart;
-  });
-}
- const clearCart = () => {
-    setCart({});
-    localStorage.removeItem("cart");
+      return newCart;
+    });
   };
-  
+
+  const clearCart = () => {
+    setCart({});
+    if (tableId) {
+      sessionStorage.removeItem(`cart_${tableId}`);
+    }
+  };
+
   const total = Object.values(cart).reduce(
     (sum, entry) => sum + entry.item.price * entry.quantity,
     0
   );
 
-  // Calculate total number of items in cart
   const totalItems = Object.values(cart).reduce(
     (sum, entry) => sum + entry.quantity,
     0
   );
 
   return (
-     <CartContext.Provider value={{ cart, addToCart, removeFromCart, total, totalItems, clearCart }}>
+    <CartContext.Provider
+      value={{ cart, addToCart, removeFromCart, clearCart, total, totalItems }}
+    >
       {children}
     </CartContext.Provider>
   );

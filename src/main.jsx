@@ -6,7 +6,7 @@ import { CartProvider } from "./context/CartContext";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import { DarkModeProvider } from "./pages/DarkModeContext.jsx"; // 👈 import
-
+import { TableProvider } from "./context/TableContext"; 
 
 
 ReactDOM.createRoot(document.getElementById("root")).render(
@@ -15,10 +15,12 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   //     <App />
   //   </CartProvider>
   // </React.StrictMode>
-  <CartProvider>
-    <DarkModeProvider>
-        <App />
-      </DarkModeProvider>
-  </CartProvider>
+  <TableProvider>  
+    <CartProvider>
+      <DarkModeProvider>
+          <App />
+        </DarkModeProvider>
+    </CartProvider>
+  </TableProvider>
 );
 

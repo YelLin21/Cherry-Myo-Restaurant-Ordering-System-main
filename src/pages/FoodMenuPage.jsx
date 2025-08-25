@@ -4,7 +4,7 @@ import Navbar from "../components/Navbar.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { io } from "socket.io-client";
 import { useDarkMode } from "./DarkModeContext.jsx";
-
+import { useTable } from "../context/TableContext";
 
 const APIBASE = import.meta.env.VITE_API_URL;
 const SOCKET_URL =
@@ -23,6 +23,7 @@ export default function FoodMenuPage() {
   const navigate = useNavigate();
   const { darkMode, setDarkMode } = useDarkMode();
   const { cart, addToCart, removeFromCart, total, totalItems } = useCart();
+  const { tableId } = useTable();
 
   useEffect(() => {
     document.body.classList.toggle("dark", darkMode);
@@ -63,14 +64,25 @@ export default function FoodMenuPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!tableId) return;
+
+    fetch(`${APIBASE}/cart/${tableId}`) // 👈 Backend should return cart
+      .then((res) => res.json())
+      .then((data) => {
+        // Your CartContext should expose a "setCart" for this
+        console.log("✅ Loaded cart for table:", tableId, data);
+        // setCart(data); 
+      })
+      .catch((err) => console.error("❌ Failed to load cart:", err));
+  }, [tableId]);
+
   const getQuantity = (id) => cart[id]?.quantity || 0;
 
   const filteredItems = menuItems.filter((item) => {
-    // If there's a search term, search across all categories
     if (searchTerm.trim()) {
       return item.name.toLowerCase().includes(searchTerm.toLowerCase());
     }
-    // If no search term, filter by active tab
     return item.category === activeTab;
   });
 
@@ -286,8 +298,8 @@ export default function FoodMenuPage() {
 
                 {/* Right: Next button */}
                 <button
-                  onClick={() => navigate('/cart')}
-                  className={`px-6 py-2 rounded-md font-medium transition-colors duration-200
+          onClick={() => navigate(`/cart/${tableId}`)}
+          className={`px-6 py-2 rounded-md font-medium transition-colors duration-200
           ${darkMode ? 'bg-green-600 hover:bg-green-500 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}
         `}
                 >
