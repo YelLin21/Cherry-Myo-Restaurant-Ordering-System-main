@@ -1367,7 +1367,7 @@ export default function AdminCheckoutPage() {
                                                     </div>
 
                                                     {/* Payment Status */}
-                                                    <div className="mt-3 text-sm">
+                                                    <div className="mt-3 text-right">
                                                         {!paymentMethods[order._id] && (
                                                             <span className="text-orange-600">⚠️ Select payment method</span>
                                                         )}
