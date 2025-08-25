@@ -71,7 +71,7 @@ export default function CartPage() {
   };
 
   const formatPrice = (price) => {
-    return "K" + price.toLocaleString("en-US");
+    return price.toLocaleString("en-US") + " MMK";
   };
 
   const calculateSelectedTotal = () => {

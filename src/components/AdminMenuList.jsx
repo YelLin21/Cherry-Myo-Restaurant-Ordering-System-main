@@ -42,7 +42,7 @@ export default function AdminMenuList({ items, onDelete, onEdit, darkMode }) {
               <p className={`font-medium ${
                 darkMode ? 'text-green-400' : 'text-gray-700'
               }`}>
-                {item.price} Kyat
+                {item.price} MMK
               </p>
               <p className={`text-sm italic ${
                 darkMode ? 'text-gray-400' : 'text-gray-600'

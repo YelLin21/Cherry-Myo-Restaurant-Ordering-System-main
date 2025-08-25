@@ -276,7 +276,7 @@ export default function AdminCheckoutPage() {
 
             // Keep orders that have status "readyForCheckout" or "sent" and are not paid
             const shouldKeepInCheckout = (updatedOrder.status === "readyForCheckout" || updatedOrder.status === "sent") && !updatedOrder.paid;
-            
+
             if (!shouldKeepInCheckout) {
                 console.log(`🔄 Order ${updatedOrder._id} status changed to ${updatedOrder.status} (paid: ${updatedOrder.paid}), removing from checkout`);
                 setCheckoutOrders((prev) => {
@@ -307,8 +307,8 @@ export default function AdminCheckoutPage() {
                         // Also check if this order ID is in the merged orderIds array
                         if (order.orderIds && order.orderIds.includes(updatedOrder._id)) {
                             // Update the main order properties while keeping the merged structure
-                            return { 
-                                ...order, 
+                            return {
+                                ...order,
                                 status: updatedOrder.status,
                                 processedAt: updatedOrder.processedAt || order.processedAt
                             };
@@ -579,7 +579,7 @@ export default function AdminCheckoutPage() {
             const orderCount = orderIds.length;
             const orderText = orderCount === 1 ? 'order' : 'orders';
             const paymentText = paymentMethod === 'cash'
-                ? `Cash: ฿${cashAmounts[tableOrder._id]}, Change: ฿${(cashAmounts[tableOrder._id] - finalTotal).toFixed(2)}`
+                ? `Cash: ${cashAmounts[tableOrder._id]}MMK, Change: ${(cashAmounts[tableOrder._id] - finalTotal).toFixed(2)}MMK`
                 : 'QR Scan payment';
 
             alert(`💰 Table ${tableOrder.tableNumber} - ${orderCount} ${orderText} marked as paid\n💳 ${paymentText}\n✅ Removed from customer order history.`);
@@ -615,8 +615,8 @@ export default function AdminCheckoutPage() {
     if (!user || loginError) {
         return (
             <div className={`min-h-screen flex flex-col items-center justify-center relative overflow-hidden transition-all duration-500 ${darkMode
-                    ? 'bg-gradient-to-br from-gray-900 via-red-900 to-pink-900'
-                    : 'bg-gradient-to-br from-pink-50 via-white to-rose-100'
+                ? 'bg-gradient-to-br from-gray-900 via-red-900 to-pink-900'
+                : 'bg-gradient-to-br from-pink-50 via-white to-rose-100'
                 }`}>
                 <div className="absolute inset-0 pointer-events-none">
                     {[...Array(15)].map((_, i) => (
@@ -655,8 +655,8 @@ export default function AdminCheckoutPage() {
         `}</style>
 
                 <div className={`relative z-10 w-full max-w-md p-8 rounded-3xl shadow-2xl backdrop-blur-lg border transition-all duration-300 hover:shadow-xl ${darkMode
-                        ? 'bg-gray-800/70 border-pink-500/20 shadow-pink-500/10'
-                        : 'bg-white/80 border-pink-200/50 shadow-pink-500/20'
+                    ? 'bg-gray-800/70 border-pink-500/20 shadow-pink-500/10'
+                    : 'bg-white/80 border-pink-200/50 shadow-pink-500/20'
                     } transform hover:scale-105`}>
 
                     <div className="flex flex-col items-center mb-8">
@@ -712,8 +712,8 @@ export default function AdminCheckoutPage() {
                                 placeholder="admin@cherrymyo.com"
                                 required
                                 className={`w-full px-4 py-3 rounded-xl border transition-all duration-200 ${darkMode
-                                        ? 'bg-gray-700/50 border-gray-600 text-gray-300 placeholder-gray-500'
-                                        : 'bg-white border-gray-300 text-gray-700 placeholder-gray-500'
+                                    ? 'bg-gray-700/50 border-gray-600 text-gray-300 placeholder-gray-500'
+                                    : 'bg-white border-gray-300 text-gray-700 placeholder-gray-500'
                                     } focus:ring-2 focus:ring-red-500 focus:border-red-500`}
                             />
                         </div>
@@ -728,16 +728,16 @@ export default function AdminCheckoutPage() {
                                     placeholder="••••••••"
                                     required
                                     className={`w-full px-4 py-3 pr-12 rounded-xl border transition-all duration-200 ${darkMode
-                                            ? 'bg-gray-700/50 border-gray-600 text-gray-300 placeholder-gray-500'
-                                            : 'bg-white border-gray-300 text-gray-700 placeholder-gray-500'
+                                        ? 'bg-gray-700/50 border-gray-600 text-gray-300 placeholder-gray-500'
+                                        : 'bg-white border-gray-300 text-gray-700 placeholder-gray-500'
                                         } focus:ring-2 focus:ring-red-500 focus:border-red-500`}
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
                                     className={`absolute right-3 top-1/2 transform -translate-y-1/2 p-1 rounded transition-colors duration-200 ${darkMode
-                                            ? 'text-gray-400 hover:text-gray-300'
-                                            : 'text-gray-500 hover:text-gray-700'
+                                        ? 'text-gray-400 hover:text-gray-300'
+                                        : 'text-gray-500 hover:text-gray-700'
                                         }`}
                                     aria-label={showPassword ? "Hide password" : "Show password"}
                                 >
@@ -809,359 +809,475 @@ export default function AdminCheckoutPage() {
         );
     }
     return (
-        <div className="min-h-screen bg-gray-100">
+        <div className={`min-h-screen transition-all duration-500 relative overflow-hidden ${darkMode
+                ? "bg-gradient-to-br from-gray-900 via-red-950 to-pink-950 text-white"
+                : "bg-gradient-to-br from-pink-50 via-rose-100 to-red-50 text-gray-800"
+            }`}>
+            {/* Admin Navigation */}
             <AdminNavbar />
-            <div className="pt-24 p-3 sm:p-4 md:p-6">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-2 sm:gap-0">
-                    <h1 className="text-2xl sm:text-3xl font-bold">🧾 Admin Checkout</h1>
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={syncWithDatabase}
-                            disabled={isRefreshing}
-                            className={`px-3 py-1 rounded-lg text-sm font-medium transition-all ${isRefreshing
-                                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                                    : 'bg-blue-500 text-white hover:bg-blue-600'
-                                }`}
-                            title="Sync with database to fetch all ready and sent orders"
-                        >
-                            {isRefreshing ? '🔄 Syncing...' : '🔄 Sync DB'}
-                        </button>
-                        <p className="text-gray-600 font-mono text-xs sm:text-sm">
-                            {currentTime.toLocaleDateString()} {currentTime.toLocaleTimeString()}
-                        </p>
+            
+            {/* Animated Cherry Background */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                {[...Array(20)].map((_, i) => (
+                    <div
+                        key={i}
+                        className={`absolute animate-float opacity-20 ${darkMode ? 'text-pink-400' : 'text-red-400'
+                            }`}
+                        style={{
+                            left: `${Math.random() * 100}%`,
+                            top: `${Math.random() * 100}%`,
+                            animationDelay: `${Math.random() * 10}s`,
+                            animationDuration: `${8 + Math.random() * 4}s`,
+                            fontSize: `${12 + Math.random() * 8}px`,
+                        }}
+                    >
+                        🍒
+                    </div>
+                ))}
+            </div>
+
+            {/* Header */}
+            <div className={`relative z-10 border-b backdrop-blur-md shadow-xl mt-16 ${darkMode
+                    ? 'bg-gradient-to-r from-gray-900/90 via-red-950/90 to-pink-950/90 border-pink-700/40'
+                    : 'bg-gradient-to-r from-white/95 via-pink-50/95 to-rose-50/95 border-pink-300/60'
+                }`}>
+                <div className="max-w-7xl mx-auto px-6 py-8">
+                    <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+                        {/* Title Section */}
+                        <div className="flex items-center gap-6">
+                            <div className={`relative w-20 h-20 rounded-3xl flex items-center justify-center shadow-2xl transform transition-all duration-300 hover:scale-110 ${darkMode
+                                    ? 'bg-gradient-to-br from-red-600 via-pink-600 to-rose-600 shadow-pink-500/30'
+                                    : 'bg-gradient-to-br from-red-500 via-pink-500 to-rose-500 shadow-red-400/40'
+                                }`}>
+                                <div className="absolute inset-0 rounded-3xl bg-white/20 animate-pulse"></div>
+                                <span className="text-3xl relative z-10 filter drop-shadow-lg">🧾</span>
+                            </div>
+                            <div className="space-y-2">
+                                <h1 className={`text-4xl font-extrabold tracking-tight ${darkMode ? 'text-pink-300' : 'text-red-700'
+                                    } bg-clip-text bg-gradient-to-r ${darkMode ? 'from-pink-300 to-rose-300' : 'from-red-700 to-pink-700'
+                                    }`}>
+                                    Cherry Checkout
+                                </h1>
+                                <p className={`text-base font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'
+                                    }`}>
+                                    🏪 Restaurant Payment Management
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Right Side Controls */}
+                        <div className="flex items-center gap-4">
+                            {/* Current Time */}
+                            <div className={`relative px-4 py-3 rounded-2xl text-sm font-mono font-bold transform transition-all duration-300 hover:scale-105 ${darkMode
+                                    ? 'bg-gray-800/80 border border-pink-600/30 shadow-lg shadow-pink-500/20 text-pink-200'
+                                    : 'bg-white/90 border border-gray-200 shadow-lg shadow-gray-300/30 text-gray-800'
+                                } backdrop-blur-md`}>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-base animate-pulse">🕐</span>
+                                    <span className="tracking-wide">{currentTime.toLocaleTimeString()}</span>
+                                </div>
+                            </div>
+
+                            {/* Admin Info */}
+                            
+                                <div className={`flex items-center gap-3 px-4 py-3 rounded-xl h-14 ${darkMode ? 'bg-gray-700/50 text-gray-200' : 'bg-white/80 text-gray-700'
+                                    } shadow-lg`}>
+                                    <div className="w-10 h-10 bg-gradient-to-r from-red-500 to-pink-500 rounded-full flex items-center justify-center">
+                                        <span className="text-white text-sm font-bold">
+                                            {user.displayName?.charAt(0) || user.email?.charAt(0)}
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-col justify-center">
+                                        <span className="font-semibold text-sm leading-tight">{user.displayName || 'Admin'}</span>
+                                        <span className="text-xs opacity-75 leading-tight">{user.email}</span>
+                                    </div>
+                                </div>
+
+
+                                {/* Sign Out Button */}
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            await signOut(auth);
+                                            navigate('/checkout');
+                                        } catch (error) {
+                                            console.error("Sign out error:", error);
+                                        }
+                                    }}
+                                    className={`relative group px-6 py-3 rounded-2xl font-bold text-sm transition-all duration-300 transform hover:scale-105 active:scale-95 overflow-hidden ${darkMode
+                                            ? 'bg-gradient-to-r from-red-600 via-pink-600 to-rose-600 hover:from-red-700 hover:via-pink-700 hover:to-rose-700 text-white shadow-xl shadow-red-500/40'
+                                            : 'bg-gradient-to-r from-red-500 via-pink-500 to-rose-500 hover:from-red-600 hover:via-pink-600 hover:to-rose-600 text-white shadow-xl shadow-red-400/50'
+                                        }`}
+                                >
+                                    {/* Cherry decorative elements */}
+                                    <div className="absolute inset-0 opacity-20">
+                                        <div className="absolute top-1 left-2 text-xs">🍒</div>
+                                        <div className="absolute bottom-1 right-2 text-xs transform rotate-45">🍒</div>
+                                    </div>
+
+                                    {/* Animated shine effect */}
+                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+
+                                    {/* Button content */}
+                                    <div className="relative flex items-center gap-2">
+                                        <span className="animate-pulse">👋</span>
+                                        <span>Sign Out</span>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                {checkoutOrders.length === 0 ? (
-                    <div className="text-center py-8 sm:py-12">
-                        <div className="bg-white rounded-lg p-6 shadow-md border">
-                            <div className="text-6xl mb-4">📋</div>
-                            <p className="text-gray-600 text-base sm:text-lg mb-2">No orders ready for checkout.</p>
-                            <p className="text-gray-500 text-sm">Waiting for kitchen to process and send orders...</p>
+                {/* Main Content */}
+                <div className="relative z-10 max-w-7xl mx-auto px-6 py-8">
+                    {checkoutOrders.length === 0 ? (
+                        <div className="text-center py-16">
+                            <div className={`max-w-md mx-auto p-8 rounded-3xl shadow-2xl backdrop-blur-sm ${darkMode ? 'bg-gray-800/50' : 'bg-white/80'
+                                }`}>
+                                <div className="text-8xl mb-6 animate-bounce">🍒</div>
+                                <h3 className={`text-2xl font-bold mb-4 ${darkMode ? 'text-pink-300' : 'text-red-700'
+                                    }`}>
+                                    All Clear!
+                                </h3>
+                                <p className={`text-lg mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'
+                                    }`}>
+                                    No orders ready for checkout
+                                </p>
+                                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'
+                                    }`}>
+                                    Waiting for kitchen to process orders...
+                                </p>
+                            </div>
                         </div>
-                    </div>
-                ) : (
-                    <div className="space-y-4 sm:space-y-6">
-                        {/* Debug info for mobile */}
-                        <div className="sm:hidden bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                            <p className="text-blue-800 text-sm font-medium">
-                                📱 Mobile View • {checkoutOrders.length} order(s) found (Ready + Sent)
-                            </p>
-                        </div>
+                    ) : (
+                        <div className="space-y-8">
 
-                        {checkoutOrders.map((order) => {
-                            // Ensure order.items exists and is an array
-                            const orderItems = Array.isArray(order.items) ? order.items : [];
-                            const total = orderItems.reduce(
-                                (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
-                                0
-                            );
-                            const discountPercent = discounts[order._id] || 0;
-                            const discountAmount = (discountPercent / 100) * total;
-                            const finalTotal = Math.max(total - discountAmount, 0);
+                            {checkoutOrders.map((order) => {
+                                // Ensure order.items exists and is an array
+                                const orderItems = Array.isArray(order.items) ? order.items : [];
+                                const total = orderItems.reduce(
+                                    (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
+                                    0
+                                );
+                                const discountPercent = discounts[order._id] || 0;
+                                const discountAmount = (discountPercent / 100) * total;
+                                const finalTotal = Math.max(total - discountAmount, 0);
 
-                            return (
-                                <div
-                                    key={order._id}
-                                    className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-200 relative overflow-hidden"
-                                >
-                                    {/* Mobile indicator */}
-                                    <div className="sm:hidden absolute top-2 right-2 bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
-                                        Mobile
-                                    </div>
-
-                                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 pt-6 sm:pt-0">
-                                        <div className="flex items-center gap-3 mb-1 sm:mb-0">
-                                            <h2 className="text-lg sm:text-xl font-bold text-gray-900">
-                                                🍽️ Table: {order.tableNumber}
-                                            </h2>
-                                            
-                                            {/* Order Status Badge */}
-                                            <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                                                order.status === 'readyForCheckout' 
-                                                    ? 'bg-blue-100 text-blue-800' 
-                                                    : order.status === 'sent' 
-                                                    ? 'bg-green-100 text-green-800' 
-                                                    : 'bg-gray-100 text-gray-800'
-                                            }`}>
-                                                {order.status === 'readyForCheckout' ? '🔵 Ready' : 
-                                                 order.status === 'sent' ? '✅ Sent' : 
-                                                 order.status}
-                                            </span>
-                                            
-                                            {(order.orderIds && order.orderIds.length > 1) && (
-                                                <span className="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full font-medium">
-                                                    {order.orderIds.length} merged orders
-                                                </span>
-                                            )}
-                                        </div>
-                                        {order.processedAt && (
-                                            <p className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                                                ✅ Processed: {new Date(order.processedAt).toLocaleString()}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    {/* Items display - responsive design */}
-                                    <div className="mt-4">
-                                        {/* Mobile-friendly cards for small screens */}
-                                        <div className="sm:hidden space-y-3">
-                                            {order.items && order.items.length > 0 ? (
-                                                order.items.map((item, idx) => (
-                                                    <div
-                                                        key={idx}
-                                                        className="bg-gray-50 rounded-lg p-3 border border-gray-200"
-                                                    >
-                                                        <div className="font-medium text-gray-800 mb-2 text-base">{item.name}</div>
-                                                        <div className="grid grid-cols-2 gap-3 text-sm">
-                                                            <div className="flex justify-between">
-                                                                <span className="text-gray-600">Qty:</span>
-                                                                <span className="font-medium">{item.quantity}</span>
-                                                            </div>
-                                                            <div className="flex justify-between">
-                                                                <span className="text-gray-600">Price:</span>
-                                                                <span className="font-medium">฿{item.price.toFixed(2)}</span>
-                                                            </div>
-                                                            <div className="col-span-2 flex justify-between border-t pt-2 mt-2">
-                                                                <span className="font-semibold text-gray-800">Total:</span>
-                                                                <span className="font-bold text-green-600">
-                                                                    ฿{(item.quantity * item.price).toFixed(2)}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))
-                                            ) : (
-                                                <div className="text-center text-gray-500 py-4">
-                                                    No items in this order
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Desktop table for larger screens */}
-                                        <div className="hidden sm:block">
-                                            <div className="grid grid-cols-4 font-semibold border-b pb-2 text-gray-800 text-sm lg:text-base bg-gray-100 p-2 rounded-t-lg">
-                                                <div>Product</div>
-                                                <div className="text-center">Qty</div>
-                                                <div className="text-center">Price</div>
-                                                <div className="text-right">Total</div>
-                                            </div>
-
-                                            {orderItems && orderItems.length > 0 ? (
-                                                orderItems.map((item, idx) => (
-                                                    <div
-                                                        key={idx}
-                                                        className="grid grid-cols-4 text-sm lg:text-base text-gray-700 py-3 px-2 border-b border-gray-100 hover:bg-gray-50"
-                                                    >
-                                                        <div className="pr-2 font-medium">{item.name}</div>
-                                                        <div className="text-center">{item.quantity}</div>
-                                                        <div className="text-center">฿{item.price.toFixed(2)}</div>
-                                                        <div className="text-right font-semibold">
-                                                            ฿{(item.quantity * item.price).toFixed(2)}
-                                                        </div>
-                                                    </div>
-                                                ))
-                                            ) : (
-                                                <div className="text-center text-gray-500 py-4 col-span-4">
-                                                    No items in this order
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className="mt-4 sm:mt-6 text-sm bg-gray-50 p-3 sm:p-4 rounded-lg shadow-inner border">
-                                        <div className="flex justify-between py-1">
-                                            <span className="font-medium text-gray-700">Total</span>
-                                            <span className="text-gray-900 font-semibold">
-                                                ฿{total.toFixed(2)}
-                                            </span>
-                                        </div>
-
-                                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 gap-2 sm:gap-0">
-                                            <label
-                                                className="font-medium text-gray-700"
-                                                htmlFor={`discount-${order._id}`}
-                                            >
-                                                Discount (%)
-                                            </label>
-                                            <input
-                                                id={`discount-${order._id}`}
-                                                type="number"
-                                                className="border border-gray-300 px-2 py-1 rounded-md w-full sm:w-24 text-right text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                                                value={discounts[order._id] || ""}
-                                                placeholder="0"
-                                                min="0"
-                                                max="100"
-                                                onChange={(e) =>
-                                                    handleDiscountChange(order._id, e.target.value)
-                                                }
-                                            />
-                                        </div>
-
-                                        <div className="flex justify-between py-1">
-                                            <span className="text-gray-500">Discount Amount</span>
-                                            <span className="text-gray-500">
-                                                -฿{discountAmount.toFixed(2)}
-                                            </span>
-                                        </div>
-
-                                        <div className="flex justify-between border-t pt-2 mt-2 text-base font-bold text-green-700">
-                                            <span>Final Total</span>
-                                            <span>฿{finalTotal.toFixed(2)}</span>
-                                        </div>
-
-                                        {/* Payment Method Selection */}
-                                        <div className="mt-4 pt-3 border-t border-gray-200">
-                                            <label className="font-medium text-gray-700 block mb-2">
-                                                Payment Method
-                                            </label>
-                                            <div className="flex gap-3 mb-3">
-                                                <button
-                                                    onClick={() => handlePaymentMethodChange(order._id, 'scan')}
-                                                    className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium transition-all ${paymentMethods[order._id] === 'scan'
-                                                            ? 'bg-blue-500 text-white border-blue-500'
-                                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                                                        }`}
-                                                >
-                                                    📱 QR Scan
-                                                </button>
-                                                <button
-                                                    onClick={() => handlePaymentMethodChange(order._id, 'cash')}
-                                                    className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium transition-all ${paymentMethods[order._id] === 'cash'
-                                                            ? 'bg-green-500 text-white border-green-500'
-                                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                                                        }`}
-                                                >
-                                                    💵 Cash
-                                                </button>
-                                            </div>
-
-                                            {/* QR Code Section */}
-                                            {paymentMethods[order._id] === 'scan' && (
-                                                <div className="bg-white p-3 rounded-lg border">
-                                                    <div className="flex justify-between items-center mb-2">
-                                                        <span className="text-sm font-medium text-gray-700">
-                                                            QR Code Payment: ฿{finalTotal.toFixed(2)}
+                                return (
+                                    <div
+                                        key={order._id}
+                                        className={`rounded-3xl shadow-2xl backdrop-blur-sm transform transition-all duration-500 hover:scale-[1.02] ${darkMode
+                                                ? 'bg-gradient-to-br from-gray-800/80 to-gray-900/80 border border-pink-800/30'
+                                                : 'bg-gradient-to-br from-white/90 to-pink-50/90 border border-pink-200/50'
+                                            }`}
+                                    >
+                                        {/* Order Header */}
+                                        <div className="p-6 border-b border-pink-200/30">
+                                            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                                                <div className="flex items-center gap-4">
+                                                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg ${darkMode
+                                                            ? 'bg-gradient-to-br from-pink-600 to-red-600'
+                                                            : 'bg-gradient-to-br from-pink-500 to-red-500'
+                                                        }`}>
+                                                        <span className={`text-xl font-bold ${darkMode ? 'text-gray-300' : 'text-red-700'
+                                                            }`}>
+                                                            {order.tableNumber}
                                                         </span>
-                                                        <button
-                                                            onClick={() => generateQrCode(order._id, finalTotal)}
-                                                            className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200"
+                                                    </div>
+                                                    <div>
+                                                        <h2 className={`text-2xl font-bold ${darkMode ? 'text-pink-300' : 'text-red-700'
+                                                            }`}>
+                                                            Table {order.tableNumber}
+                                                        </h2>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${order.status === 'readyForCheckout'
+                                                                    ? 'bg-blue-100 text-blue-800'
+                                                                    : order.status === 'sent'
+                                                                        ? 'bg-green-100 text-green-800'
+                                                                        : 'bg-gray-100 text-gray-800'
+                                                                }`}>
+                                                                {order.status === 'readyForCheckout' ? '🔵 Ready' :
+                                                                    order.status === 'sent' ? '✅ Sent' :
+                                                                        order.status}
+                                                            </span>
+                                                            {(order.orderIds && order.orderIds.length > 1) && (
+                                                                <span className="bg-orange-100 text-orange-800 text-xs px-3 py-1 rounded-full font-medium">
+                                                                    {order.orderIds.length} merged orders
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {order.processedAt && (
+                                                    <div className={`px-4 py-2 rounded-xl text-sm ${darkMode ? 'bg-gray-700/50 text-gray-300' : 'bg-gray-100 text-gray-600'
+                                                        }`}>
+                                                        ✅ {new Date(order.processedAt).toLocaleString()}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Order Items */}
+                                        <div className="p-6">
+                                            <div className={`rounded-2xl p-4 mb-6 ${darkMode ? 'bg-gray-700/30' : 'bg-pink-50/50'
+                                                }`}>
+                                                <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-pink-300' : 'text-red-700'
+                                                    }`}>
+                                                    Order Items
+                                                </h3>
+                                                <div className="space-y-3">
+                                                    {orderItems.map((item, idx) => (
+                                                        <div
+                                                            key={idx}
+                                                            className={`flex justify-between items-center p-4 rounded-xl ${darkMode ? 'bg-gray-600/30' : 'bg-white/70'
+                                                                } shadow-sm`}
                                                         >
-                                                            Generate QR
-                                                        </button>
+                                                            <div className="flex-1">
+                                                                <h4 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'
+                                                                    }`}>{item.name}</h4>
+                                                                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'
+                                                                    }`}>
+                                                                    Qty: {item.quantity} × {item.price.toFixed(2)}MMK   
+                                                                </p>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <span className={`text-lg font-bold ${darkMode ? 'text-green-400' : 'text-green-600'
+                                                                    }`}>
+                                                                    {(item.quantity * item.price).toFixed(2)}MMK
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Payment Summary */}
+                                            <div className={`rounded-2xl p-6 mb-6 ${darkMode ? 'bg-gray-700/30' : 'bg-gradient-to-r from-pink-50 to-red-50'
+                                                }`}>
+                                                <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-pink-300' : 'text-red-700'
+                                                    }`}>
+                                                    Payment Summary
+                                                </h3>
+
+                                                <div className="space-y-3">
+                                                    <div className={`flex justify-between ${darkMode ? 'text-gray-200' : 'text-gray-800'
+                                                        }`}>
+                                                        <span>Subtotal</span>
+                                                        <span>{total.toFixed(2)}MMK</span>
                                                     </div>
 
-                                                    {showQrCode[order._id] && (
-                                                        <div className="text-center py-3">
-                                                            <img
-                                                                src={generateThaiQrCode(finalTotal)}
-                                                                alt="Thai QR Code"
-                                                                className="mx-auto border rounded-lg shadow-sm"
-                                                                style={{ maxWidth: '200px', height: 'auto' }}
-                                                            />
-                                                            <p className="text-xs text-gray-600 mt-2">
-                                                                Scan to pay ฿{finalTotal.toFixed(2)}
-                                                            </p>
-                                                        </div>
-                                                    )}
+                                                    <div className="flex justify-between items-center">
+                                                        <label htmlFor={`discount-${order._id}`} className={
+                                                            darkMode ? 'text-gray-200' : 'text-gray-800'
+                                                        }>
+                                                            Discount (%)
+                                                        </label>
+                                                        <input
+                                                            id={`discount-${order._id}`}
+                                                            type="number"
+                                                            className={`w-20 px-3 py-2 rounded-lg border text-center ${darkMode
+                                                                    ? 'bg-gray-600 border-gray-500 text-white'
+                                                                    : 'bg-white border-gray-300 text-gray-900'
+                                                                }`}
+                                                            value={discounts[order._id] || ""}
+                                                            placeholder="0"
+                                                            min="0"
+                                                            max="100"
+                                                            onChange={(e) =>
+                                                                handleDiscountChange(order._id, e.target.value)
+                                                            }
+                                                        />
+                                                    </div>
+
+                                                    <div className="flex justify-between text-red-600">
+                                                        <span>Discount Amount</span>
+                                                        <span>{discountAmount.toFixed(2)}-MMK</span>
+                                                    </div>
+
+                                                    <div className={`flex justify-between text-xl font-bold pt-3 border-t ${darkMode ? 'border-gray-600 text-green-400' : 'border-gray-300 text-green-600'
+                                                        }`}>
+                                                        <span>Final Total</span>
+                                                        <span>MMK{finalTotal.toFixed(2)}</span>
+                                                    </div>
                                                 </div>
-                                            )}
+                                            </div>
 
-                                            {/* Cash Payment Section */}
-                                            {paymentMethods[order._id] === 'cash' && (
-                                                <div className="bg-white p-3 rounded-lg border">
-                                                    <div className="flex flex-col gap-2">
-                                                        <div className="flex justify-between items-center">
-                                                            <label className="text-sm font-medium text-gray-700">
-                                                                Cash Received (฿)
-                                                            </label>
-                                                            <input
-                                                                type="number"
-                                                                className="border border-gray-300 px-2 py-1 rounded w-24 text-right text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-400"
-                                                                value={cashAmounts[order._id] || ""}
-                                                                placeholder="0.00"
-                                                                min="0"
-                                                                step="0.01"
-                                                                onChange={(e) =>
-                                                                    handleCashAmountChange(order._id, e.target.value)
-                                                                }
-                                                            />
+                                            {/* Payment Method */}
+                                            <div className={`rounded-2xl p-6 ${darkMode ? 'bg-gray-700/30' : 'bg-white/70'
+                                                }`}>
+                                                <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-pink-300' : 'text-red-700'
+                                                    }`}>
+                                                    Payment Method
+                                                </h3>
+
+                                                <div className="flex gap-4 mb-6">
+                                                    <button
+                                                        onClick={() => handlePaymentMethodChange(order._id, 'scan')}
+                                                        className={`flex-1 p-4 rounded-xl border-2 transition-all duration-300 ${paymentMethods[order._id] === 'scan'
+                                                                ? 'border-blue-500 bg-blue-500 text-white'
+                                                                : darkMode
+                                                                    ? 'border-gray-600 bg-gray-600/30 text-gray-300 hover:bg-gray-600/50'
+                                                                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                                                            }`}
+                                                    >
+                                                        <div className="text-center">
+                                                            <div className="text-2xl mb-2">📱</div>
+                                                            <div className="font-semibold">QR Scan</div>
+                                                        </div>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handlePaymentMethodChange(order._id, 'cash')}
+                                                        className={`flex-1 p-4 rounded-xl border-2 transition-all duration-300 ${paymentMethods[order._id] === 'cash'
+                                                                ? 'border-blue-500 bg-blue-500 text-white'
+                                                                : darkMode
+                                                                    ? 'border-gray-600 bg-gray-600/30 text-gray-300 hover:bg-gray-600/50'
+                                                                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                                                            }`}
+                                                    >
+                                                        <div className="text-center">
+                                                            <div className="text-2xl mb-2">💵</div>
+                                                            <div className="font-semibold">Cash</div>
+                                                        </div>
+                                                    </button>
+                                                </div>
+
+                                                {/* QR Code Section */}
+                                                {paymentMethods[order._id] === 'scan' && (
+                                                    <div className={`p-4 rounded-xl ${darkMode ? 'bg-blue-900/30' : 'bg-blue-50'
+                                                        }`}>
+                                                        <div className="flex justify-between items-center mb-4">
+                                                            <span className={`font-medium ${darkMode ? 'text-gray-200' : 'text-gray-800'
+                                                                }`}>
+                                                                QR Payment: MMK{finalTotal.toFixed(2)}
+                                                            </span>
+                                                            <button
+                                                                onClick={() => generateQrCode(order._id, finalTotal)}
+                                                                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                                                            >
+                                                                Generate QR
+                                                            </button>
                                                         </div>
 
-                                                        {cashAmounts[order._id] && (
-                                                            <div className="flex justify-between items-center pt-2 border-t">
-                                                                <span className="text-sm font-medium text-gray-700">
-                                                                    Change
-                                                                </span>
-                                                                <span className={`text-sm font-bold ${(cashAmounts[order._id] - finalTotal) >= 0
-                                                                        ? 'text-green-600'
-                                                                        : 'text-red-600'
+                                                        {showQrCode[order._id] && (
+                                                            <div className="text-center py-4">
+                                                                <img
+                                                                    src={generateThaiQrCode(finalTotal)}
+                                                                    alt="Thai QR Code"
+                                                                    className="mx-auto border rounded-lg shadow-lg"
+                                                                    style={{ maxWidth: '200px', height: 'auto' }}
+                                                                />
+                                                                <p className={`text-sm mt-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'
                                                                     }`}>
-                                                                    ฿{Math.max(0, (cashAmounts[order._id] - finalTotal)).toFixed(2)}
-                                                                    {(cashAmounts[order._id] - finalTotal) < 0 && (
-                                                                        <span className="text-xs text-red-500 ml-1">
-                                                                            (Insufficient)
-                                                                        </span>
-                                                                    )}
-                                                                </span>
+                                                                    Scan to pay MMK{finalTotal.toFixed(2)}
+                                                                </p>
                                                             </div>
                                                         )}
                                                     </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className="text-center sm:text-right mt-6">
-                                        {(() => {
-                                            const paymentMethod = paymentMethods[order._id];
-                                            const cashReceived = cashAmounts[order._id];
-                                            const isValidPayment = paymentMethod === 'scan'
-                                                ? showQrCode[order._id]
-                                                : paymentMethod === 'cash' && cashReceived >= finalTotal;
-
-                                            return (
-                                                <button
-                                                    onClick={() => handleMarkAsPaid(order)}
-                                                    disabled={!paymentMethod || (paymentMethod === 'cash' && (!cashReceived || cashReceived < finalTotal))}
-                                                    className={`w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-3 rounded-lg transition-all duration-200 font-semibold text-base shadow-lg transform hover:scale-105 active:scale-95 ${!paymentMethod || (paymentMethod === 'cash' && (!cashReceived || cashReceived < finalTotal))
-                                                            ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                                                            : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800'
-                                                        }`}
-                                                >
-                                                    💰 Mark as Paid
-                                                    {(order.orderIds && order.orderIds.length > 1) && (
-                                                        <span className="ml-2 text-xs bg-blue-800 px-2 py-1 rounded">
-                                                            {order.orderIds.length} orders
-                                                        </span>
-                                                    )}
-                                                </button>
-                                            );
-                                        })()}
-
-                                        {/* Payment Status Indicator */}
-                                        <div className="mt-2 text-xs">
-                                            {!paymentMethods[order._id] && (
-                                                <span className="text-orange-600">⚠️ Select payment method</span>
-                                            )}
-                                            {paymentMethods[order._id] === 'cash' && (!cashAmounts[order._id] || cashAmounts[order._id] < finalTotal) && (
-                                                <span className="text-red-600">⚠️ Enter sufficient cash amount</span>
-                                            )}
-                                            {paymentMethods[order._id] === 'scan' && !showQrCode[order._id] && (
-                                                <span className="text-blue-600">ℹ️ Generate QR code to proceed</span>
-                                            )}
-                                            {((paymentMethods[order._id] === 'scan' && showQrCode[order._id]) ||
-                                                (paymentMethods[order._id] === 'cash' && cashAmounts[order._id] >= finalTotal)) && (
-                                                    <span className="text-green-600">✅ Ready to mark as paid</span>
                                                 )}
+
+                                                {/* Cash Payment Section */}
+                                                {paymentMethods[order._id] === 'cash' && (
+                                                    <div className={`p-4 rounded-xl ${darkMode ? 'bg-green-900/30' : 'bg-green-50'
+                                                        }`}>
+                                                        <div className="space-y-4">
+                                                            <div className="flex justify-between items-center">
+                                                                <label className={`font-medium ${darkMode ? 'text-gray-200' : 'text-gray-800'
+                                                                    }`}>Cash Received (MMK)</label>
+                                                                <input
+                                                                    type="number"
+                                                                    className={`w-32 px-3 py-2 rounded-lg border text-center ${darkMode
+                                                                            ? 'bg-gray-600 border-gray-500 text-white'
+                                                                            : 'bg-white border-gray-300 text-gray-900'
+                                                                        }`}
+                                                                    value={cashAmounts[order._id] || ""}
+                                                                    placeholder="0.00"
+                                                                    min="0"
+                                                                    step="0.01"
+                                                                    onChange={(e) =>
+                                                                        handleCashAmountChange(order._id, e.target.value)
+                                                                    }
+                                                                />
+                                                            </div>
+
+                                                            {cashAmounts[order._id] && (
+                                                                <div className="flex justify-between items-center pt-3 border-t border-green-200">
+                                                                    <span className={`font-medium ${darkMode ? 'text-gray-200' : 'text-gray-800'
+                                                                        }`}>Change</span>
+                                                                    <span className={`font-bold ${(cashAmounts[order._id] - finalTotal) >= 0
+                                                                            ? 'text-green-600'
+                                                                            : 'text-red-600'
+                                                                        }`}>
+                                                                        {Math.max(0, (cashAmounts[order._id] - finalTotal)).toFixed(2)}MMK
+                                                                        {(cashAmounts[order._id] - finalTotal) < 0 && (
+                                                                            <span className="text-xs text-red-500 ml-1">
+                                                                                (Insufficient)
+                                                                            </span>
+                                                                        )}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Mark as Paid Button */}
+                                                <div className="mt-6 text-right pt-3">
+                                                    <button
+                                                        onClick={() => handleMarkAsPaid(order)}
+                                                        disabled={!paymentMethods[order._id] ||
+                                                            (paymentMethods[order._id] === 'cash' &&
+                                                                (!cashAmounts[order._id] || cashAmounts[order._id] < finalTotal))}
+                                                        className={`px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg ${!paymentMethods[order._id]
+                                                                ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                                                                : 'bg-gradient-to-r from-red-500 via-pink-500 to-rose-500 hover:from-red-600 hover:via-pink-600 hover:to-rose-600 text-white shadow-red-400/50'
+                                                            }`}
+                                                    >
+                                                        🍒 Mark as Paid
+                                                        {(order.orderIds && order.orderIds.length > 1) && (
+                                                            <span className="ml-2 px-2 py-1 bg-red-600 rounded text-sm">
+                                                                {order.orderIds.length} orders
+                                                            </span>
+                                                        )}
+                                                    </button>
+
+                                                    {/* Payment Status */}
+                                                    <div className="mt-3 text-sm">
+                                                        {!paymentMethods[order._id] && (
+                                                            <span className="text-orange-600">⚠️ Select payment method</span>
+                                                        )}
+                                                        {paymentMethods[order._id] === 'cash' &&
+                                                            (!cashAmounts[order._id] || cashAmounts[order._id] < finalTotal) && (
+                                                                <span className="text-red-600">⚠️ Enter sufficient cash amount</span>
+                                                            )}
+                                                        {paymentMethods[order._id] === 'scan' && !showQrCode[order._id] && (
+                                                            <span className="text-blue-600">ℹ️ Generate QR code to proceed</span>
+                                                        )}
+                                                        {((paymentMethods[order._id] === 'scan' && showQrCode[order._id]) ||
+                                                            (paymentMethods[order._id] === 'cash' &&
+                                                                cashAmounts[order._id] >= finalTotal)) && (
+                                                                <span className="text-green-600">✅ Ready to mark as paid</span>
+                                                            )}
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+
+                <style jsx>{`
+                @keyframes float {
+                    0%, 100% { transform: translateY(0px) rotate(0deg); }
+                    50% { transform: translateY(-20px) rotate(180deg); }
+                }
+                .animate-float {
+                    animation: float 8s ease-in-out infinite;
+                }
+            `}</style>
             </div>
-        </div>
-    );
+            );
 }

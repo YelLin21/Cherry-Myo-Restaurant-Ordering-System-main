@@ -118,7 +118,7 @@ export default function OrderHistoryPage() {
   };
 
   const formatPrice = (price) => {
-    return "K" + price.toLocaleString("en-US");
+    return price.toLocaleString("en-US") + " MMK";
   };
 
   const formatDate = (dateString) => {

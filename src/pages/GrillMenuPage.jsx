@@ -135,7 +135,7 @@ export default function GrillMenuPage() {
                 <p className={`mb-4 font-bold ${
                   darkMode ? 'text-pink-300' : 'text-pink-900'
                 }`}>
-                  {item.price} Kyat
+                  {item.price} MMK
                 </p>
 
                 <div className="flex items-center mt-3 space-x-3">
@@ -195,7 +195,7 @@ export default function GrillMenuPage() {
                     <span className={`font-bold text-lg ${
                       darkMode ? 'text-pink-300' : 'text-pink-600'
                     }`}>
-                      {item.price} Kyat
+                      {item.price} MMK
                     </span>
                     <div className="flex items-center gap-3">
                       <button
@@ -246,7 +246,7 @@ export default function GrillMenuPage() {
                   </span>
                   <span className="font-bold text-lg">
                     Total:{' '}
-                    {Number(total).toLocaleString()} Kyat
+                    {Number(total).toLocaleString()} MMK
                   </span>
                 </div>
 
@@ -278,7 +278,7 @@ export default function GrillMenuPage() {
             }`}>Item: {totalItems}</p>
             <p className={`font-semibold ${
               darkMode ? 'text-pink-300' : 'text-pink-900'
-            }`}>🛒 Total: {total} Kyat</p>
+            }`}>🛒 Total: {total} MMK</p>
             <button
               onClick={() => navigate("/cart")}
               className={`px-4 py-2 rounded transition-colors duration-200 ${

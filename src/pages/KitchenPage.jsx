@@ -554,9 +554,28 @@ export default function KitchenPage() {
             key={order._id}
             className="bg-white rounded-xl shadow-md p-6 border border-gray-200"
           >
-            <h2 className="text-xl font-semibold mb-2">
-              Table: {order.tableNumber}
-            </h2>
+            <div className="flex justify-between items-start mb-4">
+              <h2 className="text-xl font-semibold">
+                Table: {order.tableNumber}
+              </h2>
+              <div className="text-right">
+                <div className="text-sm text-gray-500">Order Time</div>
+                <div className="text-sm font-medium text-gray-700">
+                  {order.createdAt ? new Date(order.createdAt).toLocaleString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true,
+                    month: 'short',
+                    day: 'numeric'
+                  }) : 'N/A'}
+                </div>
+                {order.createdAt && (
+                  <div className="text-xs text-gray-400">
+                    {Math.floor((new Date() - new Date(order.createdAt)) / 60000)} min ago
+                  </div>
+                )}
+              </div>
+            </div>
             <div className="w-full max-w-md mx-auto">
               <div className="flex justify-between font-semibold text-gray-800 border-b pb-1 mb-2">
                 <span>Product</span>

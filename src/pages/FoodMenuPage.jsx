@@ -171,7 +171,7 @@ export default function FoodMenuPage() {
                 </h2>
                 <p className={`mb-4 font-bold ${darkMode ? 'text-pink-300' : 'text-pink-900'
                   }`}>
-                  {item.price} Kyat
+                  {item.price} MMK
                 </p>
 
                 <div className="flex items-center mt-3 space-x-3">
@@ -232,7 +232,7 @@ export default function FoodMenuPage() {
                   <div className="flex items-center justify-between">
                     <span className={`font-bold text-lg ${darkMode ? 'text-pink-300' : 'text-pink-600'
                       }`}>
-                      {item.price} Kyat
+                      {item.price} MMK
                     </span>
                     <div className="flex items-center gap-3">
                       <button
@@ -280,7 +280,7 @@ export default function FoodMenuPage() {
                   </span>
                   <span className="font-bold text-lg">
                     Total:{' '}
-                    {Number(total).toLocaleString()} Kyat
+                    {Number(total).toLocaleString()} MMK
                   </span>
                 </div>
 
@@ -311,7 +311,7 @@ export default function FoodMenuPage() {
             <p className={`font-semibold ${darkMode ? 'text-pink-300' : 'text-pink-900'
               }`}>Item: {totalItems}</p>
             <p className={`font-semibold ${darkMode ? 'text-pink-300' : 'text-pink-900'
-              }`}>🛒 Total: {total} Kyat</p>
+              }`}>🛒 Total: {total} MMK</p>
 
             <button
               onClick={() => navigate("/cart")}
