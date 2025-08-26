@@ -69,6 +69,13 @@ export default function AdminMenuForm({
       alert("Please fill in both name and price and image url or image.");
       return;
     }
+
+    // Validate price - must be greater than zero
+    const priceValue = parseFloat(price);
+    if (isNaN(priceValue) || priceValue <= 0) {
+      alert("Price must be greater than zero. Please enter a valid price.");
+      return;
+    }
     
     let finalImageUrl = image;
 
@@ -145,11 +152,16 @@ export default function AdminMenuForm({
               </label>
               <input
                 type="number"
+                step="0.01"
+                min="0.01"
                 placeholder="Enter price"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
               />
+              <p className="text-xs mt-1 text-gray-500">
+                Price must be greater than 0
+              </p>
             </div>
             
             <div>

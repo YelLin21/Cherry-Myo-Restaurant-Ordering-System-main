@@ -62,6 +62,12 @@ export default function AdminPromotionMenuPage() {
         return;
       }
       
+      // Validate price - must be greater than zero
+      const price = parseFloat(formData.price);
+      if (isNaN(price) || price <= 0) {
+        alert("Price must be greater than zero. Please enter a valid price.");
+        return;
+      }
       let imageData = formData.image;
       
       // If a file is selected, convert it to base64
@@ -154,10 +160,10 @@ export default function AdminPromotionMenuPage() {
         return;
       }
 
-      // Validate file size (max 5MB)
-      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+      // Validate file size (max 10MB)
+      const maxSize = 10 * 1024 * 1024; // 10MB in bytes
       if (file.size > maxSize) {
-        alert('File size must be less than 5MB');
+        alert('File size must be less than 10MB');
         return;
       }
 
@@ -733,7 +739,7 @@ function AdminPromotionMenuContent({
                                 {selectedFile ? selectedFile.name : 'Click to upload image'}
                               </span>
                               <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                PNG, JPG, GIF up to 5MB
+                                PNG, JPG, GIF up to 10MB
                               </p>
                             </div>
                           </label>

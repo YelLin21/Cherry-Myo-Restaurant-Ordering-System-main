@@ -61,6 +61,14 @@ export default function AdminSpecialMenuPage() {
         alert("You already have that item. Please choose a different name.");
         return;
       }
+
+      // Validate price - must be greater than zero
+      const price = parseFloat(formData.price);
+      if (isNaN(price) || price <= 0) {
+        const action = editingItem ? "update" : "create";
+        alert(`Cannot ${action} menu item. Price must be greater than zero. Please enter a valid price.`);
+        return;
+      }
       
       let imageData = formData.image;
       
@@ -154,10 +162,10 @@ export default function AdminSpecialMenuPage() {
         return;
       }
 
-      // Validate file size (max 5MB)
-      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+      // Validate file size (max 10MB)
+      const maxSize = 10 * 1024 * 1024; // 10MB in bytes
       if (file.size > maxSize) {
-        alert('File size must be less than 5MB');
+        alert('File size must be less than 10MB');
         return;
       }
 
@@ -673,6 +681,7 @@ function AdminSpecialMenuContent({
                       <input
                         type="number"
                         step="0.01"
+                        min="0.01"
                         value={formData.price}
                         onChange={(e) => setFormData({...formData, price: e.target.value})}
                         required
@@ -689,6 +698,9 @@ function AdminSpecialMenuContent({
                         K
                       </span>
                     </div>
+                    <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Price must be greater than 0 MMK
+                    </p>
                   </div>
 
                   <div>
@@ -733,7 +745,7 @@ function AdminSpecialMenuContent({
                                 {selectedFile ? selectedFile.name : 'Click to upload image'}
                               </span>
                               <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                PNG, JPG, GIF up to 5MB
+                                PNG, JPG, GIF up to 10MB
                               </p>
                             </div>
                           </label>
