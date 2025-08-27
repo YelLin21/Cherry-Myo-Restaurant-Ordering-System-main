@@ -174,7 +174,7 @@ router.post("/mark-paid", async (req, res) => {
 
     // Emit socket event for real-time updates
     const io = req.app.get("io");
-    console.log(`📡 Emitting order:paid event for order ${orderId}`);
+    console.log(` Emitting order:paid event for order ${orderId}`);
     io.emit("order:paid", orderId);
 
     res.json({ message: "Order marked as paid", order: updated });

@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { CSVLink } from "react-csv";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import {
@@ -7,6 +6,7 @@ import {
 } from "recharts";
 import { Link } from "react-router-dom";
 import AdminAuth from "../components/AdminAuth.jsx";
+import { io } from "socket.io-client";
 
 const TABS = ["Daily", "Weekly", "Monthly", "Yearly"];
 const CHERRY_COLORS = ["#e11d48", "#f472b6", "#be185d", "#fbbf24", "#a21caf", "#f43f5e"];
@@ -25,10 +25,13 @@ export default function AdminSalesReport({ darkMode = false }) {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const [socket, setSocket] = useState(null);
 
   // Fetch data from API
-  const fetchAnalyticsData = async (period) => {
-    setLoading(true);
+  const fetchAnalyticsData = async (period, isAutoRefresh = false) => {
+    if (!isAutoRefresh) setLoading(true);
     setError(null);
     try {
       const response = await fetch(`${APIBASE}/analytics/dashboard?period=${period}`);
@@ -46,6 +49,7 @@ export default function AdminSalesReport({ darkMode = false }) {
         prev: { orders: 0, revenue: 0 },
         curr: { orders: 0, revenue: 0 }
       });
+      setLastUpdated(new Date());
     } catch (error) {
       console.error('Error fetching analytics data:', error);
       setError(error.message);
@@ -56,7 +60,7 @@ export default function AdminSalesReport({ darkMode = false }) {
       setTopItems([]);
       setRevenueByCategory([]);
     } finally {
-      setLoading(false);
+      if (!isAutoRefresh) setLoading(false);
     }
   };
 
@@ -65,10 +69,60 @@ export default function AdminSalesReport({ darkMode = false }) {
     fetchAnalyticsData(activeTab);
   }, [activeTab]);
 
-  // Export CSV with real data
-  const csvData = bestSellers.length > 0 ? bestSellers : [
-    { name: "No data available", sold: 0, revenue: 0 }
-  ];
+  // Socket.IO connection and real-time updates
+  useEffect(() => {
+    const newSocket = io(APIBASE.replace('/api', ''), {
+      withCredentials: true,
+      transports: ['websocket', 'polling']
+    });
+
+    setSocket(newSocket);
+
+    newSocket.on('connect', () => {
+      console.log('🔌 Connected to Socket.IO server');
+      setIsConnected(true);
+    });
+
+    newSocket.on('disconnect', () => {
+      console.log('❌ Disconnected from Socket.IO server');
+      setIsConnected(false);
+    });
+
+    // Listen for order events that should trigger data refresh
+    newSocket.on('order:new', (order) => {
+      console.log('📦 New order received:', order);
+      fetchAnalyticsData(activeTab, true);
+    });
+
+    newSocket.on('order:update', (order) => {
+      console.log('🔄 Order updated:', order);
+      fetchAnalyticsData(activeTab, true);
+    });
+
+    newSocket.on('order:paid', (orderId) => {
+      console.log('💰 Order paid:', orderId);
+      fetchAnalyticsData(activeTab, true);
+    });
+
+    newSocket.on('order:readyForCheckout', (order) => {
+      console.log('✅ Order ready for checkout:', order);
+      fetchAnalyticsData(activeTab, true);
+    });
+
+    return () => {
+      console.log('🔌 Cleaning up Socket.IO connection');
+      newSocket.disconnect();
+    };
+  }, [activeTab]);
+
+  // Auto-refresh data every 30 seconds as fallback
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchAnalyticsData(activeTab, true); // true indicates this is an auto-refresh
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [activeTab]);
 
   // Export PDF
   const exportPDF = () => {
@@ -78,13 +132,13 @@ export default function AdminSalesReport({ darkMode = false }) {
     // Add KPI summary
     doc.text(`Period: ${activeTab}`, 14, 26);
     doc.text(`Total Orders: ${kpi.orders}`, 14, 34);
-    doc.text(`Total Revenue: K${kpi.revenue.toLocaleString()}`, 14, 42);
-    doc.text(`Average Order Value: K${kpi.aov}`, 14, 50);
+    doc.text(`Total Revenue: ${kpi.revenue.toLocaleString()} MMK`, 14, 42);
+    doc.text(`Average Order Value: ${kpi.aov} MMK`, 14, 50);
     
     // Add best sellers table
     if (bestSellers.length > 0) {
       doc.autoTable({
-        head: [["Item Name", "Quantity Sold", "Revenue (K)"]],
+        head: [["Item Name", "Quantity Sold", "Revenue (MMK)"]],
         body: bestSellers.map((row) => [row.name, row.sold, row.revenue.toLocaleString()]),
         startY: 60,
       });
@@ -117,6 +171,18 @@ export default function AdminSalesReport({ darkMode = false }) {
           <span className="text-3xl">🍒</span>
           <h1 className={`text-2xl md:text-3xl font-bold ${darkMode ? 'text-pink-300' : 'text-pink-700'}`}>Sales Report</h1>
         </div>
+        
+        {/* Last Updated Display */}
+        {lastUpdated && (
+          <div className={`text-sm flex items-center gap-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            <div className="flex items-center gap-2">
+              <span className={`text-xs ${isConnected ? 'text-green-500' : 'text-red-500'}`}>
+                {isConnected ? '🟢 Live' : '🔴 Offline'}
+              </span>
+              <span>Last updated: {lastUpdated.toLocaleTimeString()}</span>
+            </div>
+          </div>
+        )}
       </div>
       {/* Tabs */}
       <div className="flex gap-2 mb-6 flex-wrap">
@@ -185,12 +251,12 @@ export default function AdminSalesReport({ darkMode = false }) {
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 flex flex-col items-center shadow-md border border-pink-200 dark:border-pink-900">
           <span className="text-2xl">💰</span>
           <span className="text-lg font-semibold mt-2">Revenue</span>
-          <span className="text-2xl font-bold text-pink-600 dark:text-pink-300">K{kpi.revenue.toLocaleString()}</span>
+          <span className="text-2xl font-bold text-pink-600 dark:text-pink-300">{kpi.revenue.toLocaleString()} MMK</span>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 flex flex-col items-center shadow-md border border-pink-200 dark:border-pink-900">
           <span className="text-2xl">📊</span>
           <span className="text-lg font-semibold mt-2">AOV</span>
-          <span className="text-2xl font-bold text-pink-600 dark:text-pink-300">K{kpi.aov.toLocaleString()}</span>
+          <span className="text-2xl font-bold text-pink-600 dark:text-pink-300">{kpi.aov.toLocaleString()} MMK</span>
         </div>
       </div>
       {/* Charts and Table */}
@@ -290,7 +356,7 @@ export default function AdminSalesReport({ darkMode = false }) {
                   <tr key={row.name} className={idx % 2 === 0 ? 'bg-pink-50 dark:bg-gray-900/30' : ''}>
                     <td className="px-4 py-2 font-medium">{row.name}</td>
                     <td className="px-4 py-2 text-right">{row.sold}</td>
-                    <td className="px-4 py-2 text-right">K{row.revenue.toLocaleString()}</td>
+                    <td className="px-4 py-2 text-right">{row.revenue.toLocaleString()} MMK</td>
                   </tr>
                 ))}
               </tbody>
@@ -309,17 +375,9 @@ export default function AdminSalesReport({ darkMode = false }) {
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-md border border-pink-200 dark:border-pink-900 flex flex-col md:flex-row items-center gap-4">
           <span className="font-semibold text-pink-700 dark:text-pink-300">Period Comparison:</span>
           <span className="text-sm">Orders: <span className="font-bold">{periodComparison.curr?.orders || 0}</span> vs <span className="text-gray-500">{periodComparison.prev?.orders || 0}</span></span>
-          <span className="text-sm">Revenue: <span className="font-bold">K{(periodComparison.curr?.revenue || 0).toLocaleString()}</span> vs <span className="text-gray-500">K{(periodComparison.prev?.revenue || 0).toLocaleString()}</span></span>
+          <span className="text-sm">Revenue: <span className="font-bold">{(periodComparison.curr?.revenue || 0).toLocaleString()} MMK</span> vs <span className="text-gray-500">{(periodComparison.prev?.revenue || 0).toLocaleString()} MMK</span></span>
         </div>
         <div className="flex gap-2">
-          <CSVLink
-            data={csvData}
-            filename={`cherry_myo_sales_report_${activeTab.toLowerCase()}.csv`}
-            className="px-4 py-2 rounded bg-green-600 text-white font-medium hover:bg-green-700 transition-colors duration-200"
-            aria-label="Export CSV"
-          >
-            Export CSV
-          </CSVLink>
           <button
             onClick={exportPDF}
             className="px-4 py-2 rounded bg-red-600 text-white font-medium hover:bg-red-700 transition-colors duration-200"

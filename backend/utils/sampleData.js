@@ -7,11 +7,11 @@ const createSampleData = async () => {
     // Check if we already have data
     const existingOrders = await Order.countDocuments();
     if (existingOrders > 0) {
-      console.log("📊 Sample data already exists");
+      console.log("Sample data already exists");
       return;
     }
 
-    console.log("🌱 Creating sample data for analytics...");
+    console.log("Creating sample data for analytics...");
 
     // Create sample menu items if they don't exist
     const existingMenuItems = await Menu.countDocuments();

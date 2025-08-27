@@ -610,7 +610,7 @@ export default function AdminCheckoutPage() {
         return Math.max(total - discountAmount, 0);
     };
 
-    const generateReceiptPDF = (order) => {
+    const generateReceiptPDF = async (order) => {
         const doc = new jsPDF();
         const orderItems = Array.isArray(order.items) ? order.items : [];
         const total = orderItems.reduce(
@@ -624,99 +624,203 @@ export default function AdminCheckoutPage() {
         const cashReceived = cashAmounts[order._id];
         const change = paymentMethod === 'cash' ? (cashReceived - finalTotal) : 0;
 
-        // Set up the PDF with header
-        doc.setFontSize(22);
-        doc.text('Cherry Myo Restaurant', 105, 25, { align: 'center' });
+        try {
+            // Try to add logo
+            const logoImg = new Image();
+            logoImg.crossOrigin = 'anonymous';
+            
+            await new Promise((resolve) => {
+                logoImg.onload = () => {
+                    try {
+                        // Create canvas to convert image to base64
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        canvas.width = logoImg.width;
+                        canvas.height = logoImg.height;
+                        ctx.drawImage(logoImg, 0, 0);
+                        
+                        const dataURL = canvas.toDataURL('image/png');
+                        doc.addImage(dataURL, 'PNG', 85, 8, 20, 20);
+                    } catch (error) {
+                        console.warn('Could not add logo to PDF:', error);
+                    }
+                    resolve();
+                };
+                logoImg.onerror = () => {
+                    console.warn('Logo image not found');
+                    resolve();
+                };
+                logoImg.src = '/image/cherry_myo.png';
+            });
+        } catch (error) {
+            console.warn('Error loading logo:', error);
+        }
+
+        // Header with better styling
+        doc.setFontSize(24);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(220, 38, 127); // Cherry pink color
+        doc.text('Cherry Myo Restaurant', 105, 35, { align: 'center' });
         
-        // Add space for logo (you can add logo image here later)
-        doc.setFontSize(10);
-        doc.text('[Logo Here]', 105, 15, { align: 'center' });
-        
-        doc.setFontSize(16);
-        doc.text('Payment Receipt', 105, 40, { align: 'center' });
-        
-        // Add cherry decorations
+        // Use romanized Myanmar restaurant name instead of Unicode
         doc.setFontSize(12);
-        doc.text('🍒', 20, 25);
-        doc.text('🍒', 180, 25);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 100, 100);
+        doc.text('Cherry Myo Restaurant (Myanmar)', 105, 43, { align: 'center' });
         
-        // Receipt details
+        // Receipt title
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0, 0, 0);
+        doc.text('Payment Receipt', 105, 55, { align: 'center' });
+        
+        // Decorative line
+        doc.setDrawColor(220, 38, 127);
+        doc.setLineWidth(1);
+        doc.line(20, 60, 190, 60);
+        
+        // Receipt details section
         doc.setFontSize(12);
-        doc.text(`Table: ${order.tableNumber}`, 20, 60);
-        doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 70);
-        doc.text(`Time: ${new Date().toLocaleTimeString()}`, 20, 80);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(0, 0, 0);
         
-        // Order items section with proper table headers
+        const receiptInfo = [
+            [`Table: ${order.tableNumber}`, `Receipt #: ${Date.now().toString().slice(-8)}`],
+            [`Date: ${new Date().toLocaleDateString()}`, `Time: ${new Date().toLocaleTimeString()}`]
+        ];
+        
+        let yPos = 75;
+        receiptInfo.forEach(([left, right]) => {
+            doc.text(left, 20, yPos);
+            doc.text(right, 130, yPos);
+            yPos += 8;
+        });
+        
+        // Order items section
+        yPos += 10;
         doc.setFontSize(14);
-        doc.text('Order Items:', 20, 100);
-        doc.line(20, 105, 190, 105);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Order Items:', 20, yPos);
+        
+        yPos += 5;
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.5);
+        doc.line(20, yPos, 190, yPos);
         
         // Table headers
+        yPos += 10;
         doc.setFontSize(10);
-        doc.setFont(undefined, 'bold');
-        doc.text('Item Name', 20, 115);
-        doc.text('Qty', 120, 115);
-        doc.text('Price', 140, 115);
-        doc.text('Total', 170, 115);
-        doc.line(20, 118, 190, 118);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Item Name', 20, yPos);
+        doc.text('Qty', 120, yPos);
+        doc.text('Price', 140, yPos);
+        doc.text('Total', 170, yPos);
         
-        // Order items with proper formatting
-        let yPosition = 128;
-        doc.setFont(undefined, 'normal');
-        orderItems.forEach((item, index) => {
+        yPos += 3;
+        doc.line(20, yPos, 190, yPos);
+        
+        // Order items
+        yPos += 8;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9); // Slightly smaller font to prevent overlap
+        orderItems.forEach((item) => {
             const itemTotal = (item.price || 0) * (item.quantity || 0);
-            doc.text(`${item.name}`, 20, yPosition);
-            doc.text(`${item.quantity}`, 120, yPosition);
-            doc.text(`${(item.price || 0).toFixed(2)} MMK`, 140, yPosition);
-            doc.text(`${itemTotal.toFixed(2)} MMK`, 170, yPosition);
-            yPosition += 8;
+            
+            // Handle long item names more carefully
+            let itemName = item.name || 'Unknown Item';
+            if (itemName.length > 30) {
+                itemName = itemName.substring(0, 30) + '...';
+            }
+            
+            doc.text(itemName, 20, yPos);
+            doc.text(`${item.quantity || 0}`, 125, yPos);
+            doc.text(`${(item.price || 0).toFixed(2)}`, 145, yPos);
+            doc.text(`${itemTotal.toFixed(2)}`, 175, yPos);
+            yPos += 10; // Increased spacing between items
         });
         
         // Summary section
-        yPosition += 10;
-        doc.line(20, yPosition, 190, yPosition);
-        yPosition += 10;
+        yPos += 5;
+        doc.setDrawColor(200, 200, 200);
+        doc.line(20, yPos, 190, yPos);
+        yPos += 10;
         
-        doc.setFontSize(12);
-        doc.setFont(undefined, 'bold');
-        doc.text(`Subtotal:`, 120, yPosition);
-        doc.text(`${total.toFixed(2)} MMK`, 170, yPosition);
-        yPosition += 10;
+        // Summary calculations
+        const summaryItems = [
+            ['Subtotal:', `${total.toFixed(2)} MMK`],
+            ...(discountPercent > 0 ? [['Discount (' + discountPercent + '%):', `-${discountAmount.toFixed(2)} MMK`]] : [])
+        ];
         
-        if (discountPercent > 0) {
-            doc.text(`Discount (${discountPercent}%):`, 120, yPosition);
-            doc.text(`-${discountAmount.toFixed(2)} MMK`, 170, yPosition);
-            yPosition += 10;
-        }
+        // Regular summary items
+        summaryItems.forEach(([label, value]) => {
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(12);
+            doc.setTextColor(0, 0, 0);
+            
+            doc.text(label, 120, yPos);
+            doc.text(value, 175, yPos, { align: 'right' });
+            yPos += 10;
+        });
         
+        // Final Total with proper spacing
+        yPos += 5; // Extra spacing before final total
+        doc.setFont('helvetica', 'bold');
         doc.setFontSize(14);
-        doc.setFont(undefined, 'bold');
-        doc.text(`Final Total:`, 120, yPosition);
-        doc.text(`${finalTotal.toFixed(2)} MMK`, 170, yPosition);
-        yPosition += 15;
+        doc.setTextColor(220, 38, 127);
+        
+        doc.text('Final Total:', 120, yPos);
+        doc.text(`${finalTotal.toFixed(2)} MMK`, 175, yPos, { align: 'right' });
+        yPos += 15;
         
         // Payment details
+        yPos += 5;
+        doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
-        doc.setFont(undefined, 'normal');
-        doc.text(`Payment Method: ${paymentMethod === 'cash' ? 'Cash' : 'QR Scan'}`, 20, yPosition);
-        yPosition += 10;
+        doc.text('Payment Details:', 20, yPos);
+        yPos += 10;
         
-        if (paymentMethod === 'cash') {
-            doc.text(`Cash Received: ${cashReceived.toFixed(2)} MMK`, 20, yPosition);
-            yPosition += 10;
-            doc.text(`Change: ${change.toFixed(2)} MMK`, 20, yPosition);
-            yPosition += 10;
-        }
+        doc.setFont('helvetica', 'normal');
+        const paymentDetails = [
+            [`Method: ${paymentMethod === 'cash' ? 'Cash Payment' : 'QR Code Scan'}`, ''],
+            ...(paymentMethod === 'cash' ? [
+                [`Cash Received: ${cashReceived.toFixed(2)} MMK`, ''],
+                [`Change Given: ${change.toFixed(2)} MMK`, '']
+            ] : [])
+        ];
         
-        // Footer
-        yPosition += 15;
+        paymentDetails.forEach(([detail]) => {
+            doc.text(detail, 20, yPos);
+            yPos += 8;
+        });
+        
+        // Footer section with proper spacing
+        yPos += 20; // Extra spacing before footer
+        const pageHeight = doc.internal.pageSize.height;
+        const footerY = Math.max(yPos, pageHeight - 50); // More space for footer
+        
+        // Decorative line
+        doc.setDrawColor(220, 38, 127);
+        doc.setLineWidth(0.5);
+        doc.line(20, footerY, 190, footerY);
+        
+        // Footer text with proper spacing
         doc.setFontSize(10);
-        doc.text('Thank you for dining with us!', 105, yPosition, { align: 'center' });
-        doc.text('🍒 Cherry Myo Restaurant 🍒', 105, yPosition + 10, { align: 'center' });
-        doc.text('Visit us again soon!', 105, yPosition + 20, { align: 'center' });
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(100, 100, 100);
+        
+        const footerMessages = [
+            'Thank you for dining with us!',
+            'Cherry Myo Restaurant',
+            'Authentic Myanmar Cuisine - Visit us again soon!'
+        ];
+        
+        footerMessages.forEach((message, index) => {
+            doc.text(message, 105, footerY + 15 + (index * 8), { align: 'center' });
+        });
         
         // Save the PDF
-        doc.save(`Cherry-Myo-Receipt-Table-${order.tableNumber}-${new Date().toISOString().slice(0, 10)}.pdf`);
+        const fileName = `Cherry-Myo-Receipt-Table-${order.tableNumber}-${new Date().toISOString().slice(0, 10)}.pdf`;
+        doc.save(fileName);
     };
 
     // Debug log for checkout orders
