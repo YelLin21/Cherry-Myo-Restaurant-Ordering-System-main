@@ -168,13 +168,14 @@ export default function AdminSalesReport({ darkMode = false }) {
             <span className="text-lg">←</span>
             Back to Admin
           </Link>
+          
           <span className="text-3xl">🍒</span>
           <h1 className={`text-2xl md:text-3xl font-bold ${darkMode ? 'text-pink-300' : 'text-pink-700'}`}>Sales Report</h1>
         </div>
         
         {/* Last Updated Display */}
         {lastUpdated && (
-          <div className={`text-sm flex items-center gap-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          <div className={`text-sm flex items-center ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
             <div className="flex items-center gap-2">
               <span className={`text-xs ${isConnected ? 'text-green-500' : 'text-red-500'}`}>
                 {isConnected ? '🟢 Live' : '🔴 Offline'}
@@ -182,7 +183,21 @@ export default function AdminSalesReport({ darkMode = false }) {
               <span>Last updated: {lastUpdated.toLocaleTimeString()}</span>
             </div>
           </div>
+          
         )}
+        <button
+            onClick={handleLogout}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2 ${
+              darkMode 
+                ? 'bg-red-700 text-red-100 hover:bg-red-600' 
+                : 'bg-red-600 text-white hover:bg-red-700'
+            } shadow-md`}
+            aria-label="Sign Out"
+          >
+            
+            Sign Out
+          </button>
+        
       </div>
       {/* Tabs */}
       <div className="flex gap-2 mb-6 flex-wrap">
