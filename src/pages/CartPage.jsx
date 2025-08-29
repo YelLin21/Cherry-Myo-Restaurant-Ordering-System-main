@@ -114,9 +114,8 @@ export default function CartPage() {
 
     setLoading(true);
     setShowOrderModal(false);
-
     const order = {
-      tableId, // 👈 from TableContext
+      tableNumber: tableId, 
       items: selectedCartItems.map(({ item, quantity }) => ({
         itemId: item._id,
         name: item.name,
@@ -282,12 +281,7 @@ export default function CartPage() {
                 <p className={`text-sm font-medium mb-1 ${
                   darkMode ? 'text-gray-300' : 'text-gray-600'
                 }`}>
-                  Table Number
-                </p>
-                <p className={`text-lg font-bold ${
-                  darkMode ? 'text-white' : 'text-gray-900'
-                }`}>
-                  {tableNumber}
+                  Table Number { tableId }
                 </p>
               </div>
 
