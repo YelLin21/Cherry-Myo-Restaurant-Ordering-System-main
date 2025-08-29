@@ -79,7 +79,7 @@ export default function HomePage() {
       />
 
       {/* SLIDER + SEARCH */}
-      <div className="relative pt-24"> {/* Add pt-24 to avoid overlap with fixed navbar */}
+      <div className="relative pt-20"> {/* Removed pt-24 to eliminate space between navbar and slider */}
         <Slider
           autoplay
           autoplaySpeed={4000}

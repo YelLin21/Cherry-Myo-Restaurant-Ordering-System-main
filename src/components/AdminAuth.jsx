@@ -59,25 +59,48 @@ export default function AdminAuth({ children, onLogout }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user && !ADMIN_EMAIL.includes(user.email)) {
-        setLoginError("You are not authorized to access the admin page.");
-        setUser(null);
-        await signOut(auth);
+      try {
+        if (user && !ADMIN_EMAIL.includes(user.email)) {
+          setLoginError("You are not authorized to access the admin page.");
+          setUser(null);
+          await signOut(auth);
+          setLoading(false);
+          return;
+        }
+        setUser(user);
+        setLoginError(""); // Clear any previous errors
+      } catch (error) {
+        console.error("Auth state change error:", error);
+        setLoginError("Authentication error occurred. Please try again.");
+      } finally {
         setLoading(false);
-        return;
       }
-      setUser(user);
-      setLoading(false);
     });
-    return () => unsubscribe();
+
+    // Cleanup function
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   const handleLogin = async () => {
+    setLoginError("");
+    
     try {
       await signInWithGoogle();
     } catch (error) {
       console.error("Login error:", error);
-      setLoginError("Failed to sign in with Google. Please try again.");
+      
+      // Handle specific error messages
+      if (error.message.includes('cancelled') || error.message.includes('closed')) {
+        setLoginError("Sign-in was cancelled. Please try again.");
+      } else if (error.message.includes('blocked')) {
+        setLoginError("Popup was blocked. Please allow popups and try again.");
+      } else if (error.message.includes('timeout')) {
+        setLoginError("Sign-in timed out. Please check your connection and try again.");
+      } else {
+        setLoginError("Failed to sign in with Google. Please try again.");
+      }
     }
   };
 

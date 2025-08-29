@@ -22,36 +22,6 @@ export default function AdminPage() {
     document.body.classList.toggle("dark", darkMode);
   }, [darkMode]);
 
-  const initializeMenuData = (user) => {
-    if (!user) return;
-    
-    fetch(`${APIBASE}/menu`)
-      .then((res) => res.json())
-      .then((data) => setMenuItems(data));
-
-    const socket = io(SOCKET_URL, {
-      transports: ["websocket"],
-    });
-
-    socket.on("menu:new", (newItem) => {
-      setMenuItems((prev) => [...prev, newItem]);
-    });
-
-    socket.on("menu:update", (updatedItem) => {
-      setMenuItems((prev) =>
-        prev.map((item) => (item._id === updatedItem._id ? updatedItem : item))
-      );
-    });
-
-    socket.on("menu:delete", (id) => {
-      setMenuItems((prev) => prev.filter((item) => item._id !== id));
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  };
-
   const handleAdd = (item) => {
     // Check for duplicate names in the current category
     const trimmedName = item.name.trim().toLowerCase();
@@ -166,15 +136,31 @@ function AdminPageContent({
   closeForm, 
   darkMode 
 }) {
-  const initializeMenuData = (user) => {
+  // Initialize menu fetching when user is authenticated
+  useEffect(() => {
     if (!user) return;
     
+    // Fetch initial menu data
     fetch(`${APIBASE}/menu`)
       .then((res) => res.json())
-      .then((data) => setMenuItems(data));
+      .then((data) => setMenuItems(data))
+      .catch((error) => {
+        console.error("Error fetching menu data:", error);
+      });
 
+    // Initialize socket connection
     const socket = io(SOCKET_URL, {
       transports: ["websocket"],
+      forceNew: true,
+    });
+
+    // Socket event listeners
+    socket.on("connect", () => {
+      console.log("Socket connected:", socket.id);
+    });
+
+    socket.on("connect_error", (error) => {
+      console.error("Socket connection error:", error);
     });
 
     socket.on("menu:new", (newItem) => {
@@ -191,15 +177,17 @@ function AdminPageContent({
       setMenuItems((prev) => prev.filter((item) => item._id !== id));
     });
 
+    // Cleanup function
     return () => {
+      console.log("Cleaning up socket connection");
+      socket.off("connect");
+      socket.off("connect_error");
+      socket.off("menu:new");
+      socket.off("menu:update");
+      socket.off("menu:delete");
       socket.disconnect();
     };
-  };
-
-  // Initialize menu fetching when user is authenticated
-  useEffect(() => {
-    return initializeMenuData(user);
-  }, [user]);
+  }, [user, setMenuItems]);
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${

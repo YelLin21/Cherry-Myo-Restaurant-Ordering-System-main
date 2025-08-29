@@ -1144,7 +1144,8 @@ function CheckoutContent({ user, handleLogout }) {
                     )}
                 </div>
 
-                <style jsx>{`
+                <style>
+                {`
                 @keyframes float {
                     0%, 100% { transform: translateY(0px) rotate(0deg); }
                     50% { transform: translateY(-20px) rotate(180deg); }
@@ -1152,7 +1153,8 @@ function CheckoutContent({ user, handleLogout }) {
                 .animate-float {
                     animation: float 8s ease-in-out infinite;
                 }
-            `}</style>
+                `}
+            </style>
         </div>
     );
 }
