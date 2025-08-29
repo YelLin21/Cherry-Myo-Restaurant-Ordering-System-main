@@ -62,7 +62,7 @@ router.get("/checkout", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const { tableNumber, items } = req.body;
-
+    console.log(tableNumber, items)
     if (!tableNumber || !items || !Array.isArray(items)) {
       return res.status(400).json({ error: "Invalid order format" });
     }
