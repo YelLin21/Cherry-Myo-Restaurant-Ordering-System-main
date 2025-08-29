@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Trash2 } from "lucide-react";
 import Navbar from "../components/Navbar.jsx";
 import { useCart } from "../context/CartContext.jsx";
@@ -15,10 +15,21 @@ export default function CartPage() {
   const [orderSent, setOrderSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showOrderModal, setShowOrderModal] = useState(false);
-  const { tableId } = useTable();
+  const { tableId: contextTableId, setTableId } = useTable();
+  const { tableId: urlTableId } = useParams(); // Get tableId from URL if present
   const navigate = useNavigate();
   const { cart, addToCart, removeFromCart, total, totalItems, clearCart } = useCart();
   const { darkMode, setDarkMode } = useDarkMode();
+
+  // Use URL tableId if available, otherwise use context tableId
+  const tableId = urlTableId || contextTableId;
+
+  // If URL has tableId but context doesn't, update context
+  useEffect(() => {
+    if (urlTableId && urlTableId !== contextTableId) {
+      setTableId(urlTableId);
+    }
+  }, [urlTableId, contextTableId, setTableId]);
 
   // Dark mode toggle on body
   useEffect(() => {
