@@ -28,7 +28,7 @@ function App() {
         <Route path="/beverages" element={<BeveragePage />} />
         <Route path="/special" element={<SpecialMenuPage />} />
         <Route path="/promotion" element={<PromotionMenuPage />} />
-        <Route path="/cart" element={<CartPage />} />
+        <Route path="/cart/:tableId" element={<CartPage />} />
         <Route path="/order-history" element={<OrderHistoryPage />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/admin/special" element={<AdminSpecialMenuPage />} />

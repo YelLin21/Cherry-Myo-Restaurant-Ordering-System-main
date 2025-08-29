@@ -5,6 +5,7 @@ import Navbar from "../components/Navbar.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { useDarkMode } from "./DarkModeContext.jsx";
 import "../index.css";
+import { useTable } from "../context/TableContext.jsx";
 
 const APIBASE = import.meta.env.VITE_API_URL;
 
@@ -14,30 +15,32 @@ export default function CartPage() {
   const [orderSent, setOrderSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showOrderModal, setShowOrderModal] = useState(false);
-
+  const { tableId } = useTable();
   const navigate = useNavigate();
   const { cart, addToCart, removeFromCart, total, totalItems, clearCart } = useCart();
   const { darkMode, setDarkMode } = useDarkMode();
 
+  // Dark mode toggle on body
   useEffect(() => {
     document.body.classList.toggle("dark", darkMode);
   }, [darkMode]);
 
-  // Load selectedItems and tableNumber from localStorage
+  // ✅ Load selectedItems and tableNumber from sessionStorage
   useEffect(() => {
-    const storedSelected = localStorage.getItem("selectedItems");
-    const storedTable = localStorage.getItem("tableNumber");
+    const storedSelected = sessionStorage.getItem("selectedItems");
+    const storedTable = sessionStorage.getItem("tableNumber");
     if (storedSelected) setSelectedItems(JSON.parse(storedSelected));
     if (storedTable) setTableNumber(storedTable);
   }, []);
 
-  // Save selectedItems and tableNumber to localStorage
+  // ✅ Save selectedItems to sessionStorage
   useEffect(() => {
-    localStorage.setItem("selectedItems", JSON.stringify(selectedItems));
+    sessionStorage.setItem("selectedItems", JSON.stringify(selectedItems));
   }, [selectedItems]);
 
+  // ✅ Save tableNumber to sessionStorage
   useEffect(() => {
-    localStorage.setItem("tableNumber", tableNumber);
+    sessionStorage.setItem("tableNumber", tableNumber);
   }, [tableNumber]);
 
   const handleCheckboxChange = (id) => {
@@ -58,7 +61,8 @@ export default function CartPage() {
     setSelectedItems(checked ? newSelected : {});
   };
 
-  const allSelected = Object.keys(cart).length > 0 &&
+  const allSelected =
+    Object.keys(cart).length > 0 &&
     Object.keys(cart).every((id) => selectedItems[id]);
 
   const handleDeleteSelected = () => {
@@ -77,7 +81,7 @@ export default function CartPage() {
   const calculateSelectedTotal = () => {
     return Object.values(cart).reduce((total, { item, quantity }) => {
       if (selectedItems[item._id]) {
-        return total + (item.price * quantity);
+        return total + item.price * quantity;
       }
       return total;
     }, 0);
@@ -86,12 +90,14 @@ export default function CartPage() {
   const selectedTotal = calculateSelectedTotal();
 
   const handleCheckoutClick = () => {
-    if (!tableNumber.trim()) {
-      alert("Please enter your table number.");
+    if (!tableId) {
+      alert("No table assigned. Please scan your QR code again.");
       return;
     }
 
-    const selectedCartItems = Object.values(cart).filter(({ item }) => selectedItems[item._id]);
+    const selectedCartItems = Object.values(cart).filter(
+      ({ item }) => selectedItems[item._id]
+    );
 
     if (selectedCartItems.length === 0) {
       alert("Please select at least one item to order.");
@@ -102,13 +108,15 @@ export default function CartPage() {
   };
 
   const handlePlaceOrder = async () => {
-    const selectedCartItems = Object.values(cart).filter(({ item }) => selectedItems[item._id]);
+    const selectedCartItems = Object.values(cart).filter(
+      ({ item }) => selectedItems[item._id]
+    );
 
     setLoading(true);
     setShowOrderModal(false);
 
     const order = {
-      tableNumber,
+      tableId, // 👈 from TableContext
       items: selectedCartItems.map(({ item, quantity }) => ({
         itemId: item._id,
         name: item.name,
@@ -129,8 +137,8 @@ export default function CartPage() {
       setOrderSent(true);
       clearCart();
       setSelectedItems({});
-      localStorage.removeItem("selectedItems");
-      localStorage.removeItem("tableNumber");
+      sessionStorage.removeItem("selectedItems");
+      sessionStorage.removeItem("tableNumber");
 
       setTimeout(() => {
         setOrderSent(false);
@@ -237,9 +245,8 @@ export default function CartPage() {
 
           <input
             type="text"
-            placeholder="Enter Table Number"
-            value={tableNumber}
-            onChange={(e) => setTableNumber(e.target.value)}
+            value={`Table ${tableId || ""}`}   // show "Table 1", "Table 2", etc.
+            disabled  
             className={`w-full sm:w-auto px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-pink-400 ${
               darkMode ? "bg-gray-800 text-white border-gray-600 placeholder-gray-400" : "bg-white border-gray-300 text-black"
             }`}
