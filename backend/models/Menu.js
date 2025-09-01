@@ -5,6 +5,8 @@ const menuSchema = new mongoose.Schema({
   price: Number,
   image: String,
   category: String,
+  promotion: Number,
+  outofstock: { type: Boolean, default: false },
 });
 
 module.exports = mongoose.model("Menu", menuSchema);
