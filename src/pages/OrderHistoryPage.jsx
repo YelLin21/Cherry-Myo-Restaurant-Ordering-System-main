@@ -98,8 +98,15 @@ export default function OrderHistoryPage() {
       if (!res.ok) throw new Error("Failed to fetch order history");
       const unpaidOrders = await res.json();
       
-      console.log("📊 Customer orders fetched:", unpaidOrders.length, "unpaid orders");
-      console.log("📋 Detailed orders:", unpaidOrders.map(order => ({
+      const currentTableId = (sessionStorage.getItem("tableId") || "").trim();
+
+      const tableOrders = unpaidOrders.filter(
+        order => order.tableNumber?.toString().trim() === currentTableId
+      );
+      
+      console.log("Filtered table orders:", tableOrders);
+      console.log("📊 Customer orders fetched:", tableOrders.length, "unpaid orders");
+      console.log("📋 Detailed orders:", tableOrders.map(order => ({
         id: order._id,
         table: order.tableNumber,
         status: order.status,
@@ -108,7 +115,7 @@ export default function OrderHistoryPage() {
       })));
       console.log("✅ Paid orders are filtered at API level - will never appear on reload");
       
-      setOrders(unpaidOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+      setOrders(tableOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
     } catch (err) {
       console.error("❌ Error fetching order history:", err);
       setError(err.message);
