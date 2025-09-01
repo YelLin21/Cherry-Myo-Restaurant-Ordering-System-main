@@ -99,10 +99,22 @@ export default function OrderHistoryPage() {
       const unpaidOrders = await res.json();
       
       const currentTableId = (sessionStorage.getItem("tableId") || "").trim();
+      const now = new Date();
+  
+      const tableOrders = unpaidOrders.filter(order => {
+        const orderTime = new Date(order.createdAt);
+        const isSameTable =
+          order.tableNumber?.toString().trim() === currentTableId;
 
-      const tableOrders = unpaidOrders.filter(
-        order => order.tableNumber?.toString().trim() === currentTableId
-      );
+        const isToday =
+          orderTime.getFullYear() === now.getFullYear() &&
+          orderTime.getMonth() === now.getMonth() &&
+          orderTime.getDate() === now.getDate();
+  
+        const isWithin1Hour = now - orderTime <= 60 * 60 * 1000;
+  
+        return isSameTable && isToday && isWithin1Hour;
+      });
       
       console.log("Filtered table orders:", tableOrders);
       console.log("📊 Customer orders fetched:", tableOrders.length, "unpaid orders");
@@ -413,10 +425,16 @@ export default function OrderHistoryPage() {
 
       {/* Order Details Modal */}
       {showOrderModal && selectedOrder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className={`max-w-md w-full rounded-xl shadow-2xl max-h-[80vh] overflow-y-auto ${
-            darkMode ? 'bg-gray-800 border border-gray-600' : 'bg-white border border-gray-200'
-          }`}>
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" 
+          onClick={() => setShowOrderModal(false)}
+        >
+          <div 
+            className={`max-w-md w-full rounded-xl shadow-2xl max-h-[80vh] overflow-y-auto ${
+              darkMode ? 'bg-gray-800 border border-gray-600' : 'bg-white border border-gray-200'
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className={`text-xl font-bold ${

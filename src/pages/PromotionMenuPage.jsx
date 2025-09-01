@@ -60,6 +60,7 @@ export default function PromotionMenuPage() {
       if (!res.ok) throw new Error("Failed to fetch promotion menu");
       const data = await res.json();
       const promotionItems = data.filter(item => item.category === "Promotion");
+      console.log(promotionItems)
       setMenuItems(promotionItems);
     } catch (err) {
       setError(err.message);
