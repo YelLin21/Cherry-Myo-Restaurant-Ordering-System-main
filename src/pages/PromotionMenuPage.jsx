@@ -162,12 +162,34 @@ export default function PromotionMenuPage() {
                 }`}>
                   {item.name}
                 </h2>
-                <p className={`mb-4 font-bold ${
-                  darkMode ? "text-pink-300" : "text-pink-900"
-                }`}>
-                  {item.price} MMK
+                <p className="mb-4 text-center">
+                  {item.promotion > 0 && item.promotion < item.price ? (
+                    <>
+                      <span
+                        className={`mr-2 line-through ${
+                          darkMode ? "text-red-400" : "text-red-600"
+                        }`}
+                      >
+                        {item.price} MMK
+                      </span>
+                      <span
+                        className={`font-bold ${
+                          darkMode ? "text-pink-300" : "text-pink-900"
+                        }`}
+                      >
+                        {item.promotion} MMK
+                      </span>
+                    </>
+                  ) : (
+                    <span
+                      className={`font-bold ${
+                        darkMode ? "text-pink-300" : "text-pink-900"
+                      }`}
+                    >
+                      {item.price} MMK
+                    </span>
+                  )}
                 </p>
-
                 <div className={`flex items-center mt-3 space-x-3 ${item.outofstock ? 'pointer-events-none' : ''}`}>
                   <button
                     onClick={() => !item.outofstock && removeFromCart(item._id)}
