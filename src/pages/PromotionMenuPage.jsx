@@ -190,6 +190,7 @@ export default function PromotionMenuPage() {
                     </span>
                   )}
                 </p>
+                
                 <div className={`flex items-center mt-3 space-x-3 ${item.outofstock ? 'pointer-events-none' : ''}`}>
                   <button
                     onClick={() => !item.outofstock && removeFromCart(item._id)}
