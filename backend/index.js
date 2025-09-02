@@ -55,7 +55,7 @@ app.use("/api/orders", require("./routes/order"));
 app.use("/api/qr", require("./routes/qrCode"));
 app.use("/api/session", require("./routes/session"));
 app.use("/api/analytics", require("./routes/analytics"));
-
+app.use("/api/feedback", require('./routes/feedback'));
 
 const PORT = process.env.PORT || 5001;
 server.listen(PORT, () => {
