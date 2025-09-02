@@ -132,6 +132,24 @@ export default function AdminPromotionMenuPage() {
     }
   };
 
+  const handleStockToggle = async (id, newStockStatus) => {
+    try {
+      const res = await fetch(`${APIBASE}/menu/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ outofstock: newStockStatus }),
+      });
+      
+      if (!res.ok) throw new Error("Failed to update stock status");
+      
+      // Socket will handle the real-time update
+    } catch (err) {
+      alert("Error: " + err.message);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       name: "",
@@ -227,6 +245,7 @@ export default function AdminPromotionMenuPage() {
           handleSubmit={handleSubmit}
           handleEdit={handleEdit}
           handleDelete={handleDelete}
+          handleStockToggle={handleStockToggle}
           resetForm={resetForm}
           handleCancel={handleCancel}
           handleFileSelect={handleFileSelect}
@@ -264,6 +283,7 @@ function AdminPromotionMenuContent({
   handleSubmit, 
   handleEdit, 
   handleDelete, 
+  handleStockToggle,
   resetForm, 
   handleCancel, 
   handleFileSelect, 
@@ -486,6 +506,25 @@ function AdminPromotionMenuContent({
                   {/* Action Buttons */}
                   <div className="absolute top-4 right-4 z-20 flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
                     <button
+                      onClick={() => handleStockToggle(item._id, !item.outofstock)}
+                      className={`p-2 text-white rounded-lg shadow-lg transition-all duration-200 transform hover:scale-110 ${
+                        item.outofstock 
+                          ? 'bg-green-600 hover:bg-green-700' 
+                          : 'bg-red-600 hover:bg-red-700'
+                      }`}
+                      title={item.outofstock ? "Mark as In Stock" : "Mark as Out of Stock"}
+                    >
+                      {item.outofstock ? (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      )}
+                    </button>
+                    <button
                       onClick={() => handleEdit(item)}
                       className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-lg transition-all duration-200 transform hover:scale-110"
                       title="Edit Item"
@@ -535,11 +574,36 @@ function AdminPromotionMenuContent({
                         </span>
                       </div>
                       
-                      
+                      <div className="flex flex-col items-end">
+                        <span className={`text-sm font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                          Status
+                        </span>
+                        <span className={`text-sm font-bold ${
+                          item.outofstock 
+                            ? 'text-red-500' 
+                            : darkMode ? 'text-green-400' : 'text-green-600'
+                        }`}>
+                          {item.outofstock ? 'Out of Stock' : 'In Stock'}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Action Bar */}
                     <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                      <button
+                        onClick={() => handleStockToggle(item._id, !item.outofstock)}
+                        className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all duration-200 ${
+                          item.outofstock 
+                            ? darkMode 
+                              ? 'bg-green-800 text-green-200 hover:bg-green-700' 
+                              : 'bg-green-100 text-green-700 hover:bg-green-200'
+                            : darkMode
+                              ? 'bg-red-800 text-red-200 hover:bg-red-700'
+                              : 'bg-red-100 text-red-700 hover:bg-red-200'
+                        }`}
+                      >
+                        {item.outofstock ? 'Stock' : 'Unstock'}
+                      </button>
                       <button
                         onClick={() => handleEdit(item)}
                         className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all duration-200 ${
