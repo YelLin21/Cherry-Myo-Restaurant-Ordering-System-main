@@ -160,7 +160,11 @@ export default function FoodMenuPage() {
             {filteredItems.map((item) => (
               <div
                 key={item._id}
-                className={`relative rounded-xl shadow-lg p-4 flex flex-col items-center transition-all duration-300 hover:shadow-xl hover:scale-105 ${darkMode
+                className={`relative rounded-xl shadow-lg p-4 flex flex-col items-center transition-all duration-300 hover:shadow-xl hover:scale-105 ${
+                  item.outofstock 
+                    ? 'opacity-50 grayscale cursor-not-allowed' 
+                    : ''
+                } ${darkMode
                     ? 'bg-gray-800 border border-gray-700'
                     : 'bg-pink-300 border border-pink-100'
                   }`}
@@ -177,6 +181,12 @@ export default function FoodMenuPage() {
                     {item.category}
                   </span>
                 )}
+                {/* Out of Stock Badge */}
+                {item.outofstock && (
+                  <span className="absolute top-2 left-2 px-2 py-1 text-xs font-bold rounded-full bg-red-600 text-white">
+                    OUT OF STOCK
+                  </span>
+                )}
                 <h2 className={`font-semibold text-lg text-center mb-2 ${darkMode ? 'text-white' : 'text-gray-800'
                   }`}>
                   {item.name}
@@ -186,10 +196,14 @@ export default function FoodMenuPage() {
                   {item.price} MMK
                 </p>
 
-                <div className="flex items-center mt-3 space-x-3">
+                <div className={`flex items-center mt-3 space-x-3 ${item.outofstock ? 'pointer-events-none' : ''}`}>
                   <button
-                    onClick={() => removeFromCart(item._id)}
-                    className={`px-3 py-1 text-white rounded transition-colors duration-200 ${darkMode
+                    onClick={() => !item.outofstock && removeFromCart(item._id)}
+                    disabled={item.outofstock}
+                    className={`px-3 py-1 text-white rounded transition-colors duration-200 ${
+                      item.outofstock 
+                        ? 'bg-gray-400 cursor-not-allowed' 
+                        : darkMode
                         ? 'bg-gray-600 hover:bg-gray-500'
                         : 'bg-gray-600 hover:bg-gray-700'
                       }`}
@@ -201,8 +215,12 @@ export default function FoodMenuPage() {
                     {getQuantity(item._id)}
                   </span>
                   <button
-                    onClick={() => addToCart(item)}
-                    className={`px-3 py-1 text-white rounded transition-colors duration-200 ${darkMode
+                    onClick={() => !item.outofstock && addToCart(item)}
+                    disabled={item.outofstock}
+                    className={`px-3 py-1 text-white rounded transition-colors duration-200 ${
+                      item.outofstock 
+                        ? 'bg-gray-400 cursor-not-allowed' 
+                        : darkMode
                         ? 'bg-pink-600 hover:bg-pink-500'
                         : 'bg-red-500 hover:bg-red-600'
                       }`}
@@ -219,7 +237,11 @@ export default function FoodMenuPage() {
             {filteredItems.map((item) => (
               <div
                 key={item._id}
-                className={`relative flex items-center gap-4 p-4 rounded-xl border shadow-sm transition-all duration-200 hover:shadow-md ${darkMode
+                className={`relative flex items-center gap-4 p-4 rounded-xl border shadow-sm transition-all duration-200 hover:shadow-md ${
+                  item.outofstock 
+                    ? 'opacity-50 grayscale cursor-not-allowed' 
+                    : ''
+                } ${darkMode
                     ? 'bg-gray-800 border-gray-600'
                     : 'bg-pink-300 border-pink-100'
                   }`}
@@ -229,6 +251,12 @@ export default function FoodMenuPage() {
                   <span className={`absolute top-2 right-2 px-2 py-1 text-xs font-semibold rounded-full ${darkMode ? 'bg-pink-600 text-white' : 'bg-pink-700 text-white'
                     }`}>
                     {item.category}
+                  </span>
+                )}
+                {/* Out of Stock Badge */}
+                {item.outofstock && (
+                  <span className="absolute top-2 left-2 px-2 py-1 text-xs font-bold rounded-full bg-red-600 text-white z-10">
+                    OUT OF STOCK
                   </span>
                 )}
                 <img
@@ -246,10 +274,14 @@ export default function FoodMenuPage() {
                       }`}>
                       {item.price} MMK
                     </span>
-                    <div className="flex items-center gap-3">
+                    <div className={`flex items-center gap-3 ${item.outofstock ? 'pointer-events-none' : ''}`}>
                       <button
-                        onClick={() => removeFromCart(item._id)}
-                        className={`w-8 h-8 flex items-center justify-center text-white rounded-full transition-all duration-200 hover:scale-110 ${darkMode
+                        onClick={() => !item.outofstock && removeFromCart(item._id)}
+                        disabled={item.outofstock}
+                        className={`w-8 h-8 flex items-center justify-center text-white rounded-full transition-all duration-200 hover:scale-110 ${
+                          item.outofstock 
+                            ? 'bg-gray-400 cursor-not-allowed' 
+                            : darkMode
                             ? 'bg-gray-600 hover:bg-gray-500'
                             : 'bg-gray-600 hover:bg-gray-700'
                           }`}
@@ -261,8 +293,12 @@ export default function FoodMenuPage() {
                         {getQuantity(item._id)}
                       </span>
                       <button
-                        onClick={() => addToCart(item)}
-                        className={`w-8 h-8 flex items-center justify-center text-white rounded-full transition-all duration-200 hover:scale-110 ${darkMode
+                        onClick={() => !item.outofstock && addToCart(item)}
+                        disabled={item.outofstock}
+                        className={`w-8 h-8 flex items-center justify-center text-white rounded-full transition-all duration-200 hover:scale-110 ${
+                          item.outofstock 
+                            ? 'bg-gray-400 cursor-not-allowed' 
+                            : darkMode
                             ? 'bg-pink-600 hover:bg-pink-500'
                             : 'bg-red-500 hover:bg-red-600'
                           }`}

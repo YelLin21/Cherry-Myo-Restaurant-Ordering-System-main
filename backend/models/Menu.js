@@ -5,7 +5,7 @@ const menuSchema = new mongoose.Schema({
   price: Number,
   image: String,
   category: String,
-  promotion: Number,
+  promotion: { type: Number, default: 0 }, 
   outofstock: { type: Boolean, default: false },
 });
 
