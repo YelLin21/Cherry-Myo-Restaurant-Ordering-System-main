@@ -75,6 +75,15 @@ export default function AdminPage() {
     // Don't update state here — socket will handle it
   };
 
+  const handleStockToggle = (id, newStockStatus) => {
+    fetch(`${APIBASE}/menu/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ outofstock: newStockStatus }),
+    });
+    // Don't update state here — socket will handle it
+  };
+
   const openAddForm = () => {
     setEditingItem(null);
     setIsFormOpen(true);
@@ -107,6 +116,7 @@ export default function AdminPage() {
           handleAdd={handleAdd}
           handleDelete={handleDelete}
           handleUpdate={handleUpdate}
+          handleStockToggle={handleStockToggle}
           openAddForm={openAddForm}
           openEditForm={openEditForm}
           closeForm={closeForm}
@@ -131,6 +141,7 @@ function AdminPageContent({
   handleAdd, 
   handleDelete, 
   handleUpdate, 
+  handleStockToggle,
   openAddForm, 
   openEditForm, 
   closeForm, 
@@ -314,6 +325,7 @@ function AdminPageContent({
           items={menuItems.filter((item) => item.category === activeTab)}
           onDelete={handleDelete}
           onEdit={openEditForm}
+          onStockToggle={handleStockToggle}
           darkMode={darkMode}
         />
       </div>

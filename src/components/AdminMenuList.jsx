@@ -1,4 +1,4 @@
-export default function AdminMenuList({ items, onDelete, onEdit, darkMode }) {
+export default function AdminMenuList({ items, onDelete, onEdit, onStockToggle, darkMode }) {
   if (!items.length) {
     return (
       <p className={`text-center italic mt-4 ${
@@ -49,9 +49,30 @@ export default function AdminMenuList({ items, onDelete, onEdit, darkMode }) {
               }`}>
                 Category: {item.category || "Uncategorized"}
               </p>
+              <p className={`text-sm font-medium ${
+                item.outofstock 
+                  ? 'text-red-500' 
+                  : darkMode ? 'text-green-400' : 'text-green-600'
+              }`}>
+                Status: {item.outofstock ? 'Out of Stock' : 'In Stock'}
+              </p>
             </div>
           </div>
           <div className="flex space-x-2">
+            <button
+              onClick={() => onStockToggle(item._id, !item.outofstock)}
+              className={`px-3 py-1 rounded font-medium transition-colors duration-200 ${
+                item.outofstock 
+                  ? darkMode 
+                    ? 'bg-green-600 text-white hover:bg-green-500' 
+                    : 'bg-green-600 text-white hover:bg-green-700'
+                  : darkMode
+                    ? 'bg-red-600 text-white hover:bg-red-500'
+                    : 'bg-red-500 text-white hover:bg-red-600'
+              }`}
+            >
+              {item.outofstock ? 'Stock' : 'Unstock'}
+            </button>
             <button
               onClick={() => onEdit(item)}
               className={`px-3 py-1 rounded font-medium transition-colors duration-200 ${

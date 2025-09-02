@@ -132,7 +132,10 @@ export default function SpecialMenuPage() {
               <div
                 key={item._id}
                 className={`relative rounded-xl shadow-lg p-4 flex flex-col items-center transition-all duration-300 hover:shadow-xl hover:scale-105 ${
-                  darkMode 
+                  item.outofstock 
+                    ? 'opacity-50 grayscale cursor-not-allowed' 
+                    : ''
+                } ${darkMode 
                     ? "bg-gray-800 border border-gray-700"
                     : "bg-pink-300 border-pink-100"
                 }`}
@@ -142,6 +145,12 @@ export default function SpecialMenuPage() {
                 }`}>
                   Special
                 </span>
+                {/* Out of Stock Badge */}
+                {item.outofstock && (
+                  <span className="absolute top-2 left-2 px-2 py-1 text-xs font-bold rounded-full bg-red-600 text-white z-10">
+                    OUT OF STOCK
+                  </span>
+                )}
                 <img
                   src={item.image || "https://via.placeholder.com/150"}
                   alt={item.name}
@@ -158,11 +167,14 @@ export default function SpecialMenuPage() {
                   {item.price} MMK
                 </p>
 
-                <div className="flex items-center mt-3 space-x-3">
+                <div className={`flex items-center mt-3 space-x-3 ${item.outofstock ? 'pointer-events-none' : ''}`}>
                   <button
-                    onClick={() => removeFromCart(item._id)}
+                    onClick={() => !item.outofstock && removeFromCart(item._id)}
+                    disabled={item.outofstock}
                     className={`px-3 py-1 text-white rounded transition-colors duration-200 ${
-                      darkMode 
+                      item.outofstock 
+                        ? 'bg-gray-400 cursor-not-allowed' 
+                        : darkMode 
                         ? "bg-gray-600 hover:bg-gray-500"
                         : "bg-gray-600 hover:bg-gray-700"
                     }`}
@@ -175,9 +187,12 @@ export default function SpecialMenuPage() {
                     {getQuantity(item._id)}
                   </span>
                   <button
-                    onClick={() => addToCart(item)}
+                    onClick={() => !item.outofstock && addToCart(item)}
+                    disabled={item.outofstock}
                     className={`px-3 py-1 text-white rounded transition-colors duration-200 ${
-                      darkMode 
+                      item.outofstock 
+                        ? 'bg-gray-400 cursor-not-allowed' 
+                        : darkMode 
                         ? "bg-pink-600 hover:bg-pink-500"
                         : "bg-red-500 hover:bg-red-600"
                     }`}
@@ -195,7 +210,10 @@ export default function SpecialMenuPage() {
               <div
                 key={item._id}
                 className={`relative flex items-center gap-4 p-4 rounded-xl border shadow-sm transition-all duration-200 hover:shadow-md ${
-                  darkMode 
+                  item.outofstock 
+                    ? 'opacity-50 grayscale cursor-not-allowed' 
+                    : ''
+                } ${darkMode 
                     ? "bg-gray-800 border-gray-600"
                     : "bg-pink-300 border-pink-100"
                 }`}
@@ -205,6 +223,12 @@ export default function SpecialMenuPage() {
                 }`}>
                   Special
                 </span>
+                {/* Out of Stock Badge */}
+                {item.outofstock && (
+                  <span className="absolute top-2 left-2 px-2 py-1 text-xs font-bold rounded-full bg-red-600 text-white z-10">
+                    OUT OF STOCK
+                  </span>
+                )}
                 <img
                   src={item.image || "https://via.placeholder.com/80"}
                   alt={item.name}
@@ -222,11 +246,14 @@ export default function SpecialMenuPage() {
                     }`}>
                       {item.price} MMK
                     </span>
-                    <div className="flex items-center gap-3">
+                    <div className={`flex items-center gap-3 ${item.outofstock ? 'pointer-events-none' : ''}`}>
                       <button
-                        onClick={() => removeFromCart(item._id)}
+                        onClick={() => !item.outofstock && removeFromCart(item._id)}
+                        disabled={item.outofstock}
                         className={`w-8 h-8 flex items-center justify-center text-white rounded-full transition-all duration-200 hover:scale-110 ${
-                          darkMode 
+                          item.outofstock 
+                            ? 'bg-gray-400 cursor-not-allowed' 
+                            : darkMode 
                             ? "bg-gray-600 hover:bg-gray-500"
                             : "bg-gray-600 hover:bg-gray-700"
                         }`}
@@ -239,9 +266,12 @@ export default function SpecialMenuPage() {
                         {getQuantity(item._id)}
                       </span>
                       <button
-                        onClick={() => addToCart(item)}
+                        onClick={() => !item.outofstock && addToCart(item)}
+                        disabled={item.outofstock}
                         className={`w-8 h-8 flex items-center justify-center text-white rounded-full transition-all duration-200 hover:scale-110 ${
-                          darkMode 
+                          item.outofstock 
+                            ? 'bg-gray-400 cursor-not-allowed' 
+                            : darkMode 
                             ? "bg-pink-600 hover:bg-pink-500"
                             : "bg-red-500 hover:bg-red-600"
                         }`}
