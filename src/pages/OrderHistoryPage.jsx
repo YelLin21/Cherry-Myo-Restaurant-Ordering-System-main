@@ -93,7 +93,6 @@ export default function OrderHistoryPage() {
   const fetchOrderHistory = async () => {
     try {
       setLoading(true);
-      // Use customer-specific endpoint that only returns unpaid orders
       const res = await fetch(`${APIBASE}/orders/customer`);
       if (!res.ok) throw new Error("Failed to fetch order history");
       const unpaidOrders = await res.json();
