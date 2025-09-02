@@ -214,7 +214,7 @@ export default function CartPage() {
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() => removeFromCart(item._id)}
-                        className={`w-8 h-8 flex items-center justify-center text-white rounded-full transition-all duration-200 hover:scale-110 ${darkMode ? "bg-gray-600 hover:bg-gray-500" : "bg-gray-600 hover:bg-gray-700"}`}
+                        className={`w-8 h-8 flex items-center justify-center text-white rounded transition-all duration-200 hover:scale-110 ${darkMode ? "bg-gray-600 hover:bg-gray-500" : "bg-gray-600 hover:bg-gray-700"}`}
                       >
                         −
                       </button>
@@ -223,7 +223,7 @@ export default function CartPage() {
                       </span>
                       <button
                         onClick={() => addToCart(item)}
-                        className={`w-8 h-8 flex items-center justify-center text-white rounded-full transition-all duration-200 hover:scale-110 ${darkMode ? "bg-pink-600 hover:bg-pink-500" : "bg-red-500 hover:bg-red-600"}`}
+                        className={`w-8 h-8 flex items-center justify-center text-white rounded transition-all duration-200 hover:scale-110 ${darkMode ? "bg-pink-600 hover:bg-pink-500" : "bg-red-500 hover:bg-red-600"}`}
                       >
                         +
                       </button>

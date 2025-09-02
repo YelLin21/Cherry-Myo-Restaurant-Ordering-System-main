@@ -67,7 +67,7 @@ export default function FoodMenuPage() {
   useEffect(() => {
     if (!tableId) return;
 
-    fetch(`${APIBASE}/cart/${tableId}`) // 👈 Backend should return cart
+    fetch(`${APIBASE}/cart/${tableId}`) // Backend should return cart
       .then((res) => res.json())
       .then((data) => {
         // Your CartContext should expose a "setCart" for this
