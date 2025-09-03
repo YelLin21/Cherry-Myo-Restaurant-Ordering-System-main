@@ -66,7 +66,7 @@ export default function AdminMenuForm({
     e.preventDefault();
 
     if (!name || !price || (!imageFile && !image)) {
-      alert("Please fill in both name and price and image url or image.");
+      alert("Please fill in both name and price and image.");
       return;
     }
 
@@ -162,19 +162,6 @@ export default function AdminMenuForm({
               <p className="text-xs mt-1 text-gray-500">
                 Price must be greater than 0
               </p>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Image URL (optional)
-              </label>
-              <input
-                type="text"
-                placeholder="Enter image URL"
-                value={image}
-                onChange={(e) => setImage(e.target.value)}
-                className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-              />
             </div>
 
             <div>

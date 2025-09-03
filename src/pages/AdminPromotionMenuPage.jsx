@@ -825,24 +825,7 @@ function AdminPromotionMenuContent({
                       </div>
 
                       {/* URL input option */}
-                      <div>
-                        <label className={`block text-xs font-medium mb-2 ${
-                          darkMode ? "text-gray-300" : "text-gray-600"
-                        }`}>
-                          Image URL
-                        </label>
-                        <input
-                          type="url"
-                          value={formData.image}
-                          onChange={handleImageUrlChange}
-                          className={`w-full px-4 py-3 rounded-xl border-2 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-red-500/20 ${
-                            darkMode 
-                              ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-red-500"
-                              : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-red-500"
-                          }`}
-                          placeholder="https://example.com/promotion-image.jpg"
-                        />
-                      </div>
+                      
                     </div>
 
                     {/* Image Preview */}
