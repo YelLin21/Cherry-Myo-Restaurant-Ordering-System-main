@@ -118,6 +118,9 @@ export default function Navbar({ darkMode, setDarkMode, cartCount }) {
           <Link to="/promotion" className="text-white hover:bg-white/20 hover:text-red-100 px-3 py-2 rounded-md transition-all duration-200 font-medium">
             Promotion
           </Link>
+          <Link to="/feedback" className="text-white hover:bg-white/20 hover:text-red-100 px-3 py-2 rounded-md transition-all duration-200 font-medium">
+            Feedback
+          </Link>
           <Link to="/order-history" className="text-white hover:bg-white/20 hover:text-red-100 px-3 py-2 rounded-md transition-all duration-200 font-medium">
             Order History
           </Link>
@@ -185,6 +188,9 @@ export default function Navbar({ darkMode, setDarkMode, cartCount }) {
           </Link>
           <Link to="/promotion" onClick={() => setIsOpen(false)} className="block px-3 py-2 rounded-md hover:bg-white/20 transition-all duration-200">
             Promotion
+          </Link>
+          <Link to="/feedback" onClick={() => setIsOpen(false)} className="block px-3 py-2 rounded-md hover:bg-white/20 transition-all duration-200">
+            Feedback
           </Link>
           <Link to="/order-history" onClick={() => setIsOpen(false)} className="block px-3 py-2 rounded-md hover:bg-white/20 transition-all duration-200">
             Order History

@@ -15,6 +15,7 @@ import KitchenPage from "./pages/KitchenPage";
 import AdminCheckoutPage from "./pages/AdminCheckout"; 
 import TableViewPage from "./pages/TableView";
 import { useDarkMode } from "./pages/DarkModeContext.jsx";
+import FeedbackPage from "./pages/FeedbackPage.jsx";
 
 function App() {
   const { darkMode } = useDarkMode();
@@ -37,6 +38,7 @@ function App() {
         <Route path="/admin/sales-report" element={<AdminSalesReport darkMode={darkMode} />} />
         <Route path="/kitchen" element={<KitchenPage />} />
         <Route path="/checkout" element={<AdminCheckoutPage />} />
+        <Route path="/feedback" element={<FeedbackPage />} />
         <Route path="/table/:tableId" element={<TableViewPage />} />
       </Routes>
     </Router>

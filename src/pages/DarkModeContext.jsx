@@ -5,12 +5,10 @@ const DarkModeContext = createContext();
 
 export function DarkModeProvider({ children }) {
   const [darkMode, setDarkMode] = useState(() => {
-    // load from localStorage (optional)
     return localStorage.getItem("darkMode") === "true";
   });
 
   useEffect(() => {
-    // Apply dark class to html element for Tailwind dark mode
     if (darkMode) {
       document.documentElement.classList.add("dark");
       document.body.classList.add("dark");
