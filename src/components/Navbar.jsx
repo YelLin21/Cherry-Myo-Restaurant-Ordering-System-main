@@ -89,17 +89,17 @@ export default function Navbar({ darkMode, setDarkMode, cartCount }) {
     >
       <div className="container mx-auto flex justify-between items-center">
         {/* Logo and title */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <img
             src="/image/cherry_myo.png"
             alt="Cherry Myo Logo"
-            className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-white shadow-lg"
+            className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full border-2 border-white shadow-lg"
           />
-          <h1 className="text-xl sm:text-2xl font-bold text-white drop-shadow-lg">Cherry Myo</h1>
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-white drop-shadow-lg">Cherry Myo</h1>
         </div>
 
         {/* Desktop Menu */}
-        <div className="hidden md:flex items-center space-x-4">
+        <div className="hidden lg:flex items-center space-x-4">
           <Link to="/" className="text-white hover:bg-white/20 hover:text-red-100 px-3 py-2 rounded-md transition-all duration-200 font-medium">
             Home
           </Link>
@@ -148,18 +148,33 @@ export default function Navbar({ darkMode, setDarkMode, cartCount }) {
         </div>
 
         {/* Mobile menu button */}
-        <button 
-          onClick={() => setIsOpen(!isOpen)} 
-          className="md:hidden text-white hover:bg-white/20 p-2 rounded-md transition-all duration-200"
-        >
-          {isOpen ? <X size={30} /> : <Menu size={30} />}
-        </button>
+        <div className="lg:hidden flex items-center gap-2">
+          {/* Cart icon for mobile */}
+          <div
+            className="relative cursor-pointer hover:text-yellow-300 hover:bg-white/20 p-2 rounded-md transition-all duration-200"
+            onClick={() => navigate("/cart")}
+          >
+            <FaShoppingCart className="w-5 h-5" />
+            {cartCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-yellow-400 text-red-800 text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-md border border-white text-[10px]">
+                {cartCount > 9 ? '9+' : cartCount}
+              </span>
+            )}
+          </div>
+          
+          <button 
+            onClick={() => setIsOpen(!isOpen)} 
+            className="text-white hover:bg-white/20 p-2 rounded-md transition-all duration-200"
+          >
+            {isOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Dropdown Menu */}
       {isOpen && (
         <div 
-          className={`md:hidden px-4 pt-2 pb-4 space-y-2 transition-all duration-300 ${
+          className={`lg:hidden px-4 pt-2 pb-4 space-y-1 transition-all duration-300 ${
             darkMode 
               ? "bg-red-900/95 text-white border-t border-red-700" 
               : "bg-red-600/95 text-white border-t border-red-400"
@@ -171,53 +186,36 @@ export default function Navbar({ darkMode, setDarkMode, cartCount }) {
               : 'rgba(220, 38, 38, 0.95)'
           }}
         >
-          <Link to="/" onClick={() => setIsOpen(false)} className="block px-3 py-2 rounded-md hover:bg-white/20 transition-all duration-200">
-            Home
+          <Link to="/" onClick={() => setIsOpen(false)} className="block px-3 py-3 rounded-md hover:bg-white/20 transition-all duration-200 font-medium">
+            🏠 Home
           </Link>
-          <Link to="/food" onClick={() => setIsOpen(false)} className="block px-3 py-2 rounded-md hover:bg-white/20 transition-all duration-200">
-            Food Menu
+          <Link to="/food" onClick={() => setIsOpen(false)} className="block px-3 py-3 rounded-md hover:bg-white/20 transition-all duration-200 font-medium">
+            🍽️ Food Menu
           </Link>
-          <Link to="/grill" onClick={() => setIsOpen(false)} className="block px-3 py-2 rounded-md hover:bg-white/20 transition-all duration-200">
-            Grill
+          <Link to="/grill" onClick={() => setIsOpen(false)} className="block px-3 py-3 rounded-md hover:bg-white/20 transition-all duration-200 font-medium">
+            🔥 Grill
           </Link>
-          <Link to="/beverages" onClick={() => setIsOpen(false)} className="block px-3 py-2 rounded-md hover:bg-white/20 transition-all duration-200">
-            Beverage
+          <Link to="/beverages" onClick={() => setIsOpen(false)} className="block px-3 py-3 rounded-md hover:bg-white/20 transition-all duration-200 font-medium">
+            🥤 Beverage
           </Link>
-          <Link to="/special" onClick={() => setIsOpen(false)} className="block px-3 py-2 rounded-md hover:bg-white/20 transition-all duration-200">
-            Special
+          <Link to="/special" onClick={() => setIsOpen(false)} className="block px-3 py-3 rounded-md hover:bg-white/20 transition-all duration-200 font-medium">
+            ⭐ Special
           </Link>
-          <Link to="/promotion" onClick={() => setIsOpen(false)} className="block px-3 py-2 rounded-md hover:bg-white/20 transition-all duration-200">
-            Promotion
+          <Link to="/promotion" onClick={() => setIsOpen(false)} className="block px-3 py-3 rounded-md hover:bg-white/20 transition-all duration-200 font-medium">
+            🎉 Promotion
           </Link>
-          <Link to="/feedback" onClick={() => setIsOpen(false)} className="block px-3 py-2 rounded-md hover:bg-white/20 transition-all duration-200">
-            Feedback
+          <Link to="/feedback" onClick={() => setIsOpen(false)} className="block px-3 py-3 rounded-md hover:bg-white/20 transition-all duration-200 font-medium">
+            💬 Feedback
           </Link>
-          <Link to="/order-history" onClick={() => setIsOpen(false)} className="block px-3 py-2 rounded-md hover:bg-white/20 transition-all duration-200">
-            Order History
+          <Link to="/order-history" onClick={() => setIsOpen(false)} className="block px-3 py-3 rounded-md hover:bg-white/20 transition-all duration-200 font-medium">
+            📋 Order History
           </Link>
 
           {/* Dark Mode Toggle */}
-          <button onClick={() => setDarkMode(!darkMode)} className="flex items-center gap-2 w-full px-3 py-2 hover:bg-white/20 rounded-md transition-all duration-200">
-            {darkMode ? <FaSun /> : <FaMoon />}
+          <button onClick={() => setDarkMode(!darkMode)} className="flex items-center gap-3 w-full px-3 py-3 hover:bg-white/20 rounded-md transition-all duration-200 font-medium">
+            {darkMode ? <FaSun className="text-yellow-300" /> : <FaMoon className="text-blue-200" />}
             <span>{darkMode ? "Light Mode" : "Dark Mode"}</span>
           </button>
-
-          {/* Cart */}
-          <div
-            onClick={() => {
-              navigate("/cart");
-              setIsOpen(false);
-            }}
-            className="flex items-center gap-2 cursor-pointer px-3 py-2 hover:bg-white/20 rounded-md transition-all duration-200"
-          >
-            <FaShoppingCart />
-            <span>Cart</span>
-            {cartCount > 0 && (
-              <span className="ml-auto bg-yellow-400 text-red-800 text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-md border border-white">
-                {cartCount}
-              </span>
-            )}
-          </div>
         </div>
       )}
     </nav>
