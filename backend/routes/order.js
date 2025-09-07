@@ -147,7 +147,6 @@ router.post("/mark-paid", async (req, res) => {
   try {
     console.log(`💰 Marking order ${orderId} as paid...`);
     
-    // First check if order exists and current paid status
     const existingOrder = await Order.findById(orderId);
     if (!existingOrder) {
       console.log(`❌ Order ${orderId} not found`);
