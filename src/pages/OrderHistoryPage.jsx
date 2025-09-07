@@ -301,20 +301,112 @@ export default function OrderHistoryPage() {
     setShowPaymentModal(true);
   };
 
-  const handlePayment = (paymentMethod) => {
+  // const handlePayment = (paymentMethod) => {
+  //   console.log(`Payment method selected: ${paymentMethod}`);
+  //   console.log(`Total amount: ${totalPrice} MMK`);
+    
+  //   if (paymentMethod === 'qr') {
+  //     // Show QR code modal instead of alert
+  //     setShowPaymentModal(false);
+  //     setShowQRModal(true);
+  //   } else if (paymentMethod === 'cash') {
+  //     // Handle cash payment logic here
+  //     alert(`Processing cash payment for ${totalPrice.toLocaleString('en-US')} MMK`);
+  //     setShowPaymentModal(false);
+  //   }
+  // };
+
+  // const handlePayment = async (paymentMethod) => {
+  //   console.log(`Payment method selected: ${paymentMethod}`);
+  //   console.log(`Total amount: ${totalPrice} MMK`);
+  
+  //   const currentTableId = sessionStorage.getItem("tableId");
+  //   if (!currentTableId) {
+  //     alert("Table ID missing. Cannot process checkout.");
+  //     return;
+  //   }
+  
+  //   const firstOrder = orders[0];
+  //   if (!firstOrder) {
+  //     alert("No orders found to checkout.");
+  //     return;
+  //   }
+  
+  //   try {
+  //     if (paymentMethod === "cash") {
+  //       const response = await fetch(`${APIBASE}/checkouts`, {
+  //         method: "POST",
+  //         headers: { "Content-Type": "application/json" },
+  //         body: JSON.stringify({
+  //           orderId: firstOrder._id,
+  //           paymentMethod: "cash",
+  //           finalAmount: totalPrice,
+  //           cashReceived: totalPrice,
+  //           changeGiven: 0
+  //         })
+  //       });
+  
+  //       if (!response.ok) throw new Error("Failed to process cash payment");
+  
+  //       const data = await response.json();
+  //       console.log("✅ Cash checkout successful:", data);
+  //       alert("Cash payment successful! ✅");
+  
+  //       setShowPaymentModal(false);
+  
+  //     } else if (paymentMethod === "qr") {
+  //       setShowPaymentModal(false);
+  //       setShowQRModal(true);
+  //     }
+  //   } catch (err) {
+  //     console.error("❌ Payment error:", err);
+  //     alert("Payment failed. Please try again.");
+  //   }
+  // };
+  
+
+  const handlePayment = async (paymentMethod) => {
     console.log(`Payment method selected: ${paymentMethod}`);
     console.log(`Total amount: ${totalPrice} MMK`);
-    
-    if (paymentMethod === 'qr') {
-      // Show QR code modal instead of alert
-      setShowPaymentModal(false);
-      setShowQRModal(true);
-    } else if (paymentMethod === 'cash') {
-      // Handle cash payment logic here
-      alert(`Processing cash payment for ${totalPrice.toLocaleString('en-US')} MMK`);
-      setShowPaymentModal(false);
+
+    const currentTableId = sessionStorage.getItem("tableId");
+    if (!currentTableId) {
+      alert("Table ID missing. Cannot process checkout.");
+      return;
     }
-  };
+
+    const firstOrder = orders[0];
+    if (!firstOrder) {
+      alert("No orders found to checkout.");
+      return;
+    }
+
+    try {
+        // Save payment intent only, DO NOT mark order as paid
+        const response = await fetch(`${APIBASE}/checkouts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orderId: firstOrder._id,
+            paymentMethod: paymentMethod,
+            finalAmount: totalPrice,
+            cashReceived: paymentMethod === "cash" ? totalPrice : null,
+            changeGiven: paymentMethod === "cash" ? 0 : null
+          })
+        });
+
+        if (!response.ok) throw new Error("Failed to record payment intent");
+
+        const data = await response.json();
+        console.log("✅ Payment intent recorded:", data);
+        alert("Payment recorded! ✅ Waiting for admin approval.");
+        setShowPaymentModal(false);
+    } catch (err) {
+        console.error("❌ Payment error:", err);
+        alert("Payment failed. Please try again.");
+    }
+};
+
 
   const handleReceiptUpload = (event) => {
     const file = event.target.files[0];

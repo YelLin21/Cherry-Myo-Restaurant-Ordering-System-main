@@ -30,6 +30,7 @@ function CheckoutContent({ user, handleLogout }) {
     const [cashAmounts, setCashAmounts] = useState({}); // cash received amounts
     const [showQrCode, setShowQrCode] = useState({}); // QR code visibility per order
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [payments, setPayments] = useState({});
 
     const navigate = useNavigate();
     const { darkMode, setDarkMode } = useDarkMode();
@@ -92,6 +93,38 @@ function CheckoutContent({ user, handleLogout }) {
         }
     };
 
+    const fetchPayments = async () => {
+        try {
+          const res = await fetch(`${APIBASE}/checkouts`);
+          if (res.ok) {
+            const data = await res.json();
+      
+            // Map orderId → paymentMethod
+            const map = {};
+            data.forEach(p => {
+                if (p.orderId) {
+                  map[p.orderId._id ? p.orderId._id.toString() : p.orderId.toString()] = p.paymentMethod;
+                }
+              });
+
+            setPayments(map);
+            console.log("✅ Payments synced:", map);
+          }
+        } catch (err) {
+          console.error("❌ Failed to fetch payments:", err);
+        }
+      };
+
+      
+      useEffect(() => {
+        const init = async () => {
+          await syncWithDatabase();
+          await fetchPayments();
+        };
+        init();
+      }, []);
+      
+
     useEffect(() => {
         const interval = setInterval(() => {
             setCurrentTime(new Date());
@@ -144,23 +177,19 @@ function CheckoutContent({ user, handleLogout }) {
             setCheckoutOrders((prev) => {
                 console.log("📋 Current checkout orders before update:", prev.length);
 
-                // Check if there's already an order for this table
                 const existingTableOrderIndex = prev.findIndex(
                     existingOrder => existingOrder.tableNumber === order.tableNumber
                 );
 
                 let updated;
                 if (existingTableOrderIndex !== -1) {
-                    // Merge with existing table order
                     updated = [...prev];
                     const existingOrder = updated[existingTableOrderIndex];
 
                     console.log("🔄 Found existing order for table", order.tableNumber, "- merging");
 
-                    // Combine items from both orders
                     const combinedItems = [...existingOrder.items, ...order.items];
 
-                    // Update the existing order with combined items and latest timestamp
                     updated[existingTableOrderIndex] = {
                         ...existingOrder,
                         items: combinedItems,
@@ -595,19 +624,16 @@ function CheckoutContent({ user, handleLogout }) {
             yPos += 10; // Increased spacing between items
         });
         
-        // Summary section
         yPos += 5;
         doc.setDrawColor(200, 200, 200);
         doc.line(20, yPos, 190, yPos);
         yPos += 10;
         
-        // Summary calculations
         const summaryItems = [
             ['Subtotal:', `${total.toFixed(2)} MMK`],
             ...(discountPercent > 0 ? [['Discount (' + discountPercent + '%):', `-${discountAmount.toFixed(2)} MMK`]] : [])
         ];
         
-        // Regular summary items
         summaryItems.forEach(([label, value]) => {
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(12);
@@ -866,6 +892,16 @@ function CheckoutContent({ user, handleLogout }) {
                                                             Table {order.tableNumber}
                                                         </h2>
                                                         <div className="flex items-center gap-2 mt-1">
+                                                        {(() => {
+                                                            const firstPayment = order.orderIds?.map(id => payments[id.toString()]).find(Boolean);
+                                                            if (!firstPayment) return null;
+
+                                                            return (
+                                                                <span className="ml-3 px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                                                {firstPayment === "cash" ? "💵 Pay with Cash" : "📱 Scan"}
+                                                                </span>
+                                                            );
+                                                            })()}
                                                             <span className={`px-3 py-1 rounded-full text-xs font-medium ${order.status === 'readyForCheckout'
                                                                     ? 'bg-blue-100 text-blue-800'
                                                                     : order.status === 'sent'
@@ -1096,7 +1132,6 @@ function CheckoutContent({ user, handleLogout }) {
                                                     </div>
                                                 )}
 
-                                                {/* Mark as Paid & Print Receipt */}
                                                 <div className="mt-6 text-right pt-3">
                                                     <button
                                                         onClick={() => handleMarkAsPaid(order)}
