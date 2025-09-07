@@ -52,7 +52,7 @@ export default function FeedbackPage() {
   };
 
   return (
-    <div className={`min-h-screen pt-[200px] transition-all duration-300 ${
+    <div className={`min-h-screen pt-[150px] transition-all duration-300 ${
       darkMode 
         ? "bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900" 
         : "bg-gradient-to-br from-gray-50 via-white to-gray-100"
