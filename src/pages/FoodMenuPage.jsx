@@ -6,11 +6,12 @@ import { io } from "socket.io-client";
 import { useDarkMode } from "./DarkModeContext.jsx";
 import { useTable } from "../context/TableContext";
 
-const APIBASE = import.meta.env.VITE_API_URL;
+const APIBASE = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 const SOCKET_URL =
   import.meta.env.VITE_SOCKET_URL ||
-  "http://localhost:5000" ||
+  "http://localhost:5001" ||
   "https://cherry-myo-restaurant-ordering-system.onrender.com";
+
 
 const TABS = ["Breakfast", "Lunch", "Dinner"];
 
@@ -30,13 +31,23 @@ export default function FoodMenuPage() {
   }, [darkMode]);
 
   useEffect(() => {
+    console.log("Fetching menu from:", `${APIBASE}/menu`);
+    
     fetch(`${APIBASE}/menu`)
       .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch menu");
+        if (!res.ok) {
+          throw new Error(`Failed to fetch menu: ${res.status} ${res.statusText}`);
+        }
         return res.json();
       })
-      .then((data) => setMenuItems(data))
-      .catch((err) => setError(err.message))
+      .then((data) => {
+        console.log("✅ Menu loaded successfully:", data.length, "items");
+        setMenuItems(data);
+      })
+      .catch((err) => {
+        console.error("❌ Menu fetch error:", err);
+        setError(err.message);
+      })
       .finally(() => setLoading(false));
 
     const socket = io(SOCKET_URL, { transports: ["websocket"] });
@@ -64,17 +75,11 @@ export default function FoodMenuPage() {
     };
   }, []);
 
+  // Cart is managed locally in CartContext, no need to fetch from server
   useEffect(() => {
-    if (!tableId) return;
-
-    fetch(`${APIBASE}/cart/${tableId}`) // Backend should return cart
-      .then((res) => res.json())
-      .then((data) => {
-        // Your CartContext should expose a "setCart" for this
-        console.log("✅ Loaded cart for table:", tableId, data);
-        // setCart(data); 
-      })
-      .catch((err) => console.error("❌ Failed to load cart:", err));
+    if (tableId) {
+      console.log("✅ Table ID set:", tableId);
+    }
   }, [tableId]);
 
   const getQuantity = (id) => cart[id]?.quantity || 0;

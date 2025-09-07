@@ -8,7 +8,7 @@ import { useDarkMode } from "./DarkModeContext.jsx";
 const APIBASE = import.meta.env.VITE_API_URL;
 const SOCKET_URL =
   import.meta.env.VITE_SOCKET_URL ||
-  "http://localhost:5000" ||
+  "http://localhost:5001" ||
   "https://cherry-myo-restaurant-ordering-system.onrender.com";
 
 export default function GrillMenuPage() {

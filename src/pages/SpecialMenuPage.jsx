@@ -6,7 +6,7 @@ import { io } from "socket.io-client";
 import { useDarkMode } from "./DarkModeContext.jsx";
 
 const APIBASE = import.meta.env.VITE_API_URL;
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5001";
 
 export default function SpecialMenuPage() {
   const [menuItems, setMenuItems] = useState([]);
