@@ -4,15 +4,9 @@ const path = require("path");
 const router = express.Router();
 const Checkout = require("../models/Checkout");
 const Order = require("../models/Order");
+const { supabase } = require("../../src/utils/supabaseClient");
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/slips/"); // save images in /uploads/slips
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname)); // unique filename
-  }
-});
+const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 router.get("/", async (req, res) => {
@@ -40,57 +34,155 @@ router.get("/table/:tableNumber", async (req, res) => {
   }
 });
 
-// ✅ POST create checkout (with optional slip image)
+// // ✅ POST create checkout (with optional slip image)
+// router.post("/", upload.single("slipImage"), async (req, res) => {
+//   const { orderId, paymentMethod, finalAmount, cashReceived, changeGiven } = req.body;
+
+//   if (!orderId || !paymentMethod || !finalAmount) {
+//     return res.status(400).json({ error: "Missing required fields" });
+//   }
+
+//   try {
+//     const order = await Order.findById(orderId);
+//     if (!order) {
+//       return res.status(404).json({ error: "Order not found" });
+//     }
+
+//     // // Mark order as paid
+//     // order.paid = true;
+//     // await order.save();
+
+//     // Create new checkout
+//     let slipImageUrl = null;
+//     if (req.file) {
+//         const fileExt = path.extname(req.file.originalname);
+//         const fileName = `${Date.now()}${fileExt}`;
+ 
+//         if (uploadError) {
+//           console.error("Supabase upload error:", uploadError);
+//           return res.status(500).json({ error: "Failed to upload receipt" });
+//         }
+  
+//         const { data: publicData, error: publicError } = supabase.storage
+//           .from("slip-image")
+//           .getPublicUrl(filePath);
+  
+//         if (publicError) {
+//           console.error("Supabase getPublicUrl error:", publicError);
+//           return res.status(500).json({ error: "Failed to get receipt URL" });
+//         }
+  
+//         slipImageUrl = publicData.publicUrl;
+//       }
+  
+//     const newCheckout = new Checkout({
+//       orderId,
+//       tableNumber: order.tableNumber,
+//       paymentMethod,
+//       finalAmount,
+//       cashReceived: paymentMethod === "cash" ? cashReceived : null,
+//       changeGiven: paymentMethod === "cash" ? changeGiven : null,
+//       slipImage: slipImageUrl
+//     });
+
+//     await newCheckout.save();
+
+//     const io = req.app.get("io");
+//     io.emit("checkout:new", newCheckout);
+
+//     if (paymentMethod === "cash") {
+//       io.emit("checkout:cash", {
+//         checkoutId: newCheckout._id,
+//         tableNumber: newCheckout.tableNumber,
+//         finalAmount: newCheckout.finalAmount,
+//         cashReceived: newCheckout.cashReceived,
+//         changeGiven: newCheckout.changeGiven
+//       });
+//     }
+
+//     res.status(201).json(newCheckout);
+//   } catch (err) {
+//     console.error("❌ Error creating checkout:", err);
+//     res.status(500).json({ error: "Failed to create checkout" });
+//   }
+// });
+
+
 router.post("/", upload.single("slipImage"), async (req, res) => {
-  const { orderId, paymentMethod, finalAmount, cashReceived, changeGiven } = req.body;
-
-  if (!orderId || !paymentMethod || !finalAmount) {
-    return res.status(400).json({ error: "Missing required fields" });
-  }
-
-  try {
-    const order = await Order.findById(orderId);
-    if (!order) {
-      return res.status(404).json({ error: "Order not found" });
+    const { orderId, paymentMethod, finalAmount, cashReceived, changeGiven } = req.body;
+  
+    if (!orderId || !paymentMethod || !finalAmount) {
+      return res.status(400).json({ error: "Missing required fields" });
     }
-
-    // // Mark order as paid
-    // order.paid = true;
-    // await order.save();
-
-    // Create new checkout
-    const newCheckout = new Checkout({
-      orderId,
-      tableNumber: order.tableNumber,
-      paymentMethod,
-      finalAmount,
-      cashReceived: paymentMethod === "cash" ? cashReceived : null,
-      changeGiven: paymentMethod === "cash" ? changeGiven : null,
-      slipImage: req.file ? `/uploads/slips/${req.file.filename}` : null
-    });
-
-    await newCheckout.save();
-
-    const io = req.app.get("io");
-    io.emit("checkout:new", newCheckout);
-
-    // Extra event if cash
-    if (paymentMethod === "cash") {
-      io.emit("checkout:cash", {
-        checkoutId: newCheckout._id,
-        tableNumber: newCheckout.tableNumber,
-        finalAmount: newCheckout.finalAmount,
-        cashReceived: newCheckout.cashReceived,
-        changeGiven: newCheckout.changeGiven
+  
+    try {
+      const order = await Order.findById(orderId);
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+  
+      // Upload to Supabase if file exists
+      let slipImageUrl = null;
+      if (req.file) {
+        const fileExt = path.extname(req.file.originalname);
+        const fileName = `${Date.now()}${fileExt}`;
+        const filePath = fileName
+  
+        // Upload file
+        const { error: uploadError } = await supabase.storage
+          .from("slip-image")
+          .upload(filePath, req.file.buffer);
+  
+        if (uploadError) {
+          console.error("Supabase upload error:", uploadError);
+          return res.status(500).json({ error: "Failed to upload receipt" });
+        }
+  
+        // Get public URL
+        const { data: publicData, error: publicError } = supabase.storage
+          .from("slip-image")
+          .getPublicUrl(filePath);
+  
+        if (publicError) {
+          console.error("Supabase getPublicUrl error:", publicError);
+          return res.status(500).json({ error: "Failed to get receipt URL" });
+        }
+  
+        slipImageUrl = publicData.publicUrl;
+      }
+  
+      const newCheckout = new Checkout({
+        orderId,
+        tableNumber: order.tableNumber,
+        paymentMethod,
+        finalAmount,
+        cashReceived: paymentMethod === "cash" ? cashReceived : null,
+        changeGiven: paymentMethod === "cash" ? changeGiven : null,
+        slipImage: slipImageUrl
       });
+  
+      await newCheckout.save();
+  
+      const io = req.app.get("io");
+      io.emit("checkout:new", newCheckout);
+  
+      if (paymentMethod === "cash") {
+        io.emit("checkout:cash", {
+          checkoutId: newCheckout._id,
+          tableNumber: newCheckout.tableNumber,
+          finalAmount: newCheckout.finalAmount,
+          cashReceived: newCheckout.cashReceived,
+          changeGiven: newCheckout.changeGiven
+        });
+      }
+  
+      res.status(201).json(newCheckout);
+    } catch (err) {
+      console.error("❌ Error creating checkout:", err);
+      res.status(500).json({ error: "Failed to create checkout" });
     }
-
-    res.status(201).json(newCheckout);
-  } catch (err) {
-    console.error("❌ Error creating checkout:", err);
-    res.status(500).json({ error: "Failed to create checkout" });
-  }
-});
+  });
+  
 
 // ✅ GET single checkout by ID
 router.get("/:id", async (req, res) => {

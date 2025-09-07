@@ -31,6 +31,8 @@ function CheckoutContent({ user, handleLogout }) {
     const [showQrCode, setShowQrCode] = useState({}); // QR code visibility per order
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [payments, setPayments] = useState({});
+    const [checkouts, setCheckouts] = useState([]);
+
 
     const navigate = useNavigate();
     const { darkMode, setDarkMode } = useDarkMode();
@@ -55,13 +57,12 @@ function CheckoutContent({ user, handleLogout }) {
                 })));
 
 
-                // Group orders by table (same logic as socket handler)
                 const groupedOrders = dbOrders.reduce((acc, order) => {
                     const existingTable = acc.find(o => o.tableNumber === order.tableNumber);
                     if (existingTable) {
                         existingTable.items.push(...order.items);
                         existingTable.orderIds = [...(existingTable.orderIds || [existingTable._id]), order._id];
-                        existingTable.processedAt = order.processedAt; // Use latest
+                        existingTable.processedAt = order.processedAt;
                     } else {
                         acc.push({
                             ...order,
@@ -99,7 +100,6 @@ function CheckoutContent({ user, handleLogout }) {
           if (res.ok) {
             const data = await res.json();
       
-            // Map orderId → paymentMethod
             const map = {};
             data.forEach(p => {
                 if (p.orderId) {
@@ -115,11 +115,26 @@ function CheckoutContent({ user, handleLogout }) {
         }
       };
 
+      const fetchCheckouts = async () => {
+        try {
+          const res = await fetch(`${APIBASE}/checkouts`);
+          if (res.ok) {
+            const data = await res.json();
+            setCheckouts(data);
+            console.log("✅ Checkouts fetched:", data);
+          }
+        } catch (err) {
+          console.error("❌ Failed to fetch checkouts:", err);
+        }
+      };
+      
+
       
       useEffect(() => {
         const init = async () => {
           await syncWithDatabase();
           await fetchPayments();
+          await fetchCheckouts();
         };
         init();
       }, []);
@@ -338,7 +353,6 @@ function CheckoutContent({ user, handleLogout }) {
             [orderId]: method,
         }));
 
-        // Reset related states when changing payment method
         if (method === 'scan') {
             setCashAmounts((prev) => {
                 const updated = { ...prev };
@@ -387,7 +401,6 @@ function CheckoutContent({ user, handleLogout }) {
             const paymentMethod = paymentMethods[tableOrder._id];
             const finalTotal = calculateFinalTotal(tableOrder);
 
-            // Validate payment method selection
             if (!paymentMethod) {
                 alert('⚠️ Please select a payment method (QR Scan or Cash)');
                 return;
@@ -892,7 +905,7 @@ function CheckoutContent({ user, handleLogout }) {
                                                             Table {order.tableNumber}
                                                         </h2>
                                                         <div className="flex items-center gap-2 mt-1">
-                                                        {(() => {
+                                                        {/* {(() => {
                                                             const firstPayment = order.orderIds?.map(id => payments[id.toString()]).find(Boolean);
                                                             if (!firstPayment) return null;
 
@@ -901,7 +914,45 @@ function CheckoutContent({ user, handleLogout }) {
                                                                 {firstPayment === "cash" ? "💵 Pay with Cash" : "📱 Scan"}
                                                                 </span>
                                                             );
-                                                            })()}
+                                                            })()} */}
+
+{(() => {
+  const firstPayment = order.orderIds
+    ?.map(id => payments[id.toString()])
+    .find(Boolean);
+
+  if (!firstPayment) return null;
+
+  if (firstPayment === "cash") {
+    return (
+      <span className="ml-3 px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+        💵 Pay with Cash
+      </span>
+    );
+  }
+
+  // For scan/QR, find the checkout object
+  const checkout = checkouts.find(c =>
+    c.orderId && order.orderIds.includes(c.orderId._id)
+  );
+
+  if (checkout && checkout.slipImage) {
+    return (
+      <img
+        src={checkout.slipImage}
+        alt="Payment Receipt"
+        className="ml-3 w-16 h-16 rounded-lg object-cover border border-gray-300"
+      />
+    );
+  }
+
+  return (
+    <span className="ml-3 px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+      📱 Scan
+    </span>
+  );
+})()}
+
                                                             <span className={`px-3 py-1 rounded-full text-xs font-medium ${order.status === 'readyForCheckout'
                                                                     ? 'bg-blue-100 text-blue-800'
                                                                     : order.status === 'sent'

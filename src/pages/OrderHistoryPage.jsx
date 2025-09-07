@@ -382,7 +382,11 @@ export default function OrderHistoryPage() {
     }
 
     try {
-        // Save payment intent only, DO NOT mark order as paid
+      if (paymentMethod === "scan") {
+        setShowQRModal(true);
+        return;
+      }
+  
         const response = await fetch(`${APIBASE}/checkouts`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -415,26 +419,84 @@ export default function OrderHistoryPage() {
     }
   };
 
-  const handleSubmitReceipt = () => {
+  // const handleSubmitReceipt = () => {
+  //   if (!receiptFile) {
+  //     alert('Please upload your payment receipt first!');
+  //     return;
+  //   }
+
+  //   // Set payment processing state
+  //   setIsPaymentProcessing(true);
+
+  //   // Here you can implement the logic to submit the receipt
+  //   console.log('Submitting receipt:', receiptFile);
+  //   console.log('Payment amount:', totalPrice, 'MMK');
+    
+  //   // You can add API call here to upload the receipt
+  //   alert(`Receipt submitted successfully! Payment of ${totalPrice.toLocaleString('en-US')} MMK is being processed.`);
+    
+  //   // Reset and close modals
+  //   setReceiptFile(null);
+  //   setShowQRModal(false);
+  // };
+
+  const handleSubmitReceipt = async () => {
     if (!receiptFile) {
-      alert('Please upload your payment receipt first!');
+      alert("Please upload your payment receipt first!");
       return;
     }
-
-    // Set payment processing state
+  
     setIsPaymentProcessing(true);
-
-    // Here you can implement the logic to submit the receipt
-    console.log('Submitting receipt:', receiptFile);
-    console.log('Payment amount:', totalPrice, 'MMK');
-    
-    // You can add API call here to upload the receipt
-    alert(`Receipt submitted successfully! Payment of ${totalPrice.toLocaleString('en-US')} MMK is being processed.`);
-    
-    // Reset and close modals
-    setReceiptFile(null);
-    setShowQRModal(false);
+  
+    const currentTableId = sessionStorage.getItem("tableId");
+    if (!currentTableId) {
+      alert("Table ID missing. Cannot process checkout.");
+      setIsPaymentProcessing(false);
+      return;
+    }
+  
+    const firstOrder = orders[0];
+    if (!firstOrder) {
+      alert("No orders found to checkout.");
+      setIsPaymentProcessing(false);
+      return;
+    }
+  
+    try {
+      // build form data for file + payload
+      const formData = new FormData();
+      formData.append("slipImage", receiptFile); // 👈 your receipt file
+      formData.append("orderId", firstOrder._id);
+      formData.append("paymentMethod", "scan");
+      formData.append("finalAmount", totalPrice);
+  
+      const response = await fetch(`${APIBASE}/checkouts`, {
+        method: "POST",
+        body: formData, // 👈 don't set headers manually for FormData
+      });
+  
+      if (!response.ok) throw new Error("Failed to submit receipt");
+  
+      const data = await response.json();
+      console.log("✅ Receipt submitted:", data);
+  
+      alert(
+        `Receipt submitted successfully! Payment of ${totalPrice.toLocaleString(
+          "en-US"
+        )} MMK is being processed.`
+      );
+  
+      // Reset and close
+      setReceiptFile(null);
+      setShowQRModal(false);
+    } catch (err) {
+      console.error("❌ Receipt submission error:", err);
+      alert("Failed to submit receipt. Please try again.");
+    } finally {
+      setIsPaymentProcessing(false);
+    }
   };
+  
 
   const handleCloseQRModal = () => {
     setReceiptFile(null);
@@ -777,7 +839,7 @@ export default function OrderHistoryPage() {
               <div className="space-y-4">
                 {/* QR Code Payment Button */}
                 <button
-                  onClick={() => handlePayment('qr')}
+                  onClick={() => handlePayment('scan')}
                   className={`w-full p-4 rounded-xl border-2 transition-all duration-200 flex items-center justify-center gap-3 ${
                     darkMode 
                       ? 'border-blue-500 bg-blue-900 hover:bg-blue-800 text-blue-300' 
