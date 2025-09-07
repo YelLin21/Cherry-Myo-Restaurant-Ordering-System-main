@@ -16,7 +16,6 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// Configure Google Auth Provider
 const provider = new GoogleAuthProvider();
 provider.addScope('email');
 provider.addScope('profile');
