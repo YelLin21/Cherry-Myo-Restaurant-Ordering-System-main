@@ -33,4 +33,4 @@ dist-ssr
 .env*.local
 
 # Ignore specific client file
-supabaseClient.js
+# supabaseClient.js
