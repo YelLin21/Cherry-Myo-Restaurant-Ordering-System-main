@@ -18,6 +18,8 @@ export default function OrderHistoryPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
   const [receiptFile, setReceiptFile] = useState(null);
+  const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
+  const [showPaymentSuccessModal, setShowPaymentSuccessModal] = useState(false);
 
   const navigate = useNavigate();
   const { totalItems } = useCart();
@@ -40,6 +42,13 @@ export default function OrderHistoryPage() {
     // Listen for order updates (when orders are marked as paid)
     socket.on("order:paid", (paidOrderId) => {
       console.log("📦 Order marked as paid - PERMANENTLY removing from customer view:", paidOrderId);
+      
+      // Show payment success modal
+      setShowPaymentSuccessModal(true);
+      
+      // Reset payment processing state
+      setIsPaymentProcessing(false);
+      
       setOrders((prev) => {
         const filteredOrders = prev.filter(order => order._id !== paidOrderId);
         console.log("📋 Orders before filtering:", prev.length, "After filtering:", filteredOrders.length);
@@ -320,6 +329,9 @@ export default function OrderHistoryPage() {
       return;
     }
 
+    // Set payment processing state
+    setIsPaymentProcessing(true);
+
     // Here you can implement the logic to submit the receipt
     console.log('Submitting receipt:', receiptFile);
     console.log('Payment amount:', totalPrice, 'MMK');
@@ -387,7 +399,7 @@ export default function OrderHistoryPage() {
                 No pending orders
               </p>
               <p className={`mb-6 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                All your orders have been completed and paid for, or you haven't placed any orders yet
+                You haven't placed any orders yet. Please browse our menu to start ordering!.
               </p>
               <button
                 onClick={() => navigate("/")}
@@ -495,9 +507,9 @@ export default function OrderHistoryPage() {
                     )}
                     <button
                       onClick={handleCheckout}
-                      disabled={!canCheckout}
+                      disabled={!canCheckout || isPaymentProcessing}
                       className={`px-6 py-3 rounded-xl shadow font-bold text-lg transition-colors duration-200 ${
-                        canCheckout
+                        canCheckout && !isPaymentProcessing
                           ? darkMode 
                             ? 'bg-pink-600 text-white hover:bg-pink-500' 
                             : 'bg-pink-600 text-white hover:bg-pink-700'
@@ -506,7 +518,7 @@ export default function OrderHistoryPage() {
                             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       }`}
                     >
-                      Checkout
+                      {isPaymentProcessing ? 'Payment is under review...' : 'Checkout'}
                     </button>
                   </div>
                 </div>
@@ -843,6 +855,69 @@ export default function OrderHistoryPage() {
                 }`}
               >
                 Submit Payment Receipt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Success Modal */}
+      {showPaymentSuccessModal && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" 
+          onClick={() => setShowPaymentSuccessModal(false)}
+        >
+          <div 
+            className={`max-w-md w-full rounded-xl shadow-2xl ${
+              darkMode ? 'bg-gray-800 border border-gray-600' : 'bg-white border border-gray-200'
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 text-center">
+              {/* Success Icon */}
+              <div className="mb-6">
+                <div className="mx-auto w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                  <div className="text-4xl">✅</div>
+                </div>
+                <div className="text-6xl mb-4 animate-bounce">🎉</div>
+              </div>
+
+              {/* Success Message */}
+              <h2 className={`text-2xl font-bold mb-4 ${
+                darkMode ? 'text-green-400' : 'text-green-600'
+              }`}>
+                Payment Successful!
+              </h2>
+              
+              <p className={`text-lg mb-6 ${
+                darkMode ? 'text-gray-300' : 'text-gray-700'
+              }`}>
+                Your payment has been processed successfully. Thank you for dining with us!
+              </p>
+
+              {/* Cherry Decoration */}
+              <div className="mb-6">
+                <div className="flex justify-center items-center gap-2">
+                  <span className="text-2xl animate-pulse">🍒</span>
+                  <span className={`text-lg font-semibold ${
+                    darkMode ? 'text-pink-300' : 'text-pink-600'
+                  }`}>
+                    Cherry Myo Restaurant
+                  </span>
+                  <span className="text-2xl animate-pulse">🍒</span>
+                </div>
+              </div>
+
+              {/* Close Button */}
+              <button
+                onClick={() => setShowPaymentSuccessModal(false)}
+                className={`w-full py-3 px-6 rounded-xl font-bold text-lg transition-all duration-200 ${
+                  darkMode 
+                    ? 'bg-green-600 hover:bg-green-500 text-white' 
+                    : 'bg-green-600 hover:bg-green-700 text-white'
+                }`}
+              >
+                Awesome! Close
               </button>
             </div>
           </div>

@@ -152,7 +152,7 @@ export default function CartPage() {
 
       setTimeout(() => {
         setOrderSent(false);
-        navigate("/");
+        navigate("/order-history");
       }, 2000);
     } catch (err) {
       alert("Failed to send order.");
