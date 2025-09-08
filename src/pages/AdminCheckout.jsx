@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import AdminAuth from '../components/AdminAuth';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDarkMode } from './DarkModeContext';
 import AdminNavbar from '../components/AdminNavbar';
@@ -12,13 +12,52 @@ const SOCKET_URL =
     "http://localhost:5000" ||
     "https://cherry-myo-restaurant-ordering-system.onrender.com";
 
+// Error Boundary Component
+class ErrorBoundary extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = { hasError: false, error: null };
+    }
+
+    static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+    }
+
+    componentDidCatch(error, errorInfo) {
+        console.error('Error Boundary caught an error:', error, errorInfo);
+    }
+
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-red-50">
+                    <div className="text-center p-8">
+                        <h2 className="text-2xl font-bold text-red-600 mb-4">Something went wrong</h2>
+                        <p className="text-gray-600 mb-4">Please refresh the page to try again.</p>
+                        <button 
+                            onClick={() => window.location.reload()} 
+                            className="bg-red-600 text-white px-4 py-2 rounded"
+                        >
+                            Refresh Page
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        return this.props.children;
+    }
+}
+
 export default function AdminCheckoutPage() {
     return (
-        <AdminAuth>
-            {({ user, handleLogout }) => (
-                <CheckoutContent user={user} handleLogout={handleLogout} />
-            )}
-        </AdminAuth>
+        <ErrorBoundary>
+            <AdminAuth>
+                {({ user, handleLogout }) => (
+                    <CheckoutContent user={user} handleLogout={handleLogout} />
+                )}
+            </AdminAuth>
+        </ErrorBoundary>
     );
 }
 
@@ -28,22 +67,110 @@ function CheckoutContent({ user, handleLogout }) {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [paymentMethods, setPaymentMethods] = useState({}); // 'scan' or 'cash'
     const [cashAmounts, setCashAmounts] = useState({}); // cash received amounts
-    const [showQrCode, setShowQrCode] = useState({}); // QR code visibility per order
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [payments, setPayments] = useState({});
     const [checkouts, setCheckouts] = useState([]);
-
+    const [expandedOrders, setExpandedOrders] = useState({}); // Track which orders are expanded
 
     const navigate = useNavigate();
     const { darkMode, setDarkMode } = useDarkMode();
+    const isMountedRef = useRef(true);
+    const socketRef = useRef(null);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            isMountedRef.current = false;
+        };
+    }, []);
+
+    // Safe state setter that checks if component is still mounted
+    const safeSetState = useCallback((setter, value) => {
+        if (isMountedRef.current) {
+            setter(value);
+        }
+    }, []);
+
+    // Disable browser extension interference
+    useEffect(() => {
+        // Prevent browser extensions from interfering
+        const preventExtensionMessages = (e) => {
+            if (e.data && e.data.source === 'react-devtools-bridge') {
+                return;
+            }
+            if (e.data && e.data.source === 'react-devtools-content-script') {
+                return;
+            }
+            // Stop propagation of extension messages
+            if (e.data && typeof e.data === 'object' && e.data.type && e.data.type.includes('extension')) {
+                e.stopImmediatePropagation();
+                e.preventDefault();
+            }
+        };
+
+        window.addEventListener('message', preventExtensionMessages, true);
+        
+        // Also add to document
+        document.addEventListener('message', preventExtensionMessages, true);
+        
+        return () => {
+            window.removeEventListener('message', preventExtensionMessages, true);
+            document.removeEventListener('message', preventExtensionMessages, true);
+        };
+    }, []);
+    useEffect(() => {
+        const handleUnhandledRejection = (event) => {
+            console.error('Unhandled promise rejection:', event.reason);
+            event.preventDefault(); // Prevent the default error handling
+        };
+
+        const handleError = (event) => {
+            console.error('Global error caught:', event.error);
+            event.preventDefault();
+        };
+
+        // Chrome extension message handling
+        const handleMessage = (event) => {
+            // Ignore messages from extensions
+            if (event.source !== window) {
+                return;
+            }
+        };
+
+        window.addEventListener('unhandledrejection', handleUnhandledRejection);
+        window.addEventListener('error', handleError);
+        window.addEventListener('message', handleMessage);
+        
+        return () => {
+            window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+            window.removeEventListener('error', handleError);
+            window.removeEventListener('message', handleMessage);
+        };
+    }, []);
 
 
     // Function to sync with database
-    const syncWithDatabase = async () => {
-        setIsRefreshing(true);
+    const syncWithDatabase = useCallback(async () => {
+        if (!isMountedRef.current) return;
+        
+        safeSetState(setIsRefreshing, true);
         try {
             console.log("🔄 Starting database sync...");
-            const response = await fetch(`${APIBASE}/orders/checkout`);
+            
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+            
+            const response = await fetch(`${APIBASE}/orders/checkout`, {
+                signal: controller.signal,
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!isMountedRef.current) return;
+            
             if (response.ok) {
                 const dbOrders = await response.json();
                 console.log("🔄 Manual sync - Database orders:", dbOrders.length);
@@ -55,7 +182,6 @@ function CheckoutContent({ user, handleLogout }) {
                     items: o.items?.length || 0,
                     processedAt: o.processedAt
                 })));
-
 
                 const groupedOrders = dbOrders.reduce((acc, order) => {
                     const existingTable = acc.find(o => o.tableNumber === order.tableNumber);
@@ -81,22 +207,47 @@ function CheckoutContent({ user, handleLogout }) {
                     orderIds: o.orderIds
                 })));
 
-                setCheckoutOrders(groupedOrders);
-                localStorage.setItem("checkoutOrders", JSON.stringify(groupedOrders));
-                console.log("✅ Successfully synced with database");
+                if (isMountedRef.current) {
+                    safeSetState(setCheckoutOrders, groupedOrders);
+                    localStorage.setItem("checkoutOrders", JSON.stringify(groupedOrders));
+                    console.log("✅ Successfully synced with database");
+                }
             } else {
                 console.error("❌ Failed to fetch from /orders/checkout, status:", response.status);
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
         } catch (error) {
-            console.error("❌ Failed to sync with database:", error);
+            if (error.name === 'AbortError') {
+                console.error("❌ Request timed out");
+            } else {
+                console.error("❌ Failed to sync with database:", error);
+            }
+            // Don't throw the error, handle it gracefully
         } finally {
-            setIsRefreshing(false);
+            if (isMountedRef.current) {
+                safeSetState(setIsRefreshing, false);
+            }
         }
-    };
+    }, [safeSetState]);
 
-    const fetchPayments = async () => {
+    const fetchPayments = useCallback(async () => {
+        if (!isMountedRef.current) return;
+        
         try {
-          const res = await fetch(`${APIBASE}/checkouts`);
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000);
+          
+          const res = await fetch(`${APIBASE}/checkouts`, {
+            signal: controller.signal,
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (!isMountedRef.current) return;
+          
           if (res.ok) {
             const data = await res.json();
       
@@ -107,34 +258,69 @@ function CheckoutContent({ user, handleLogout }) {
                 }
               });
 
-            setPayments(map);
-            console.log("✅ Payments synced:", map);
+            if (isMountedRef.current) {
+                safeSetState(setPayments, map);
+                console.log("✅ Payments synced:", map);
+            }
+          } else {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
           }
         } catch (err) {
-          console.error("❌ Failed to fetch payments:", err);
+          if (err.name === 'AbortError') {
+            console.error("❌ Payments fetch timed out");
+          } else {
+            console.error("❌ Failed to fetch payments:", err);
+          }
         }
-      };
+      }, [safeSetState]);
 
-      const fetchCheckouts = async () => {
+      const fetchCheckouts = useCallback(async () => {
+        if (!isMountedRef.current) return;
+        
         try {
-          const res = await fetch(`${APIBASE}/checkouts`);
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000);
+          
+          const res = await fetch(`${APIBASE}/checkouts`, {
+            signal: controller.signal,
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (!isMountedRef.current) return;
+          
           if (res.ok) {
             const data = await res.json();
-            setCheckouts(data);
-            console.log("✅ Checkouts fetched:", data);
+            if (isMountedRef.current) {
+                safeSetState(setCheckouts, data);
+                console.log("✅ Checkouts fetched:", data);
+            }
+          } else {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
           }
         } catch (err) {
-          console.error("❌ Failed to fetch checkouts:", err);
+          if (err.name === 'AbortError') {
+            console.error("❌ Checkouts fetch timed out");
+          } else {
+            console.error("❌ Failed to fetch checkouts:", err);
+          }
         }
-      };
+      }, [safeSetState]);
       
 
       
       useEffect(() => {
         const init = async () => {
-          await syncWithDatabase();
-          await fetchPayments();
-          await fetchCheckouts();
+          try {
+            await syncWithDatabase();
+            await fetchPayments();
+            await fetchCheckouts();
+          } catch (error) {
+            console.error("❌ Error during initialization:", error);
+          }
         };
         init();
       }, []);
@@ -160,125 +346,219 @@ function CheckoutContent({ user, handleLogout }) {
 
         // Fetch current checkout orders from database to sync with reality
         const fetchCheckoutOrders = async () => {
-            await syncWithDatabase();
+            try {
+                await syncWithDatabase();
+            } catch (error) {
+                console.error("❌ Error fetching checkout orders:", error);
+            }
         };
 
         // Initial fetch
         fetchCheckoutOrders();
 
-        const socket = io(SOCKET_URL, { transports: ["websocket"] });
+        // Initialize socket connection with error handling
+        let socket;
+        try {
+            socket = io(SOCKET_URL, { 
+                transports: ["websocket"],
+                timeout: 20000,
+                forceNew: true,
+                reconnection: true,
+                reconnectionDelay: 1000,
+                reconnectionAttempts: 5,
+                maxReconnectionAttempts: 5,
+                autoConnect: true
+            });
 
-        socket.on("connect", () => {
-            console.log("🧾 Admin socket connected:", socket.id);
-            console.log("🧾 Socket URL:", SOCKET_URL);
-        });
+            socketRef.current = socket;
 
-        socket.on("disconnect", () => {
-            console.log("❌ Admin socket disconnected");
-        });
+            socket.on("connect", () => {
+                console.log("🧾 Admin socket connected:", socket.id);
+                console.log("🧾 Socket URL:", SOCKET_URL);
+            });
 
-        socket.on("connect_error", (error) => {
-            console.error("❌ Socket connection error:", error);
-        });
+            socket.on("disconnect", (reason) => {
+                console.log("❌ Admin socket disconnected:", reason);
+            });
+
+            socket.on("connect_error", (error) => {
+                console.error("❌ Socket connection error:", error);
+            });
+
+            socket.on("reconnect", (attemptNumber) => {
+                console.log("🔄 Socket reconnected after", attemptNumber, "attempts");
+            });
+
+            socket.on("reconnect_error", (error) => {
+                console.error("❌ Socket reconnection error:", error);
+            });
+
+            socket.on("reconnect_failed", () => {
+                console.error("❌ Socket reconnection failed");
+            });
+        } catch (error) {
+            console.error("❌ Failed to initialize socket:", error);
+        }
+
+        // Set up socket event handlers if socket was created successfully
+        if (socket) {
 
         // Listen for new orders ready for checkout
         socket.on("order:readyForCheckout", (order) => {
-            console.log("📥 Checkout order received:", order);
-            console.log("📱 Order items:", order.items);
-            console.log("📱 Order table:", order.tableNumber);
-            console.log("📱 Order status:", order.status);
-            console.log("📱 Order processedAt:", order.processedAt);
+            try {
+                console.log("📥 Checkout order received:", order);
+                console.log("📱 Order items:", order.items);
+                console.log("📱 Order table:", order.tableNumber);
+                console.log("📱 Order status:", order.status);
+                console.log("📱 Order processedAt:", order.processedAt);
 
-            setCheckoutOrders((prev) => {
-                console.log("📋 Current checkout orders before update:", prev.length);
+                setCheckoutOrders((prev) => {
+                    console.log("📋 Current checkout orders before update:", prev.length);
 
-                const existingTableOrderIndex = prev.findIndex(
-                    existingOrder => existingOrder.tableNumber === order.tableNumber
-                );
+                    const existingTableOrderIndex = prev.findIndex(
+                        existingOrder => existingOrder.tableNumber === order.tableNumber
+                    );
 
-                let updated;
-                if (existingTableOrderIndex !== -1) {
-                    updated = [...prev];
-                    const existingOrder = updated[existingTableOrderIndex];
+                    let updated;
+                    if (existingTableOrderIndex !== -1) {
+                        updated = [...prev];
+                        const existingOrder = updated[existingTableOrderIndex];
 
-                    console.log("🔄 Found existing order for table", order.tableNumber, "- merging");
+                        console.log("🔄 Found existing order for table", order.tableNumber, "- merging");
 
-                    const combinedItems = [...existingOrder.items, ...order.items];
+                        const combinedItems = [...existingOrder.items, ...order.items];
 
-                    updated[existingTableOrderIndex] = {
-                        ...existingOrder,
-                        items: combinedItems,
-                        processedAt: order.processedAt, // Use latest processed time
-                        orderIds: [
-                            ...(existingOrder.orderIds || [existingOrder._id]),
-                            order._id
-                        ] // Track all order IDs for this table
-                    };
+                        updated[existingTableOrderIndex] = {
+                            ...existingOrder,
+                            items: combinedItems,
+                            processedAt: order.processedAt, // Use latest processed time
+                            orderIds: [
+                                ...(Array.isArray(existingOrder.orderIds) ? existingOrder.orderIds : [existingOrder._id]),
+                                order._id
+                            ] // Track all order IDs for this table
+                        };
 
-                    console.log(`🔄 Merged order ${order._id} with existing table ${order.tableNumber} order`);
-                } else {
-                    // Add as new table order
-                    updated = [...prev, {
-                        ...order,
-                        orderIds: [order._id] // Track the original order ID
-                    }];
-                    console.log(`➕ Added new order for table ${order.tableNumber}`);
-                }
+                        console.log(`🔄 Merged order ${order._id} with existing table ${order.tableNumber} order`);
+                    } else {
+                        // Add as new table order
+                        updated = [...prev, {
+                            ...order,
+                            orderIds: [order._id] // Track the original order ID
+                        }];
+                        console.log(`➕ Added new order for table ${order.tableNumber}`);
+                    }
 
-                console.log("📱 Updated checkout orders count:", updated.length);
-                console.log("📱 Updated checkout orders:", updated.map(o => ({
-                    id: o._id,
-                    table: o.tableNumber,
-                    status: o.status,
-                    items: o.items?.length || 0
-                })));
-                localStorage.setItem("checkoutOrders", JSON.stringify(updated));
-                return updated;
-            });
+                    console.log("📱 Updated checkout orders count:", updated.length);
+                    console.log("📱 Updated checkout orders:", updated.map(o => ({
+                        id: o._id,
+                        table: o.tableNumber,
+                        status: o.status,
+                        items: o.items?.length || 0
+                    })));
+                    localStorage.setItem("checkoutOrders", JSON.stringify(updated));
+                    return updated;
+                });
+            } catch (error) {
+                console.error("❌ Error handling order:readyForCheckout:", error);
+            }
         });
 
         // Listen for order deletions/removals
         socket.on("order:deleted", (deletedOrderId) => {
-            console.log("🗑️ Order deleted:", deletedOrderId);
-            setCheckoutOrders((prev) => {
-                const updated = prev.filter(order => {
-                    // Remove if this is the main order ID
-                    if (order._id === deletedOrderId) {
-                        return false;
-                    }
-                    // Remove if this order ID is in the merged orderIds array
-                    if (order.orderIds && order.orderIds.includes(deletedOrderId)) {
-                        // If this was a merged order, remove just this ID
-                        const remainingIds = order.orderIds.filter(id => id !== deletedOrderId);
-                        if (remainingIds.length === 0) {
-                            return false; // Remove entire table order if no orders left
+            try {
+                console.log("🗑️ Order deleted:", deletedOrderId);
+                setCheckoutOrders((prev) => {
+                    const updated = prev.filter(order => {
+                        // Remove if this is the main order ID
+                        if (order._id === deletedOrderId) {
+                            return false;
                         }
-                        // Update the order to remove the deleted order ID
-                        order.orderIds = remainingIds;
-                    }
-                    return true;
+                        // Remove if this order ID is in the merged orderIds array
+                        if (Array.isArray(order.orderIds) && order.orderIds.includes(deletedOrderId)) {
+                            // If this was a merged order, remove just this ID
+                            const remainingIds = order.orderIds.filter(id => id !== deletedOrderId);
+                            if (remainingIds.length === 0) {
+                                return false; // Remove entire table order if no orders left
+                            }
+                            // Update the order to remove the deleted order ID
+                            order.orderIds = remainingIds;
+                        }
+                        return true;
+                    });
+                    localStorage.setItem("checkoutOrders", JSON.stringify(updated));
+                    return updated;
                 });
-                localStorage.setItem("checkoutOrders", JSON.stringify(updated));
-                return updated;
-            });
+            } catch (error) {
+                console.error("❌ Error handling order:deleted:", error);
+            }
         });
 
         // Listen for order updates (including status changes that might remove from checkout)
         socket.on("order:update", (updatedOrder) => {
-            console.log("🔄 Order update received:", updatedOrder);
+            try {
+                console.log("🔄 Order update received:", updatedOrder);
 
-            // Keep orders that have status "readyForCheckout" or "sent" and are not paid
-            const shouldKeepInCheckout = (updatedOrder.status === "readyForCheckout" || updatedOrder.status === "sent") && !updatedOrder.paid;
+                // Keep orders that have status "readyForCheckout" or "sent" and are not paid
+                const shouldKeepInCheckout = (updatedOrder.status === "readyForCheckout" || updatedOrder.status === "sent") && !updatedOrder.paid;
 
-            if (!shouldKeepInCheckout) {
-                console.log(`🔄 Order ${updatedOrder._id} status changed to ${updatedOrder.status} (paid: ${updatedOrder.paid}), removing from checkout`);
+                if (!shouldKeepInCheckout) {
+                    console.log(`🔄 Order ${updatedOrder._id} status changed to ${updatedOrder.status} (paid: ${updatedOrder.paid}), removing from checkout`);
+                    setCheckoutOrders((prev) => {
+                        const updated = prev.filter(order => {
+                            if (order._id === updatedOrder._id) {
+                                return false;
+                            }
+                            if (Array.isArray(order.orderIds) && order.orderIds.includes(updatedOrder._id)) {
+                                const remainingIds = order.orderIds.filter(id => id !== updatedOrder._id);
+                                if (remainingIds.length === 0) {
+                                    return false;
+                                }
+                                order.orderIds = remainingIds;
+                            }
+                            return true;
+                        });
+                        localStorage.setItem("checkoutOrders", JSON.stringify(updated));
+                        return updated;
+                    });
+                } else {
+                    // Update the order in place if it's still valid for checkout
+                    console.log(`🔄 Order ${updatedOrder._id} status updated to ${updatedOrder.status}, keeping in checkout`);
+                    setCheckoutOrders((prev) => {
+                        const updated = prev.map(order => {
+                            if (order._id === updatedOrder._id) {
+                                return { ...order, ...updatedOrder };
+                            }
+                            // Also check if this order ID is in the merged orderIds array
+                            if (Array.isArray(order.orderIds) && order.orderIds.includes(updatedOrder._id)) {
+                                // Update the main order properties while keeping the merged structure
+                                return {
+                                    ...order,
+                                    status: updatedOrder.status,
+                                    processedAt: updatedOrder.processedAt || order.processedAt
+                                };
+                            }
+                            return order;
+                        });
+                        localStorage.setItem("checkoutOrders", JSON.stringify(updated));
+                        return updated;
+                    });
+                }
+            } catch (error) {
+                console.error("❌ Error handling order:update:", error);
+            }
+        });
+
+        // Listen for paid orders (should be removed from checkout)
+        socket.on("order:paid", (paidOrderId) => {
+            try {
+                console.log("💰 Order marked as paid, removing from checkout:", paidOrderId);
                 setCheckoutOrders((prev) => {
                     const updated = prev.filter(order => {
-                        if (order._id === updatedOrder._id) {
+                        if (order._id === paidOrderId) {
                             return false;
                         }
-                        if (order.orderIds && order.orderIds.includes(updatedOrder._id)) {
-                            const remainingIds = order.orderIds.filter(id => id !== updatedOrder._id);
+                        if (Array.isArray(order.orderIds) && order.orderIds.includes(paidOrderId)) {
+                            const remainingIds = order.orderIds.filter(id => id !== paidOrderId);
                             if (remainingIds.length === 0) {
                                 return false;
                             }
@@ -289,54 +569,23 @@ function CheckoutContent({ user, handleLogout }) {
                     localStorage.setItem("checkoutOrders", JSON.stringify(updated));
                     return updated;
                 });
-            } else {
-                // Update the order in place if it's still valid for checkout
-                console.log(`🔄 Order ${updatedOrder._id} status updated to ${updatedOrder.status}, keeping in checkout`);
-                setCheckoutOrders((prev) => {
-                    const updated = prev.map(order => {
-                        if (order._id === updatedOrder._id) {
-                            return { ...order, ...updatedOrder };
-                        }
-                        // Also check if this order ID is in the merged orderIds array
-                        if (order.orderIds && order.orderIds.includes(updatedOrder._id)) {
-                            // Update the main order properties while keeping the merged structure
-                            return {
-                                ...order,
-                                status: updatedOrder.status,
-                                processedAt: updatedOrder.processedAt || order.processedAt
-                            };
-                        }
-                        return order;
-                    });
-                    localStorage.setItem("checkoutOrders", JSON.stringify(updated));
-                    return updated;
-                });
+            } catch (error) {
+                console.error("❌ Error handling order:paid:", error);
             }
         });
+        } // Close the if (socket) block
 
-        // Listen for paid orders (should be removed from checkout)
-        socket.on("order:paid", (paidOrderId) => {
-            console.log("💰 Order marked as paid, removing from checkout:", paidOrderId);
-            setCheckoutOrders((prev) => {
-                const updated = prev.filter(order => {
-                    if (order._id === paidOrderId) {
-                        return false;
-                    }
-                    if (order.orderIds && order.orderIds.includes(paidOrderId)) {
-                        const remainingIds = order.orderIds.filter(id => id !== paidOrderId);
-                        if (remainingIds.length === 0) {
-                            return false;
-                        }
-                        order.orderIds = remainingIds;
-                    }
-                    return true;
-                });
-                localStorage.setItem("checkoutOrders", JSON.stringify(updated));
-                return updated;
-            });
-        });
-
-        return () => socket.disconnect();
+        return () => {
+            try {
+                if (socketRef.current) {
+                    socketRef.current.removeAllListeners();
+                    socketRef.current.disconnect();
+                    console.log("🔌 Socket disconnected and cleaned up");
+                }
+            } catch (error) {
+                console.error("❌ Error cleaning up socket:", error);
+            }
+        };
     }, []);
 
     const handleDiscountChange = (orderId, value) => {
@@ -359,12 +608,14 @@ function CheckoutContent({ user, handleLogout }) {
                 delete updated[orderId];
                 return updated;
             });
-        } else {
-            setShowQrCode((prev) => ({
-                ...prev,
-                [orderId]: false,
-            }));
         }
+    };
+
+    const toggleOrderExpansion = (orderId) => {
+        setExpandedOrders((prev) => ({
+            ...prev,
+            [orderId]: !prev[orderId],
+        }));
     };
 
     const handleCashAmountChange = (orderId, amount) => {
@@ -375,29 +626,11 @@ function CheckoutContent({ user, handleLogout }) {
         }));
     };
 
-    const generateQrCode = (orderId, amount) => {
-        setShowQrCode((prev) => ({
-            ...prev,
-            [orderId]: true,
-        }));
-    };
 
-    const generateThaiQrCode = (amount) => {
-        // Thai QR Code format (PromptPay)
-        // This is a simplified version - you might want to use a proper library
-        const merchantId = "0123456789012"; // Replace with actual merchant ID
-        const qrData = `00020101021229370016A000000677010111011${merchantId}520454045802TH5909Cherry Myo6007Bangkok62070503***6304`;
-
-        // Add amount to QR code
-        const amountStr = amount.toFixed(2);
-        const qrWithAmount = qrData.replace('***', amountStr);
-
-        return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrWithAmount)}`;
-    };
 
     const handleMarkAsPaid = async (tableOrder) => {
         try {
-            const orderIds = tableOrder.orderIds || [tableOrder._id];
+            const orderIds = Array.isArray(tableOrder.orderIds) ? tableOrder.orderIds : [tableOrder._id];
             const paymentMethod = paymentMethods[tableOrder._id];
             const finalTotal = calculateFinalTotal(tableOrder);
 
@@ -416,9 +649,9 @@ function CheckoutContent({ user, handleLogout }) {
             }
 
             // Validate QR payment
-            if (paymentMethod === 'scan' && !showQrCode[tableOrder._id]) {
-                alert('Please generate QR code before marking as paid');
-                return;
+            if (paymentMethod === 'scan') {
+                // QR payment is always valid when selected
+                console.log("QR payment method selected");
             }
 
             console.log("Marking orders as paid for table", tableOrder.tableNumber, ":", orderIds);
@@ -465,11 +698,6 @@ function CheckoutContent({ user, handleLogout }) {
                 return updated;
             });
             setCashAmounts((prev) => {
-                const updated = { ...prev };
-                delete updated[tableOrder._id];
-                return updated;
-            });
-            setShowQrCode((prev) => {
                 const updated = { ...prev };
                 delete updated[tableOrder._id];
                 return updated;
@@ -886,8 +1114,13 @@ function CheckoutContent({ user, handleLogout }) {
                                                 : 'bg-gradient-to-br from-white/90 to-pink-50/90 border border-pink-200/50'
                                             }`}
                                     >
-                                        {/* Order Header */}
-                                        <div className="p-6 border-b border-pink-200/30">
+                                        {/* Clickable Order Header - Summary View */}
+                                        <div 
+                                            className={`p-6 cursor-pointer hover:bg-opacity-80 transition-all duration-300 ${
+                                                expandedOrders[order._id] ? 'border-b border-pink-200/30' : ''
+                                            }`}
+                                            onClick={() => toggleOrderExpansion(order._id)}
+                                        >
                                             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                                                 <div className="flex items-center gap-4">
                                                     <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg ${darkMode
@@ -917,9 +1150,9 @@ function CheckoutContent({ user, handleLogout }) {
                                                             })()} */}
 
 {(() => {
-  const firstPayment = order.orderIds
-    ?.map(id => payments[id.toString()])
-    .find(Boolean);
+  const firstPayment = Array.isArray(order.orderIds)
+    ? order.orderIds.map(id => payments[id.toString()]).find(Boolean)
+    : null;
 
   if (!firstPayment) return null;
 
@@ -931,21 +1164,7 @@ function CheckoutContent({ user, handleLogout }) {
     );
   }
 
-  // For scan/QR, find the checkout object
-  const checkout = checkouts.find(c =>
-    c.orderId && order.orderIds.includes(c.orderId._id)
-  );
-
-  if (checkout && checkout.slipImage) {
-    return (
-      <img
-        src={checkout.slipImage}
-        alt="Payment Receipt"
-        className="ml-3 w-16 h-16 rounded-lg object-cover border border-gray-300"
-      />
-    );
-  }
-
+  // For scan/QR, just show the scan badge without image
   return (
     <span className="ml-3 px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
       📱 Scan
@@ -963,7 +1182,7 @@ function CheckoutContent({ user, handleLogout }) {
                                                                     order.status === 'sent' ? '✅ Sent' :
                                                                         order.status}
                                                             </span>
-                                                            {(order.orderIds && order.orderIds.length > 1) && (
+                                                            {(Array.isArray(order.orderIds) && order.orderIds.length > 1) && (
                                                                 <span className="bg-orange-100 text-orange-800 text-xs px-3 py-1 rounded-full font-medium">
                                                                     {order.orderIds.length} merged orders
                                                                 </span>
@@ -980,10 +1199,12 @@ function CheckoutContent({ user, handleLogout }) {
                                             </div>
                                         </div>
 
-                                        {/* Order Items */}
-                                        <div className="p-6">
-                                            <div className={`rounded-2xl p-4 mb-6 ${darkMode ? 'bg-gray-700/30' : 'bg-pink-50/50'
-                                                }`}>
+                                        {/* Expanded Order Details */}
+                                        {expandedOrders[order._id] && (
+                                            <div className="p-6">
+                                                {/* Order Items */}
+                                                <div className={`rounded-2xl p-4 mb-6 ${darkMode ? 'bg-gray-700/30' : 'bg-pink-50/50'
+                                                    }`}>
                                                 <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-pink-300' : 'text-red-700'
                                                     }`}>
                                                     Order Items
@@ -1060,10 +1281,95 @@ function CheckoutContent({ user, handleLogout }) {
                                                     <div className={`flex justify-between text-xl font-bold pt-3 border-t ${darkMode ? 'border-gray-600 text-green-400' : 'border-gray-300 text-green-600'
                                                         }`}>
                                                         <span>Final Total</span>
-                                                        <span>MMK{finalTotal.toFixed(2)}</span>
+                                                        <span>{finalTotal.toFixed(2)}MMK</span>
                                                     </div>
                                                 </div>
                                             </div>
+
+                                            {/* Payment Slip Images */}
+                                            {(() => {
+                                                // Find payment slip images for this order
+                                                const orderSlips = checkouts.filter(checkout => 
+                                                    checkout.orderId && 
+                                                    Array.isArray(order.orderIds) && 
+                                                    order.orderIds.includes(checkout.orderId._id || checkout.orderId) &&
+                                                    checkout.slipImage
+                                                );
+
+                                                if (orderSlips.length === 0) return null;
+
+                                                return (
+                                                    <div className={`rounded-2xl p-6 mb-6 ${darkMode ? 'bg-gray-700/30' : 'bg-blue-50/70'}`}>
+                                                        <h3 className={`text-lg font-semibold mb-4 text-center ${darkMode ? 'text-pink-300' : 'text-blue-700'}`}>
+                                                            📄 Payment Slip Images
+                                                        </h3>
+                                                        <div className="flex flex-wrap justify-center items-center gap-4">
+                                                            {orderSlips.map((slip, index) => (
+                                                                <div key={index} className={`relative group rounded-xl overflow-hidden shadow-lg w-64 ${darkMode ? 'bg-gray-600/50' : 'bg-white'}`}>
+                                                                    {/* Image Container */}
+                                                                    <div className="relative aspect-square">
+                                                                        <img
+                                                                            src={slip.slipImage}
+                                                                            alt={`Payment Slip ${index + 1}`}
+                                                                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                                                            onError={(e) => {
+                                                                                e.target.src = '/image/cherry_myo.png'; // Fallback image
+                                                                            }}
+                                                                        />
+                                                                        
+                                                                        {/* View Overlay */}
+                                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    // Open image in new tab
+                                                                                    window.open(slip.slipImage, '_blank');
+                                                                                }}
+                                                                                className="bg-white/90 hover:bg-white text-gray-800 p-3 rounded-full shadow-lg transform hover:scale-110 transition-all duration-200"
+                                                                                title="View Full Image"
+                                                                            >
+                                                                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                                                </svg>
+                                                                            </button>
+                                                                        </div>
+
+                                                                        {/* Payment Method Badge */}
+                                                                        <div className="absolute top-2 right-2">
+                                                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                                                                slip.paymentMethod === 'cash' 
+                                                                                    ? 'bg-green-100 text-green-800' 
+                                                                                    : 'bg-blue-100 text-blue-800'
+                                                                            }`}>
+                                                                                {slip.paymentMethod === 'cash' ? '💵 Cash' : '📱 QR'}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* Image Info */}
+                                                                    <div className="p-3 text-center">
+                                                                        <div className="flex justify-between items-center mb-1">
+                                                                            <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                                                                Payment Slip {index + 1}
+                                                                            </span>
+                                                                            {slip.createdAt && (
+                                                                                <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                                                                    {new Date(slip.createdAt).toLocaleDateString()}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                        {slip.finalAmount && (
+                                                                            <div className={`text-sm font-bold ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
+                                                                                 {slip.finalAmount.toFixed(2)} MMK
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
 
                                             {/* Payment Method */}
                                             <div className={`rounded-2xl p-6 ${darkMode ? 'bg-gray-700/30' : 'bg-white/70'
@@ -1108,33 +1414,16 @@ function CheckoutContent({ user, handleLogout }) {
                                                 {paymentMethods[order._id] === 'scan' && (
                                                     <div className={`p-4 rounded-xl ${darkMode ? 'bg-blue-900/30' : 'bg-blue-50'
                                                         }`}>
-                                                        <div className="flex justify-between items-center mb-4">
-                                                            <span className={`font-medium ${darkMode ? 'text-gray-200' : 'text-gray-800'
+                                                        <div className="text-center py-4">
+                                                            <div className={`text-lg font-medium mb-2 ${darkMode ? 'text-gray-200' : 'text-gray-800'
                                                                 }`}>
-                                                                QR Payment: MMK{finalTotal.toFixed(2)}
-                                                            </span>
-                                                            <button
-                                                                onClick={() => generateQrCode(order._id, finalTotal)}
-                                                                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                                                            >
-                                                                Generate QR
-                                                            </button>
-                                                        </div>
-
-                                                        {showQrCode[order._id] && (
-                                                            <div className="text-center py-4">
-                                                                <img
-                                                                    src={generateThaiQrCode(finalTotal)}
-                                                                    alt="Thai QR Code"
-                                                                    className="mx-auto border rounded-lg shadow-lg"
-                                                                    style={{ maxWidth: '200px', height: 'auto' }}
-                                                                />
-                                                                <p className={`text-sm mt-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'
-                                                                    }`}>
-                                                                    Scan to pay MMK{finalTotal.toFixed(2)}
-                                                                </p>
+                                                                QR Payment Selected: {finalTotal.toFixed(2)} MMK
                                                             </div>
-                                                        )}
+                                                            <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'
+                                                                }`}>
+                                                                Customer will pay via QR scan
+                                                            </p>
+                                                        </div>
                                                     </div>
                                                 )}
 
@@ -1195,7 +1484,7 @@ function CheckoutContent({ user, handleLogout }) {
                                                             }`}
                                                     >
                                                         🍒 Mark as Paid & Print Receipt
-                                                        {(order.orderIds && order.orderIds.length > 1) && (
+                                                        {(Array.isArray(order.orderIds) && order.orderIds.length > 1) && (
                                                             <span className="ml-2 px-2 py-1 bg-red-600 rounded text-sm">
                                                                 {order.orderIds.length} orders
                                                             </span>
@@ -1211,18 +1500,18 @@ function CheckoutContent({ user, handleLogout }) {
                                                             (!cashAmounts[order._id] || cashAmounts[order._id] < finalTotal) && (
                                                                 <span className="text-red-600">⚠️ Enter sufficient cash amount</span>
                                                             )}
-                                                        {paymentMethods[order._id] === 'scan' && !showQrCode[order._id] && (
-                                                            <span className="text-blue-600">ℹ️ Generate QR code to proceed</span>
+                                                        {paymentMethods[order._id] === 'scan' && (
+                                                            <span className="text-green-600">✅ QR payment method selected - Ready to proceed</span>
                                                         )}
-                                                        {((paymentMethods[order._id] === 'scan' && showQrCode[order._id]) ||
-                                                            (paymentMethods[order._id] === 'cash' &&
-                                                                cashAmounts[order._id] >= finalTotal)) && (
+                                                        {(paymentMethods[order._id] === 'cash' &&
+                                                            cashAmounts[order._id] >= finalTotal) && (
                                                                 <span className="text-green-600">✅ Ready to mark as paid & print receipt</span>
                                                             )}
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
+                                    )}
                                     </div>
                                 );
                             })}
