@@ -268,7 +268,7 @@ export default function CartPage() {
             className={`px-5 py-2 rounded-xl text-white text-sm font-semibold shadow ${loading || orderSent ? "bg-gray-400 cursor-not-allowed" : "bg-pink-600 hover:bg-pink-700"}`}
             disabled={loading || orderSent}
           >
-            {loading ? "Sending..." : `Check Out (${Object.keys(selectedItems).filter((id) => selectedItems[id]).length})`}
+            {loading ? "Sending..." : `Confirm Order (${Object.keys(selectedItems).filter((id) => selectedItems[id]).length})`}
           </button>
         </div>
       )}
@@ -368,7 +368,7 @@ export default function CartPage() {
                   }`}
                   disabled={loading}
                 >
-                  {loading ? "Sending..." : "Confirm Order"}
+                  {loading ? "Sending..." : "Submit Order"}
                 </button>
               </div>
             </div>

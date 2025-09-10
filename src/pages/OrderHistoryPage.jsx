@@ -43,13 +43,22 @@ export default function OrderHistoryPage() {
     socket.on("order:paid", (paidOrderId) => {
       console.log("📦 Order marked as paid - PERMANENTLY removing from customer view:", paidOrderId);
       
-      // Show payment success modal
-      setShowPaymentSuccessModal(true);
+      // Only show success modal if this order belongs to the current table
+      const currentTableId = (sessionStorage.getItem("tableId") || "").trim();
       
       // Reset payment processing state
       setIsPaymentProcessing(false);
       
       setOrders((prev) => {
+        const paidOrder = prev.find(order => order._id === paidOrderId);
+        
+        if (paidOrder && paidOrder.tableNumber?.toString().trim() === currentTableId) {
+          console.log("✅ Payment success modal shown for table:", currentTableId);
+          setShowPaymentSuccessModal(true);
+        } else {
+          console.log("ℹ️ Payment success modal NOT shown - different table or order not found");
+        }
+        
         const filteredOrders = prev.filter(order => order._id !== paidOrderId);
         console.log("📋 Orders before filtering:", prev.length, "After filtering:", filteredOrders.length);
         console.log("🗑️ Order permanently removed from customer history");
@@ -111,6 +120,14 @@ export default function OrderHistoryPage() {
       
       const currentTableId = (sessionStorage.getItem("tableId") || "").trim();
       const now = new Date();
+      
+      console.log("🔍 Current Table ID from sessionStorage:", currentTableId);
+      console.log("📋 All unpaid orders received:", unpaidOrders.map(order => ({
+        id: order._id.slice(-8),
+        table: order.tableNumber,
+        status: order.status,
+        paid: order.paid
+      })));
   
       const tableOrders = unpaidOrders.filter(order => {
         const orderTime = new Date(order.createdAt);
@@ -123,20 +140,20 @@ export default function OrderHistoryPage() {
           orderTime.getDate() === now.getDate();
   
         const isWithin1Hour = now - orderTime <= 60 * 60 * 1000;
+        
+        console.log(`📊 Order ${order._id.slice(-8)}: table=${order.tableNumber}, currentTable=${currentTableId}, match=${isSameTable}, today=${isToday}, within1h=${isWithin1Hour}`);
   
         return isSameTable && isToday && isWithin1Hour;
       });
       
-      console.log("Filtered table orders:", tableOrders);
-      console.log("📊 Customer orders fetched:", tableOrders.length, "unpaid orders");
-      console.log("📋 Detailed orders:", tableOrders.map(order => ({
-        id: order._id,
+      console.log("✅ Filtered table orders for table", currentTableId, ":", tableOrders.length);
+      console.log("📋 Detailed filtered orders:", tableOrders.map(order => ({
+        id: order._id.slice(-8),
         table: order.tableNumber,
         status: order.status,
         paid: order.paid,
         items: order.items?.length || 0
       })));
-      console.log("✅ Paid orders are filtered at API level - will never appear on reload");
       
       setOrders(tableOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
     } catch (err) {
@@ -301,70 +318,6 @@ export default function OrderHistoryPage() {
     setShowPaymentModal(true);
   };
 
-  // const handlePayment = (paymentMethod) => {
-  //   console.log(`Payment method selected: ${paymentMethod}`);
-  //   console.log(`Total amount: ${totalPrice} MMK`);
-    
-  //   if (paymentMethod === 'qr') {
-  //     // Show QR code modal instead of alert
-  //     setShowPaymentModal(false);
-  //     setShowQRModal(true);
-  //   } else if (paymentMethod === 'cash') {
-  //     // Handle cash payment logic here
-  //     alert(`Processing cash payment for ${totalPrice.toLocaleString('en-US')} MMK`);
-  //     setShowPaymentModal(false);
-  //   }
-  // };
-
-  // const handlePayment = async (paymentMethod) => {
-  //   console.log(`Payment method selected: ${paymentMethod}`);
-  //   console.log(`Total amount: ${totalPrice} MMK`);
-  
-  //   const currentTableId = sessionStorage.getItem("tableId");
-  //   if (!currentTableId) {
-  //     alert("Table ID missing. Cannot process checkout.");
-  //     return;
-  //   }
-  
-  //   const firstOrder = orders[0];
-  //   if (!firstOrder) {
-  //     alert("No orders found to checkout.");
-  //     return;
-  //   }
-  
-  //   try {
-  //     if (paymentMethod === "cash") {
-  //       const response = await fetch(`${APIBASE}/checkouts`, {
-  //         method: "POST",
-  //         headers: { "Content-Type": "application/json" },
-  //         body: JSON.stringify({
-  //           orderId: firstOrder._id,
-  //           paymentMethod: "cash",
-  //           finalAmount: totalPrice,
-  //           cashReceived: totalPrice,
-  //           changeGiven: 0
-  //         })
-  //       });
-  
-  //       if (!response.ok) throw new Error("Failed to process cash payment");
-  
-  //       const data = await response.json();
-  //       console.log("✅ Cash checkout successful:", data);
-  //       alert("Cash payment successful! ✅");
-  
-  //       setShowPaymentModal(false);
-  
-  //     } else if (paymentMethod === "qr") {
-  //       setShowPaymentModal(false);
-  //       setShowQRModal(true);
-  //     }
-  //   } catch (err) {
-  //     console.error("❌ Payment error:", err);
-  //     alert("Payment failed. Please try again.");
-  //   }
-  // };
-  
-
   const handlePayment = async (paymentMethod) => {
     console.log(`Payment method selected: ${paymentMethod}`);
     console.log(`Total amount: ${totalPrice} MMK`);
@@ -445,23 +398,23 @@ export default function OrderHistoryPage() {
       alert("Please upload your payment receipt first!");
       return;
     }
-  
+
     setIsPaymentProcessing(true);
-  
+
     const currentTableId = sessionStorage.getItem("tableId");
     if (!currentTableId) {
       alert("Table ID missing. Cannot process checkout.");
       setIsPaymentProcessing(false);
       return;
     }
-  
+
     const firstOrder = orders[0];
     if (!firstOrder) {
       alert("No orders found to checkout.");
       setIsPaymentProcessing(false);
       return;
     }
-  
+
     try {
       // build form data for file + payload
       const formData = new FormData();
@@ -469,30 +422,25 @@ export default function OrderHistoryPage() {
       formData.append("orderId", firstOrder._id);
       formData.append("paymentMethod", "scan");
       formData.append("finalAmount", totalPrice);
-  
+
       const response = await fetch(`${APIBASE}/checkouts`, {
         method: "POST",
         body: formData, // 👈 don't set headers manually for FormData
       });
-  
+
       if (!response.ok) throw new Error("Failed to submit receipt");
-  
+
       const data = await response.json();
       console.log("✅ Receipt submitted:", data);
-  
-      alert(
-        `Receipt submitted successfully! Payment of ${totalPrice.toLocaleString(
-          "en-US"
-        )} MMK is being processed.`
-      );
-  
+
       // Reset and close
       setReceiptFile(null);
       setShowQRModal(false);
+      // Keep isPaymentProcessing true until admin marks as paid
+      // Do NOT setIsPaymentProcessing(false) here
     } catch (err) {
       console.error("❌ Receipt submission error:", err);
       alert("Failed to submit receipt. Please try again.");
-    } finally {
       setIsPaymentProcessing(false);
     }
   };
@@ -672,7 +620,7 @@ export default function OrderHistoryPage() {
                             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       }`}
                     >
-                      {isPaymentProcessing ? 'Payment is under review...' : 'Checkout'}
+                      {(isPaymentProcessing && !showPaymentSuccessModal) ? 'Payment is under review...' : 'Checkout'}
                     </button>
                   </div>
                 </div>
