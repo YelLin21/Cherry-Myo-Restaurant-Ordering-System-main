@@ -36,43 +36,25 @@ export default function OrderHistoryPage() {
       transports: ["websocket"],
     });
 
-    console.log("🔌 Socket connected to:", SOCKET_URL);
-
-    // Listen for order updates (when orders are marked as paid)
-    // socket.on("order:paid", (paidOrderId) => {
-    //   console.log("📦 Order marked as paid - PERMANENTLY removing from customer view:", paidOrderId);
-    //   console.log(sessionStorage.getItem("tableId") || "No table ID in session");
-    //   // Show payment success modal
-    //   setShowPaymentSuccessModal(true);
-      
-    //   // Reset payment processing state
-    //   setIsPaymentProcessing(false);
-      
-    //   setOrders((prev) => {
-    //     const filteredOrders = prev.filter(order => order._id !== paidOrderId);
-    //     console.log("📋 Orders before filtering:", prev.length, "After filtering:", filteredOrders.length);
-    //     console.log("🗑️ Order permanently removed from customer history");
-    //     return filteredOrders;
-    //   });
-    // });
+    console.log(" Socket connected to:", SOCKET_URL);
 
     socket.on("order:paid", ({ orderId, tableNumber }) => {
       const currentTableId = (sessionStorage.getItem("tableId") || "").trim();
     
       if (tableNumber?.toString().trim() !== currentTableId) {
-        console.log(`🚫 Ignored order:paid for Table ${tableNumber}`);
+        console.log(` Ignored order:paid for Table ${tableNumber}`);
         return;
       }
     
-      console.log("📦 Order marked as paid for this table:", orderId);
+      console.log(" Order marked as paid for this table:", orderId);
     
       setShowPaymentSuccessModal(true);
       setIsPaymentProcessing(false);
       
       setOrders((prev) => {
         const filteredOrders = prev.filter(order => order._id !== paidOrderId);
-        console.log("📋 Orders before filtering:", prev.length, "After filtering:", filteredOrders.length);
-        console.log("🗑️ Order permanently removed from customer history");
+        console.log(" Orders before filtering:", prev.length, "After filtering:", filteredOrders.length);
+        console.log(" Order permanently removed from customer history");
         return filteredOrders;
       });
     });
@@ -81,11 +63,11 @@ export default function OrderHistoryPage() {
     // Also listen for any order updates to double-check paid status
     socket.on("order:update", (updatedOrder) => {
       if (updatedOrder.paid === true) {
-        console.log("🔄 Order update detected - removing paid order:", updatedOrder._id);
+        console.log("Order update detected - removing paid order:", updatedOrder._id);
         setOrders((prev) => prev.filter(order => order._id !== updatedOrder._id));
       } else {
         // Update order status in real-time (including status changes like "sent")
-        console.log("🔄 Order status update detected:", updatedOrder._id, "->", updatedOrder.status);
+        console.log(" Order status update detected:", updatedOrder._id, "->", updatedOrder.status);
         setOrders((prev) =>
           prev.map((order) =>
             order._id === updatedOrder._id ? { ...order, status: updatedOrder.status } : order
@@ -98,16 +80,16 @@ export default function OrderHistoryPage() {
     socket.on("order:new", (newOrder) => {
       const currentTableId = (sessionStorage.getItem("tableId") || "").trim();
       if (newOrder.tableNumber?.toString().trim() === currentTableId) {
-        console.log("📦 New order received for this table:", newOrder);
+        console.log(" New order received for this table:", newOrder);
         setOrders((prev) => [newOrder, ...prev]);
       } else {
-        console.log("🚫 Ignored order for another table:", newOrder.tableNumber);
+        console.log(" Ignored order for another table:", newOrder.tableNumber);
       }
     });
 
     // Listen for orders ready for checkout
     socket.on("order:readyForCheckout", (updatedOrder) => {
-      console.log("🔄 Order ready for checkout:", updatedOrder);
+      console.log(" Order ready for checkout:", updatedOrder);
       setOrders((prev) =>
         prev.map((order) =>
           order._id === updatedOrder._id ? { ...order, status: updatedOrder.status } : order
@@ -116,11 +98,11 @@ export default function OrderHistoryPage() {
     });
 
     socket.on("connect", () => {
-      console.log("✅ Socket connected successfully");
+      console.log(" Socket connected successfully");
     });
 
     socket.on("disconnect", () => {
-      console.log("❌ Socket disconnected");
+      console.log(" Socket disconnected");
     });
 
     return () => {
@@ -138,8 +120,8 @@ export default function OrderHistoryPage() {
       const currentTableId = (sessionStorage.getItem("tableId") || "").trim();
       const now = new Date();
       
-      console.log("🔍 Current Table ID from sessionStorage:", currentTableId);
-      console.log("📋 All unpaid orders received:", unpaidOrders.map(order => ({
+      console.log(" Current Table ID from sessionStorage:", currentTableId);
+      console.log(" All unpaid orders received:", unpaidOrders.map(order => ({
         id: order._id.slice(-8),
         table: order.tableNumber,
         status: order.status,
@@ -158,13 +140,13 @@ export default function OrderHistoryPage() {
   
         const isWithin1Hour = now - orderTime <= 60 * 60 * 1000;
         
-        console.log(`📊 Order ${order._id.slice(-8)}: table=${order.tableNumber}, currentTable=${currentTableId}, match=${isSameTable}, today=${isToday}, within1h=${isWithin1Hour}`);
+        console.log(` Order ${order._id.slice(-8)}: table=${order.tableNumber}, currentTable=${currentTableId}, match=${isSameTable}, today=${isToday}, within1h=${isWithin1Hour}`);
   
         return isSameTable && isToday && isWithin1Hour;
       });
       
-      console.log("✅ Filtered table orders for table", currentTableId, ":", tableOrders.length);
-      console.log("📋 Detailed filtered orders:", tableOrders.map(order => ({
+      console.log(" Filtered table orders for table", currentTableId, ":", tableOrders.length);
+      console.log(" Detailed filtered orders:", tableOrders.map(order => ({
         id: order._id.slice(-8),
         table: order.tableNumber,
         status: order.status,
@@ -174,7 +156,7 @@ export default function OrderHistoryPage() {
       
       setOrders(tableOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
     } catch (err) {
-      console.error("❌ Error fetching order history:", err);
+      console.error(" Error fetching order history:", err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -259,7 +241,7 @@ export default function OrderHistoryPage() {
         return false;
       }
 
-      console.log(`✅ Order ${orderId} status updated to "${newStatus}" in backend`);
+      console.log(` Order ${orderId} status updated to "${newStatus}" in backend`);
       return true;
     } catch (error) {
       console.error('Error updating order status:', error);
@@ -274,7 +256,7 @@ export default function OrderHistoryPage() {
     orders.forEach(order => {
       if (order.status === "readyForCheckout" && !timers[order._id]) {
         timers[order._id] = setTimeout(async () => {
-          console.log(`🕐 Automatically updating order ${order._id} status to "sent" after 10 seconds`);
+          console.log(` Automatically updating order ${order._id} status to "sent" after 10 seconds`);
           
           // Update status in backend first
           const success = await updateOrderStatus(order._id, "sent");
@@ -371,11 +353,11 @@ export default function OrderHistoryPage() {
         if (!response.ok) throw new Error("Failed to record payment intent");
 
         const data = await response.json();
-        console.log("✅ Payment intent recorded:", data);
-        alert("Payment recorded! ✅ Waiting for admin approval.");
+        console.log(" Payment intent recorded:", data);
+        alert("Payment recorded!  Waiting for admin approval.");
         setShowPaymentModal(false);
     } catch (err) {
-        console.error("❌ Payment error:", err);
+        console.error(" Payment error:", err);
         alert("Payment failed. Please try again.");
     }
 };
@@ -413,20 +395,20 @@ export default function OrderHistoryPage() {
     try {
       // build form data for file + payload
       const formData = new FormData();
-      formData.append("slipImage", receiptFile); // 👈 your receipt file
+      formData.append("slipImage", receiptFile); //  your receipt file
       formData.append("orderId", firstOrder._id);
       formData.append("paymentMethod", "scan");
       formData.append("finalAmount", totalPrice);
 
       const response = await fetch(`${APIBASE}/checkouts`, {
         method: "POST",
-        body: formData, // 👈 don't set headers manually for FormData
+        body: formData, //  don't set headers manually for FormData
       });
 
       if (!response.ok) throw new Error("Failed to submit receipt");
 
       const data = await response.json();
-      console.log("✅ Receipt submitted:", data);
+      console.log(" Receipt submitted:", data);
 
       // Reset and close
       setReceiptFile(null);
@@ -434,7 +416,7 @@ export default function OrderHistoryPage() {
       // Keep isPaymentProcessing true until admin marks as paid
       // Do NOT setIsPaymentProcessing(false) here
     } catch (err) {
-      console.error("❌ Receipt submission error:", err);
+      console.error(" Receipt submission error:", err);
       alert("Failed to submit receipt. Please try again.");
       setIsPaymentProcessing(false);
     }
