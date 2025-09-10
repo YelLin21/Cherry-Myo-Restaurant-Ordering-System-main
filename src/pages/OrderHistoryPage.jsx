@@ -32,7 +32,6 @@ export default function OrderHistoryPage() {
   useEffect(() => {
     fetchOrderHistory();
     
-    // Set up real-time updates to remove paid orders
     const socket = io(SOCKET_URL, {
       transports: ["websocket"],
     });
@@ -40,31 +39,44 @@ export default function OrderHistoryPage() {
     console.log("🔌 Socket connected to:", SOCKET_URL);
 
     // Listen for order updates (when orders are marked as paid)
-    socket.on("order:paid", (paidOrderId) => {
-      console.log("📦 Order marked as paid - PERMANENTLY removing from customer view:", paidOrderId);
+    // socket.on("order:paid", (paidOrderId) => {
+    //   console.log("📦 Order marked as paid - PERMANENTLY removing from customer view:", paidOrderId);
+    //   console.log(sessionStorage.getItem("tableId") || "No table ID in session");
+    //   // Show payment success modal
+    //   setShowPaymentSuccessModal(true);
       
-      // Only show success modal if this order belongs to the current table
+    //   // Reset payment processing state
+    //   setIsPaymentProcessing(false);
+      
+    //   setOrders((prev) => {
+    //     const filteredOrders = prev.filter(order => order._id !== paidOrderId);
+    //     console.log("📋 Orders before filtering:", prev.length, "After filtering:", filteredOrders.length);
+    //     console.log("🗑️ Order permanently removed from customer history");
+    //     return filteredOrders;
+    //   });
+    // });
+
+    socket.on("order:paid", ({ orderId, tableNumber }) => {
       const currentTableId = (sessionStorage.getItem("tableId") || "").trim();
-      
-      // Reset payment processing state
+    
+      if (tableNumber?.toString().trim() !== currentTableId) {
+        console.log(`🚫 Ignored order:paid for Table ${tableNumber}`);
+        return;
+      }
+    
+      console.log("📦 Order marked as paid for this table:", orderId);
+    
+      setShowPaymentSuccessModal(true);
       setIsPaymentProcessing(false);
       
       setOrders((prev) => {
-        const paidOrder = prev.find(order => order._id === paidOrderId);
-        
-        if (paidOrder && paidOrder.tableNumber?.toString().trim() === currentTableId) {
-          console.log("✅ Payment success modal shown for table:", currentTableId);
-          setShowPaymentSuccessModal(true);
-        } else {
-          console.log("ℹ️ Payment success modal NOT shown - different table or order not found");
-        }
-        
         const filteredOrders = prev.filter(order => order._id !== paidOrderId);
         console.log("📋 Orders before filtering:", prev.length, "After filtering:", filteredOrders.length);
         console.log("🗑️ Order permanently removed from customer history");
         return filteredOrders;
       });
     });
+    
 
     // Also listen for any order updates to double-check paid status
     socket.on("order:update", (updatedOrder) => {
@@ -84,8 +96,13 @@ export default function OrderHistoryPage() {
 
     // Listen for new orders
     socket.on("order:new", (newOrder) => {
-      console.log("📦 New order received:", newOrder);
-      setOrders((prev) => [newOrder, ...prev]);
+      const currentTableId = (sessionStorage.getItem("tableId") || "").trim();
+      if (newOrder.tableNumber?.toString().trim() === currentTableId) {
+        console.log("📦 New order received for this table:", newOrder);
+        setOrders((prev) => [newOrder, ...prev]);
+      } else {
+        console.log("🚫 Ignored order for another table:", newOrder.tableNumber);
+      }
     });
 
     // Listen for orders ready for checkout
@@ -305,7 +322,6 @@ export default function OrderHistoryPage() {
 
   const totalPrice = orders.reduce((sum, order) => sum + calculateOrderTotal(order.items), 0);
 
-  // Check if checkout should be enabled based on order statuses
   const canCheckout = orders.length > 0 && orders.every(order => 
     order.status === 'sent' || order.status === 'readyForCheckout' || order.status === 'completed'
   );
@@ -371,27 +387,6 @@ export default function OrderHistoryPage() {
       setReceiptFile(file);
     }
   };
-
-  // const handleSubmitReceipt = () => {
-  //   if (!receiptFile) {
-  //     alert('Please upload your payment receipt first!');
-  //     return;
-  //   }
-
-  //   // Set payment processing state
-  //   setIsPaymentProcessing(true);
-
-  //   // Here you can implement the logic to submit the receipt
-  //   console.log('Submitting receipt:', receiptFile);
-  //   console.log('Payment amount:', totalPrice, 'MMK');
-    
-  //   // You can add API call here to upload the receipt
-  //   alert(`Receipt submitted successfully! Payment of ${totalPrice.toLocaleString('en-US')} MMK is being processed.`);
-    
-  //   // Reset and close modals
-  //   setReceiptFile(null);
-  //   setShowQRModal(false);
-  // };
 
   const handleSubmitReceipt = async () => {
     if (!receiptFile) {
