@@ -70,7 +70,7 @@ export default function OrderHistoryPage() {
       setIsPaymentProcessing(false);
       
       setOrders((prev) => {
-        const filteredOrders = prev.filter(order => order._id !== paidOrderId);
+        const filteredOrders = prev.filter(order => order._id !== orderId);
         console.log("📋 Orders before filtering:", prev.length, "After filtering:", filteredOrders.length);
         console.log("🗑️ Order permanently removed from customer history");
         return filteredOrders;
