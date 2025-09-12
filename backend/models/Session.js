@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const sessionSchema = new mongoose.Schema({
   tableId: { type: mongoose.Schema.Types.ObjectId, ref: "Table" },
@@ -6,4 +6,4 @@ const sessionSchema = new mongoose.Schema({
   expiresAt: Date,
 });
 
-module.exports = mongoose.model("Session", sessionSchema);
+export default mongoose.model("Session", sessionSchema);

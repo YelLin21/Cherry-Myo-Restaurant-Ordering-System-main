@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const OrderSchema = new mongoose.Schema({
   tableNumber: String,
@@ -6,17 +6,16 @@ const OrderSchema = new mongoose.Schema({
     {
       name: String,
       price: Number,
-      quantity: Number
-    }
+      quantity: Number,
+    },
   ],
   status: String,
   createdAt: Date,
   paid: {
     type: Boolean,
-    default: false
+    default: false,
   },
-  processedAt: Date
-
+  processedAt: Date,
 });
 
-module.exports = mongoose.model("Order", OrderSchema);
+export default mongoose.model("Order", OrderSchema);

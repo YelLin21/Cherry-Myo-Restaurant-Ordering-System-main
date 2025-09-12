@@ -1,18 +1,18 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const feedbackSchema = new mongoose.Schema(
   {
     name: {
-        type: String,
-        trim: true,
-        maxlength: 100,
-        default: "Anonymous",
+      type: String,
+      trim: true,
+      maxlength: 100,
+      default: "Anonymous",
     },
     rating: {
-        type: Number,
-        min: 1,
-        max: 5,
-        required: true, 
+      type: Number,
+      min: 1,
+      max: 5,
+      required: true,
     },
     comment: {
       type: String,
@@ -23,4 +23,4 @@ const feedbackSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Feedback", feedbackSchema);
+export default mongoose.model("Feedback", feedbackSchema);

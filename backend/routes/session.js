@@ -1,8 +1,8 @@
-const express = require("express");
+import express from "express";
+import Table from "../models/Table.js";
+import Session from "../models/Session.js";
+import { nanoid } from "nanoid";
 const router = express.Router();
-const Table = require("../models/Table");
-const Session = require("../models/Session"); // You’ll create this next
-const { nanoid } = require("nanoid");
 
 // Helper: Calculate distance between lat/lon points
 function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
@@ -39,7 +39,9 @@ router.post("/create", async (req, res) => {
   );
 
   if (distance > 20) {
-    return res.status(403).json({ error: "You must be near the table to order." });
+    return res
+      .status(403)
+      .json({ error: "You must be near the table to order." });
   }
 
   const sessionToken = nanoid();
@@ -56,4 +58,4 @@ router.post("/create", async (req, res) => {
   res.json({ session: sessionToken, expiresAt });
 });
 
-module.exports = router;
+export default router;
