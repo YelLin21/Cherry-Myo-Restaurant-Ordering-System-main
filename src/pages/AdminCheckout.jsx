@@ -155,7 +155,7 @@ function CheckoutContent({ user, handleLogout }) {
         
         safeSetState(setIsRefreshing, true);
         try {
-            console.log("🔄 Starting database sync...");
+            console.log("Starting database sync...");
             
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
@@ -173,8 +173,8 @@ function CheckoutContent({ user, handleLogout }) {
             
             if (response.ok) {
                 const dbOrders = await response.json();
-                console.log("🔄 Manual sync - Database orders:", dbOrders.length);
-                console.log("🔄 Raw database orders (readyForCheckout + sent):", dbOrders.map(o => ({
+                console.log("Manual sync - Database orders:", dbOrders.length);
+                console.log("Raw database orders (readyForCheckout + sent):", dbOrders.map(o => ({
                     id: o._id,
                     table: o.tableNumber,
                     status: o.status,
@@ -210,7 +210,7 @@ function CheckoutContent({ user, handleLogout }) {
                 if (isMountedRef.current) {
                     safeSetState(setCheckoutOrders, groupedOrders);
                     localStorage.setItem("checkoutOrders", JSON.stringify(groupedOrders));
-                    console.log("✅ Successfully synced with database");
+                    console.log("Successfully synced with database");
                 }
             } else {
                 console.error("❌ Failed to fetch from /orders/checkout, status:", response.status);
@@ -260,7 +260,7 @@ function CheckoutContent({ user, handleLogout }) {
 
             if (isMountedRef.current) {
                 safeSetState(setPayments, map);
-                console.log("✅ Payments synced:", map);
+                console.log("Payments synced:", map);
             }
           } else {
             throw new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -296,7 +296,7 @@ function CheckoutContent({ user, handleLogout }) {
             const data = await res.json();
             if (isMountedRef.current) {
                 safeSetState(setCheckouts, data);
-                console.log("✅ Checkouts fetched:", data);
+                console.log("Checkouts fetched:", data);
             }
           } else {
             throw new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -373,8 +373,8 @@ function CheckoutContent({ user, handleLogout }) {
             socketRef.current = socket;
 
             socket.on("connect", () => {
-                console.log("🧾 Admin socket connected:", socket.id);
-                console.log("🧾 Socket URL:", SOCKET_URL);
+                console.log("Admin socket connected:", socket.id);
+                console.log("Socket URL:", SOCKET_URL);
             });
 
             socket.on("disconnect", (reason) => {
@@ -386,7 +386,7 @@ function CheckoutContent({ user, handleLogout }) {
             });
 
             socket.on("reconnect", (attemptNumber) => {
-                console.log("🔄 Socket reconnected after", attemptNumber, "attempts");
+                console.log("Socket reconnected after", attemptNumber, "attempts");
             });
 
             socket.on("reconnect_error", (error) => {
@@ -406,14 +406,14 @@ function CheckoutContent({ user, handleLogout }) {
         // Listen for new orders ready for checkout
         socket.on("order:readyForCheckout", (order) => {
             try {
-                console.log("📥 Checkout order received:", order);
-                console.log("📱 Order items:", order.items);
-                console.log("📱 Order table:", order.tableNumber);
-                console.log("📱 Order status:", order.status);
-                console.log("📱 Order processedAt:", order.processedAt);
+                console.log("Checkout order received:", order);
+                console.log("Order items:", order.items);
+                console.log("Order table:", order.tableNumber);
+                console.log("Order status:", order.status);
+                console.log("Order processedAt:", order.processedAt);
 
                 setCheckoutOrders((prev) => {
-                    console.log("📋 Current checkout orders before update:", prev.length);
+                    console.log("Current checkout orders before update:", prev.length);
 
                     const existingTableOrderIndex = prev.findIndex(
                         existingOrder => existingOrder.tableNumber === order.tableNumber
@@ -424,7 +424,7 @@ function CheckoutContent({ user, handleLogout }) {
                         updated = [...prev];
                         const existingOrder = updated[existingTableOrderIndex];
 
-                        console.log("🔄 Found existing order for table", order.tableNumber, "- merging");
+                        console.log("Found existing order for table", order.tableNumber, "- merging");
 
                         const combinedItems = [...existingOrder.items, ...order.items];
 
@@ -438,18 +438,18 @@ function CheckoutContent({ user, handleLogout }) {
                             ] // Track all order IDs for this table
                         };
 
-                        console.log(`🔄 Merged order ${order._id} with existing table ${order.tableNumber} order`);
+                        console.log(`Merged order ${order._id} with existing table ${order.tableNumber} order`);
                     } else {
                         // Add as new table order
                         updated = [...prev, {
                             ...order,
                             orderIds: [order._id] // Track the original order ID
                         }];
-                        console.log(`➕ Added new order for table ${order.tableNumber}`);
+                        console.log(`Added new order for table ${order.tableNumber}`);
                     }
 
-                    console.log("📱 Updated checkout orders count:", updated.length);
-                    console.log("📱 Updated checkout orders:", updated.map(o => ({
+                    console.log("Updated checkout orders count:", updated.length);
+                    console.log("Updated checkout orders:", updated.map(o => ({
                         id: o._id,
                         table: o.tableNumber,
                         status: o.status,
@@ -459,14 +459,14 @@ function CheckoutContent({ user, handleLogout }) {
                     return updated;
                 });
             } catch (error) {
-                console.error("❌ Error handling order:readyForCheckout:", error);
+                console.error("Error handling order:readyForCheckout:", error);
             }
         });
 
         // Listen for order deletions/removals
         socket.on("order:deleted", (deletedOrderId) => {
             try {
-                console.log("🗑️ Order deleted:", deletedOrderId);
+                console.log("Order deleted:", deletedOrderId);
                 setCheckoutOrders((prev) => {
                     const updated = prev.filter(order => {
                         // Remove if this is the main order ID
@@ -496,13 +496,13 @@ function CheckoutContent({ user, handleLogout }) {
         // Listen for order updates (including status changes that might remove from checkout)
         socket.on("order:update", (updatedOrder) => {
             try {
-                console.log("🔄 Order update received:", updatedOrder);
+                console.log("Order update received:", updatedOrder);
 
                 // Keep orders that have status "readyForCheckout" or "sent" and are not paid
                 const shouldKeepInCheckout = (updatedOrder.status === "readyForCheckout" || updatedOrder.status === "sent") && !updatedOrder.paid;
 
                 if (!shouldKeepInCheckout) {
-                    console.log(`🔄 Order ${updatedOrder._id} status changed to ${updatedOrder.status} (paid: ${updatedOrder.paid}), removing from checkout`);
+                    console.log(`Order ${updatedOrder._id} status changed to ${updatedOrder.status} (paid: ${updatedOrder.paid}), removing from checkout`);
                     setCheckoutOrders((prev) => {
                         const updated = prev.filter(order => {
                             if (order._id === updatedOrder._id) {
@@ -544,14 +544,14 @@ function CheckoutContent({ user, handleLogout }) {
                     });
                 }
             } catch (error) {
-                console.error("❌ Error handling order:update:", error);
+                console.error("Error handling order:update:", error);
             }
         });
 
         // Listen for paid orders (should be removed from checkout)
         socket.on("order:paid", (paidOrderId) => {
             try {
-                console.log("💰 Order marked as paid, removing from checkout:", paidOrderId);
+                console.log("Order marked as paid, removing from checkout:", paidOrderId);
                 setCheckoutOrders((prev) => {
                     const updated = prev.filter(order => {
                         if (order._id === paidOrderId) {
@@ -580,10 +580,10 @@ function CheckoutContent({ user, handleLogout }) {
                 if (socketRef.current) {
                     socketRef.current.removeAllListeners();
                     socketRef.current.disconnect();
-                    console.log("🔌 Socket disconnected and cleaned up");
+                    console.log(" Socket disconnected and cleaned up");
                 }
             } catch (error) {
-                console.error("❌ Error cleaning up socket:", error);
+                console.error(" Error cleaning up socket:", error);
             }
         };
     }, []);
@@ -635,7 +635,7 @@ function CheckoutContent({ user, handleLogout }) {
             const finalTotal = calculateFinalTotal(tableOrder);
 
             if (!paymentMethod) {
-                alert('⚠️ Please select a payment method (QR Scan or Cash)');
+                alert(' Please select a payment method (QR Scan or Cash)');
                 return;
             }
 
@@ -682,7 +682,7 @@ function CheckoutContent({ user, handleLogout }) {
                 throw new Error(`Failed to mark ${failedResponses.length} order(s) as paid`);
             }
 
-            console.log("✅ All orders marked as paid successfully for table", tableOrder.tableNumber);
+            console.log(" All orders marked as paid successfully for table", tableOrder.tableNumber);
 
             // Remove from local checkout orders list
             setCheckoutOrders((prev) => {
@@ -712,16 +712,16 @@ function CheckoutContent({ user, handleLogout }) {
             // Generate PDF receipt automatically after successful payment
             try {
                 generateReceiptPDF(tableOrder);
-                console.log("📄 Receipt PDF generated successfully");
+                console.log("Receipt PDF generated successfully");
             } catch (pdfError) {
                 console.error("Error generating PDF receipt:", pdfError);
                 // Continue even if PDF generation fails
             }
 
-            alert(`💰 Table ${tableOrder.tableNumber} - ${orderCount} ${orderText} marked as paid\n💳 ${paymentText}\n📄 Receipt downloaded\n✅ Removed from customer order history.`);
+            alert(`Table ${tableOrder.tableNumber} - ${orderCount} ${orderText} marked as paid\n💳 ${paymentText}\nReceipt downloaded\n Removed from customer order history.`);
         } catch (error) {
             console.error('Error marking orders as paid:', error);
-            alert('❌ Failed to mark orders as paid. Please try again.');
+            alert(' Failed to mark orders as paid. Please try again.');
         }
     };
 
@@ -788,7 +788,6 @@ function CheckoutContent({ user, handleLogout }) {
         doc.setTextColor(220, 38, 127); // Cherry pink color
         doc.text('Cherry Myo Restaurant', 105, 35, { align: 'center' });
         
-        // Use romanized Myanmar restaurant name instead of Unicode
         doc.setFontSize(12);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(100, 100, 100);
@@ -947,8 +946,8 @@ function CheckoutContent({ user, handleLogout }) {
     };
 
     // Debug log for checkout orders
-    console.log("🧾 Current checkout orders:", checkoutOrders);
-    console.log("📱 Orders count:", checkoutOrders.length);
+    console.log("Current checkout orders:", checkoutOrders);
+    console.log("Orders count:", checkoutOrders.length);
 
     return (
         <div className={`min-h-screen transition-all duration-500 relative overflow-hidden ${darkMode
@@ -1002,7 +1001,7 @@ function CheckoutContent({ user, handleLogout }) {
                                 </h1>
                                 <p className={`text-base font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'
                                     }`}>
-                                    🏪 Restaurant Payment Management
+                                    Restaurant Payment Management
                                 </p>
                             </div>
                         </div>
@@ -1138,16 +1137,7 @@ function CheckoutContent({ user, handleLogout }) {
                                                             Table {order.tableNumber}
                                                         </h2>
                                                         <div className="flex items-center gap-2 mt-1">
-                                                        {/* {(() => {
-                                                            const firstPayment = order.orderIds?.map(id => payments[id.toString()]).find(Boolean);
-                                                            if (!firstPayment) return null;
-
-                                                            return (
-                                                                <span className="ml-3 px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                                                {firstPayment === "cash" ? "💵 Pay with Cash" : "📱 Scan"}
-                                                                </span>
-                                                            );
-                                                            })()} */}
+                                                        
 
 {(() => {
   const firstPayment = Array.isArray(order.orderIds)

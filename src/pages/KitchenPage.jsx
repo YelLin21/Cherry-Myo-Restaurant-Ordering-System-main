@@ -9,10 +9,10 @@ function GoogleIcon({ className = "w-6 h-6" }) {
   return (
     <svg className={className} viewBox="0 0 48 48">
       <g>
-        <path fill="#4285F4" d="M43.6 20.5h-1.9V20H24v8h11.3c-1.6 4.3-5.7 7-10.3 7-6.1 0-11-4.9-11-11s4.9-11 11-11c2.6 0 5 .9 6.9 2.4l6-6C34.5 6.5 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 19.7-8 19.7-20 0-1.3-.1-2.2-.3-3.5z"/>
-        <path fill="#34A853" d="M6.3 14.7l6.6 4.8C14.5 16.1 18.8 13 24 13c2.6 0 5 .9 6.9 2.4l6-6C34.5 6.5 29.6 4 24 4 15.6 4 8.1 9.7 6.3 14.7z"/>
-        <path fill="#FBBC05" d="M24 44c5.4 0 10.3-1.8 14.1-4.9l-6.5-5.3C29.6 35.5 27 36.5 24 36.5c-4.6 0-8.7-2.7-10.3-7l-6.6 5.1C8.1 38.3 15.6 44 24 44z"/>
-        <path fill="#EA4335" d="M43.6 20.5h-1.9V20H24v8h11.3c-1.1 3-3.6 5.2-6.3 6.3l6.5 5.3C40.7 36.2 44 31.7 44 24c0-1.3-.1-2.2-.4-3.5z"/>
+        <path fill="#4285F4" d="M43.6 20.5h-1.9V20H24v8h11.3c-1.6 4.3-5.7 7-10.3 7-6.1 0-11-4.9-11-11s4.9-11 11-11c2.6 0 5 .9 6.9 2.4l6-6C34.5 6.5 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 19.7-8 19.7-20 0-1.3-.1-2.2-.3-3.5z" />
+        <path fill="#34A853" d="M6.3 14.7l6.6 4.8C14.5 16.1 18.8 13 24 13c2.6 0 5 .9 6.9 2.4l6-6C34.5 6.5 29.6 4 24 4 15.6 4 8.1 9.7 6.3 14.7z" />
+        <path fill="#FBBC05" d="M24 44c5.4 0 10.3-1.8 14.1-4.9l-6.5-5.3C29.6 35.5 27 36.5 24 36.5c-4.6 0-8.7-2.7-10.3-7l-6.6 5.1C8.1 38.3 15.6 44 24 44z" />
+        <path fill="#EA4335" d="M43.6 20.5h-1.9V20H24v8h11.3c-1.1 3-3.6 5.2-6.3 6.3l6.5 5.3C40.7 36.2 44 31.7 44 24c0-1.3-.1-2.2-.4-3.5z" />
       </g>
     </svg>
   );
@@ -66,7 +66,7 @@ export default function KitchenPage() {
   useEffect(() => {
     const rememberedAdmin = localStorage.getItem('rememberAdmin');
     const rememberedEmail = localStorage.getItem('adminEmail');
-    
+
     if (rememberedAdmin === 'true' && rememberedEmail) {
       setEmail(rememberedEmail);
       setRememberMe(true);
@@ -77,14 +77,14 @@ export default function KitchenPage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       console.log("Auth state changed:", user?.email);
-      
+
       if (user) {
         // Check if the user email is in the admin list
         if (!ADMIN_EMAIL.includes(user.email)) {
           console.log("Non-admin user detected, signing out:", user.email);
           setLoginError("You are not authorized to access the kitchen page.");
           setUser(null);
-          
+
           // Prevent multiple signOut calls
           if (!isSigningOut) {
             setIsSigningOut(true);
@@ -99,7 +99,7 @@ export default function KitchenPage() {
           setAuthLoading(false);
           return;
         }
-        
+
         // User is authorized
         console.log("Admin user authenticated:", user.email);
         setUser(user);
@@ -109,10 +109,10 @@ export default function KitchenPage() {
         setUser(null);
         setIsSigningOut(false); // Reset signing out state
       }
-      
+
       setAuthLoading(false);
     });
-    
+
     return () => unsubscribe();
   }, [isSigningOut]);
 
@@ -129,7 +129,7 @@ export default function KitchenPage() {
 
   useEffect(() => {
     if (!user) return;
-    
+
     const processedIds = getProcessedIds();
 
     // Initial fetch
@@ -191,14 +191,14 @@ export default function KitchenPage() {
     try {
       setLoginError("");
       const result = await signInWithGoogle();
-      
+
       // Check if the signed-in user is an admin
       if (!ADMIN_EMAIL.includes(result.user.email)) {
         setLoginError("You are not authorized to access the kitchen page.");
         await signOut(auth);
         return;
       }
-      
+
       console.log("Google login successful for admin:", result.user.email);
     } catch (error) {
       console.error("Login error:", error);
@@ -215,24 +215,24 @@ export default function KitchenPage() {
   const handleEmailLogin = async (e) => {
     e.preventDefault();
     setLoginError("");
-    
+
     if (!email || !password) {
       setLoginError("Please enter both email and password.");
       return;
     }
-    
+
     // Check if email is in admin list before attempting login
     if (!ADMIN_EMAIL.includes(email)) {
       setLoginError("You are not authorized to access the kitchen page.");
       return;
     }
-    
+
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      
+
       console.log("Email login successful for admin:", user.email);
-      
+
       if (rememberMe) {
         localStorage.setItem('rememberAdmin', 'true');
         localStorage.setItem('adminEmail', email);
@@ -240,7 +240,7 @@ export default function KitchenPage() {
         localStorage.removeItem('rememberAdmin');
         localStorage.removeItem('adminEmail');
       }
-      
+
     } catch (error) {
       console.error("Email login error:", error);
       switch (error.code) {
@@ -360,7 +360,7 @@ export default function KitchenPage() {
                 animationTimingFunction: 'linear'
               }}
             >
-              <div 
+              <div
                 className="text-red-500 opacity-60"
                 style={{
                   fontSize: `${12 + Math.random() * 8}px`,
@@ -381,18 +381,18 @@ export default function KitchenPage() {
             100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
           }
         `}</style>
-        
+
         <div className="relative z-10 w-full max-w-md p-8 rounded-3xl shadow-2xl backdrop-blur-lg border bg-white/80 border-pink-200/50 shadow-pink-500/20 transform hover:scale-105 transition-all duration-300 hover:shadow-xl">
-          
+
           <div className="flex flex-col items-center mb-8">
             <div className="w-24 h-24 rounded-full bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center mb-4 shadow-lg relative overflow-hidden">
               <span className="text-white text-2xl font-bold">👨‍🍳</span>
               <div className="absolute inset-0 bg-gradient-to-t from-red-600/20 to-transparent"></div>
             </div>
-            <h1 className="text-4xl font-bold mb-2 text-red-700" style={{fontFamily: 'ui-rounded, system-ui, sans-serif'}}>
+            <h1 className="text-4xl font-bold mb-2 text-red-700" style={{ fontFamily: 'ui-rounded, system-ui, sans-serif' }}>
               Cherry Myo's Kitchen
             </h1>
-            <h2 className="text-xl font-semibold mb-1 text-red-700" style={{fontFamily: 'ui-rounded, system-ui, sans-serif'}}>
+            <h2 className="text-xl font-semibold mb-1 text-red-700" style={{ fontFamily: 'ui-rounded, system-ui, sans-serif' }}>
               Admin Only
             </h2>
           </div>
@@ -493,7 +493,7 @@ export default function KitchenPage() {
             <button
               onClick={handleEmailLogin}
               className="w-full bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-red-500/50 flex items-center justify-center gap-2 text-lg"
-              style={{fontFamily: 'ui-rounded, system-ui, sans-serif'}}
+              style={{ fontFamily: 'ui-rounded, system-ui, sans-serif' }}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -513,7 +513,7 @@ export default function KitchenPage() {
             <button
               onClick={handleLogin}
               className="w-full bg-white hover:bg-gray-50 text-gray-900 font-semibold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-gray-500/50 flex items-center justify-center gap-3 text-lg border border-gray-300"
-              style={{fontFamily: 'ui-rounded, system-ui, sans-serif'}}
+              style={{ fontFamily: 'ui-rounded, system-ui, sans-serif' }}
             >
               <GoogleIcon className="w-6 h-6" />
               <span>Continue with Google</span>
@@ -542,7 +542,7 @@ export default function KitchenPage() {
               animationTimingFunction: 'ease-in-out'
             }}
           >
-            <div 
+            <div
               className="text-red-400"
               style={{
                 fontSize: `${20 + Math.random() * 15}px`,
@@ -570,7 +570,7 @@ export default function KitchenPage() {
           animation: pulse-glow 2s infinite;
         }
       `}</style>
-      
+
       <div className="relative z-10 p-6">
         {/* Header Section with Cherry Theme */}
         <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-red-200/50 p-8 mb-8 transform hover:scale-[1.02] transition-all duration-300">
@@ -586,8 +586,8 @@ export default function KitchenPage() {
                 </div>
               </div>
               <div>
-                <h1 className="text-4xl lg:text-5xl font-bold mb-2 text-red-700" 
-                    style={{fontFamily: 'ui-rounded, system-ui, sans-serif'}}>
+                <h1 className="text-4xl lg:text-5xl font-bold mb-2 text-red-700"
+                  style={{ fontFamily: 'ui-rounded, system-ui, sans-serif' }}>
                   Cherry Myo's Kitchen
                 </h1>
                 <p className="text-lg text-red-700 font-medium flex items-center gap-2">
@@ -597,18 +597,26 @@ export default function KitchenPage() {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-6 bg-white/60 backdrop-blur-sm rounded-2xl px-6 py-4 border border-red-200">
-              <div className="text-center">
-                <div className="font-semibold text-red-700 text-lg">
-                  {user.displayName || user.email.split('@')[0]}
-                </div>
+              {/* Admin Info */}
+
+
+              <div className="w-10 h-10 bg-gradient-to-r from-red-500 to-pink-500 rounded-full flex items-center justify-center">
+                <span className="text-white text-sm font-bold">
+                  {user.displayName?.charAt(0) || user.email?.charAt(0)}
+                </span>
               </div>
+              <div className="flex flex-col justify-center">
+                <span className="font-semibold text-sm leading-tight">{user.displayName || 'Admin'}</span>
+                <span className="text-xs opacity-75 leading-tight">{user.email}</span>
+              </div>
+
               <div className="w-px h-12 bg-red-200"></div>
               <button
                 onClick={handleLogout}
                 className="px-6 py-3 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-red-500/50 flex items-center gap-2"
-                style={{fontFamily: 'ui-rounded, system-ui, sans-serif'}}
+                style={{ fontFamily: 'ui-rounded, system-ui, sans-serif' }}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -672,7 +680,7 @@ export default function KitchenPage() {
                     <span className="text-white text-2xl font-bold">#{order.tableNumber}</span>
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold text-red-700 mb-1" style={{fontFamily: 'ui-rounded, system-ui, sans-serif'}}>
+                    <h2 className="text-2xl font-bold text-red-700 mb-1" style={{ fontFamily: 'ui-rounded, system-ui, sans-serif' }}>
                       Table {order.tableNumber}
                     </h2>
                     <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -681,7 +689,7 @@ export default function KitchenPage() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="text-right bg-red-50 rounded-2xl p-4 border border-red-200">
                   <div className="text-xs text-red-600 font-medium mb-1">Order Time</div>
                   <div className="text-sm font-bold text-red-800">
@@ -737,16 +745,16 @@ export default function KitchenPage() {
                 <button
                   onClick={() => handleMarkAsProcessing(order._id)}
                   className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 transform hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-red-500/50 flex items-center justify-center gap-3 text-lg"
-                  style={{fontFamily: 'ui-rounded, system-ui, sans-serif'}}
+                  style={{ fontFamily: 'ui-rounded, system-ui, sans-serif' }}
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <span>Order Complete</span>
-                  
+
                 </button>
               </div>
-              
+
               {/* Decorative Cherry */}
               <div className="absolute top-4 right-4 text-red-400 opacity-20 text-2xl animate-pulse">
                 🍒
