@@ -9,7 +9,7 @@ dotenv.config({ path: "../.env" });
 const app = express();
 const server = http.createServer(app);
 
-app.get("/health", (_, res) => res.send("ok"));
+app.get("/health", (_, res) => res.send("ok now: (from script)"));
 
 const allowedOrigins = [
   "http://localhost:5173",
