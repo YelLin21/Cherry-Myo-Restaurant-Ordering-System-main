@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const tableSchema = new mongoose.Schema({
   number: Number,
@@ -6,4 +6,4 @@ const tableSchema = new mongoose.Schema({
   longitude: Number,
 });
 
-module.exports = mongoose.model("Table", tableSchema);
+export default mongoose.model("Table", tableSchema);
