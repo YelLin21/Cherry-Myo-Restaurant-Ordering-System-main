@@ -11,10 +11,16 @@ const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
 
 export default function AdminPromotionMenuPage() {
   const [menuItems, setMenuItems] = useState([]);
+  const [allMenuItems, setAllMenuItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [showPromotionForm, setShowPromotionForm] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [selectedItems, setSelectedItems] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [promotionSearchQuery, setPromotionSearchQuery] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     price: "",
@@ -38,7 +44,12 @@ export default function AdminPromotionMenuPage() {
       const res = await fetch(`${APIBASE}/menu`);
       if (!res.ok) throw new Error("Failed to fetch menu items");
       const data = await res.json();
-      const promotionItems = data.filter(item => item.category === "Promotion");
+      
+      // Store all menu items for promotion selection
+      setAllMenuItems(data);
+      
+      // Filter items that have promotions (promotion > 0)
+      const promotionItems = data.filter(item => item.promotion && item.promotion > 0);
       setMenuItems(promotionItems);
     } catch (err) {
       setError(err.message);
@@ -150,6 +161,120 @@ export default function AdminPromotionMenuPage() {
     }
   };
 
+  const handlePromotionToggle = (item) => {
+    const isSelected = selectedItems.find(selected => selected._id === item._id);
+    if (isSelected) {
+      setSelectedItems(selectedItems.filter(selected => selected._id !== item._id));
+    } else {
+      setSelectedItems([...selectedItems, { ...item, promotionPrice: "" }]);
+    }
+  };
+
+  const handlePromotionPriceChange = (itemId, promotionPrice) => {
+    setSelectedItems(selectedItems.map(item => 
+      item._id === itemId ? { ...item, promotionPrice } : item
+    ));
+  };
+
+  const handleSavePromotions = async () => {
+    try {
+      const validItems = selectedItems.filter(item => 
+        item.promotionPrice && parseFloat(item.promotionPrice) > 0
+      );
+
+      if (validItems.length === 0) {
+        alert("Please set promotion prices for selected items.");
+        return;
+      }
+
+      for (const item of validItems) {
+        const promotionPrice = parseFloat(item.promotionPrice);
+        
+        if (promotionPrice >= item.price) {
+          alert(`Promotion price for "${item.name}" must be less than original price (${item.price} MMK)`);
+          return;
+        }
+
+        await fetch(`${APIBASE}/menu/${item._id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ promotion: promotionPrice }),
+        });
+      }
+
+      setShowPromotionForm(false);
+      setSelectedItems([]);
+      fetchPromotionMenuItems();
+      alert("Promotions saved successfully!");
+    } catch (err) {
+      alert("Error: " + err.message);
+    }
+  };
+
+  const handleRemovePromotion = async (id) => {
+    if (!confirm("Are you sure you want to remove this promotion?")) return;
+    
+    try {
+      const res = await fetch(`${APIBASE}/menu/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ promotion: 0 }),
+      });
+      
+      if (!res.ok) throw new Error("Failed to remove promotion");
+      
+      fetchPromotionMenuItems();
+    } catch (err) {
+      alert("Error: " + err.message);
+    }
+  };
+
+  // Filter menu items based on search query and category
+  const getFilteredMenuItems = () => {
+    let filtered = allMenuItems.filter(item => 
+      item.category !== "Promotion" && 
+      (!item.promotion || item.promotion === 0)
+    );
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(item =>
+        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.category.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Filter by category
+    if (selectedCategory !== "All") {
+      filtered = filtered.filter(item => item.category === selectedCategory);
+    }
+
+    return filtered;
+  };
+
+  // Get unique categories for filter dropdown
+  const getAvailableCategories = () => {
+    const categories = [...new Set(allMenuItems
+      .filter(item => item.category !== "Promotion" && (!item.promotion || item.promotion === 0))
+      .map(item => item.category))];
+    return ["All", ...categories];
+  };
+
+  // Filter promotion items based on search query
+  const getFilteredPromotionItems = () => {
+    if (!promotionSearchQuery.trim()) {
+      return menuItems;
+    }
+    return menuItems.filter(item =>
+      item.name.toLowerCase().includes(promotionSearchQuery.toLowerCase()) ||
+      item.category.toLowerCase().includes(promotionSearchQuery.toLowerCase())
+    );
+  };
+
   const resetForm = () => {
     setFormData({
       name: "",
@@ -219,6 +344,11 @@ export default function AdminPromotionMenuPage() {
     });
   };
 
+  // Calculate discount percentage
+  const calculateDiscount = (originalPrice, promotionPrice) => {
+    return Math.round(((originalPrice - promotionPrice) / originalPrice) * 100);
+  };
+
   return (
     <AdminAuth>
       {({ user, handleLogout }) => (
@@ -227,14 +357,25 @@ export default function AdminPromotionMenuPage() {
           handleLogout={handleLogout}
           menuItems={menuItems}
           setMenuItems={setMenuItems}
+          allMenuItems={allMenuItems}
           loading={loading}
           setLoading={setLoading}
           error={error}
           setError={setError}
           showForm={showForm}
           setShowForm={setShowForm}
+          showPromotionForm={showPromotionForm}
+          setShowPromotionForm={setShowPromotionForm}
           editingItem={editingItem}
           setEditingItem={setEditingItem}
+          selectedItems={selectedItems}
+          setSelectedItems={setSelectedItems}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          selectedCategory={selectedCategory}
+          setSelectedCategory={setSelectedCategory}
+          promotionSearchQuery={promotionSearchQuery}
+          setPromotionSearchQuery={setPromotionSearchQuery}
           formData={formData}
           setFormData={setFormData}
           selectedFile={selectedFile}
@@ -246,11 +387,19 @@ export default function AdminPromotionMenuPage() {
           handleEdit={handleEdit}
           handleDelete={handleDelete}
           handleStockToggle={handleStockToggle}
+          handlePromotionToggle={handlePromotionToggle}
+          handlePromotionPriceChange={handlePromotionPriceChange}
+          handleSavePromotions={handleSavePromotions}
+          handleRemovePromotion={handleRemovePromotion}
+          getFilteredMenuItems={getFilteredMenuItems}
+          getAvailableCategories={getAvailableCategories}
+          getFilteredPromotionItems={getFilteredPromotionItems}
           resetForm={resetForm}
           handleCancel={handleCancel}
           handleFileSelect={handleFileSelect}
           handleImageUrlChange={handleImageUrlChange}
           convertFileToBase64={convertFileToBase64}
+          calculateDiscount={calculateDiscount}
           navigate={navigate}
           darkMode={darkMode}
           totalItems={totalItems}
@@ -265,14 +414,25 @@ function AdminPromotionMenuContent({
   handleLogout, 
   menuItems, 
   setMenuItems, 
+  allMenuItems,
   loading, 
   setLoading, 
   error, 
   setError, 
   showForm, 
   setShowForm, 
+  showPromotionForm,
+  setShowPromotionForm,
   editingItem, 
   setEditingItem, 
+  selectedItems,
+  setSelectedItems,
+  searchQuery,
+  setSearchQuery,
+  selectedCategory,
+  setSelectedCategory,
+  promotionSearchQuery,
+  setPromotionSearchQuery,
   formData, 
   setFormData, 
   selectedFile, 
@@ -284,11 +444,19 @@ function AdminPromotionMenuContent({
   handleEdit, 
   handleDelete, 
   handleStockToggle,
+  handlePromotionToggle,
+  handlePromotionPriceChange,
+  handleSavePromotions,
+  handleRemovePromotion,
+  getFilteredMenuItems,
+  getAvailableCategories,
+  getFilteredPromotionItems,
   resetForm, 
   handleCancel, 
   handleFileSelect, 
   handleImageUrlChange, 
   convertFileToBase64, 
+  calculateDiscount,
   navigate, 
   darkMode, 
   totalItems 
@@ -306,17 +474,28 @@ function AdminPromotionMenuContent({
     });
 
     socket.on("menu:new", (newItem) => {
-      if (newItem.category === "Promotion") {
-        setMenuItems((prev) => [...prev, newItem]);
-      }
+      // Update all menu items
+      setMenuItems(prev => {
+        const updatedItems = [...prev];
+        const existingIndex = updatedItems.findIndex(item => item._id === newItem._id);
+        if (existingIndex >= 0) {
+          updatedItems[existingIndex] = newItem;
+        } else if (newItem.promotion && newItem.promotion > 0) {
+          updatedItems.push(newItem);
+        }
+        return updatedItems;
+      });
     });
 
     socket.on("menu:update", (updatedItem) => {
-      if (updatedItem.category === "Promotion") {
-        setMenuItems((prev) =>
-          prev.map((item) => (item._id === updatedItem._id ? updatedItem : item))
-        );
-      }
+      // Update promotion menu items
+      setMenuItems((prev) => {
+        const filtered = prev.filter(item => item._id !== updatedItem._id);
+        if (updatedItem.promotion && updatedItem.promotion > 0) {
+          return [...filtered, updatedItem];
+        }
+        return filtered;
+      });
     });
 
     socket.on("menu:delete", (id) => {
@@ -413,7 +592,7 @@ function AdminPromotionMenuContent({
                 </div>
                 
                 <button
-                  onClick={() => setShowForm(true)}
+                  onClick={() => setShowPromotionForm(true)}
                   className="group relative px-6 py-3 h-14 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-red-500/50 overflow-hidden min-w-fit whitespace-nowrap flex items-center justify-center"
                 >
                   <div className="absolute inset-0 shimmer"></div>
@@ -480,8 +659,57 @@ function AdminPromotionMenuContent({
 
           {/* Enhanced Menu Items Grid */}
           {!loading && !error && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-              {menuItems.map((item, index) => (
+            <>
+              {/* Search bar for promotions */}
+              {menuItems.length > 0 && (
+                <div className={`mb-8 p-6 rounded-2xl backdrop-blur-lg border transition-all duration-500 ${
+                  darkMode 
+                    ? 'bg-gray-800/30 border-gray-700/50' 
+                    : 'bg-white/70 border-gray-200/50'
+                }`}>
+                  <div className="relative max-w-md mx-auto">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <svg className={`w-5 h-5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </div>
+                    <input
+                      type="text"
+                      value={promotionSearchQuery}
+                      onChange={(e) => setPromotionSearchQuery(e.target.value)}
+                      placeholder="Search promotions..."
+                      className={`w-full pl-10 pr-10 py-3 rounded-xl border-2 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-red-500/20 ${
+                        darkMode 
+                          ? "bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 focus:border-red-500"
+                          : "bg-white/80 border-gray-300 text-gray-900 placeholder-gray-500 focus:border-red-500"
+                      }`}
+                    />
+                    {promotionSearchQuery && (
+                      <button
+                        onClick={() => setPromotionSearchQuery("")}
+                        className={`absolute inset-y-0 right-0 pr-3 flex items-center ${
+                          darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                  
+                  {promotionSearchQuery && (
+                    <div className="text-center mt-4">
+                      <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Showing {getFilteredPromotionItems().length} of {menuItems.length} promotions
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                {getFilteredPromotionItems().map((item, index) => (
                 <div
                   key={item._id}
                   className={`group relative rounded-2xl shadow-xl overflow-hidden transition-all duration-500 hover:shadow-2xl transform hover:scale-105 hover:-translate-y-2 ${
@@ -493,13 +721,16 @@ function AdminPromotionMenuContent({
                     animationDelay: `${index * 100}ms`
                   }}
                 >
-                  {/* Promotion Badge */}
-                  <div className="absolute top-4 left-4 z-20">
+                  {/* Promotion Badge with Discount Percentage */}
+                  <div className="absolute top-4 left-4 z-20 flex flex-col gap-2">
                     <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold shadow-lg ${
                       darkMode ? 'bg-gradient-to-r from-red-600 to-pink-600 text-white' : 'bg-gradient-to-r from-red-500 to-pink-500 text-white'
                     }`}>
                       <span>🍒</span>
                       <span>PROMO</span>
+                    </div>
+                    <div className="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-bold shadow-lg">
+                      {calculateDiscount(item.price, item.promotion)}% OFF
                     </div>
                   </div>
 
@@ -562,15 +793,33 @@ function AdminPromotionMenuContent({
                       {item.name}
                     </h3>
                     
+                    {/* Enhanced Pricing Section with Strike-through */}
                     <div className="flex items-center justify-between">
                       <div className="flex flex-col">
-                        <span className={`text-sm font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                          Promo Price
-                        </span>
-                        <span className={`text-2xl font-bold ${
-                          darkMode ? "text-red-400" : "text-red-600"
-                        }`}>
-                          {item.price} MMK
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`text-2xl font-bold ${
+                            darkMode ? "text-red-400" : "text-red-600"
+                          }`}>
+                            {item.promotion} MMK
+                          </span>
+                          <span className={`text-xs px-2 py-1 rounded-full font-bold ${
+                            darkMode ? 'bg-green-800 text-green-200' : 'bg-green-100 text-green-700'
+                          }`}>
+                            SALE
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-lg line-through ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                            {item.price} MMK
+                          </span>
+                          <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                            darkMode ? 'bg-red-800 text-red-200' : 'bg-red-100 text-red-700'
+                          }`}>
+                            -{calculateDiscount(item.price, item.promotion)}%
+                          </span>
+                        </div>
+                        <span className={`text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                          You save: {(item.price - item.promotion)} MMK
                         </span>
                       </div>
                       
@@ -589,10 +838,10 @@ function AdminPromotionMenuContent({
                     </div>
 
                     {/* Action Bar */}
-                    <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
                       <button
                         onClick={() => handleStockToggle(item._id, !item.outofstock)}
-                        className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all duration-200 ${
+                        className={`flex-1 py-2 px-3 rounded-lg font-medium text-xs transition-all duration-200 ${
                           item.outofstock 
                             ? darkMode 
                               ? 'bg-green-800 text-green-200 hover:bg-green-700' 
@@ -605,18 +854,18 @@ function AdminPromotionMenuContent({
                         {item.outofstock ? 'Stock' : 'Unstock'}
                       </button>
                       <button
-                        onClick={() => handleEdit(item)}
-                        className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all duration-200 ${
+                        onClick={() => handleRemovePromotion(item._id)}
+                        className={`flex-1 py-2 px-3 rounded-lg font-medium text-xs transition-all duration-200 ${
                           darkMode 
-                            ? "bg-blue-800 text-blue-200 hover:bg-blue-700"
-                            : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                            ? "bg-orange-800 text-orange-200 hover:bg-orange-700"
+                            : "bg-orange-100 text-orange-700 hover:bg-orange-200"
                         }`}
                       >
-                        Edit
+                        Remove
                       </button>
                       <button
                         onClick={() => handleDelete(item._id)}
-                        className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all duration-200 ${
+                        className={`flex-1 py-2 px-3 rounded-lg font-medium text-xs transition-all duration-200 ${
                           darkMode 
                             ? "bg-red-800 text-red-200 hover:bg-red-700"
                             : "bg-red-100 text-red-700 hover:bg-red-200"
@@ -631,7 +880,8 @@ function AdminPromotionMenuContent({
                   <div className="absolute inset-0 bg-gradient-to-t from-red-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none"></div>
                 </div>
               ))}
-            </div>
+              </div>
+            </>
           )}
 
           {/* Enhanced Empty State */}
@@ -646,10 +896,10 @@ function AdminPromotionMenuContent({
                 No Promotions Yet
               </h3>
               <p className={`text-lg mb-8 max-w-md mx-auto ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                Start creating exciting promotional offers that will attract customers and boost your sales!
+                Start creating exciting promotional offers by selecting menu items and setting special prices!
               </p>
               <button
-                onClick={() => setShowForm(true)}
+                onClick={() => setShowPromotionForm(true)}
                 className="group px-8 py-4 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white font-bold rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-xl"
               >
                 <div className="flex items-center gap-2">
@@ -661,8 +911,318 @@ function AdminPromotionMenuContent({
               </button>
             </div>
           )}
+
+          {/* No Search Results State */}
+          {!loading && !error && menuItems.length > 0 && getFilteredPromotionItems().length === 0 && promotionSearchQuery && (
+            <div className={`text-center py-20 rounded-3xl ${
+              darkMode ? 'bg-gray-800/30 border border-gray-700' : 'bg-white/70 border border-red-200'
+            } backdrop-blur-lg`}>
+              <div className="text-6xl mb-6">🔍</div>
+              <h3 className={`text-2xl font-bold mb-4 ${
+                darkMode ? "text-gray-200" : "text-gray-700"
+              }`}>
+                No promotions found
+              </h3>
+              <p className={`text-lg mb-8 max-w-md mx-auto ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                No promotions match your search "{promotionSearchQuery}"
+              </p>
+              <button
+                onClick={() => setPromotionSearchQuery("")}
+                className="px-6 py-3 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105"
+              >
+                Clear Search
+              </button>
+            </div>
+          )}
         </div>
       </main>
+
+      {/* Promotion Selection Modal */}
+      {showPromotionForm && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300 overflow-y-auto">
+          <div className={`max-w-4xl w-full my-8 rounded-3xl shadow-2xl transform transition-all duration-500 scale-100 max-h-[90vh] overflow-y-auto ${
+            darkMode ? "bg-gray-800 border border-gray-600" : "bg-white border border-gray-200"
+          }`}>
+            {/* Modal Header */}
+            <div className={`p-6 border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} sticky top-0 bg-inherit z-10`}>
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-pink-500"></div>
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-r from-red-500 to-pink-500 rounded-xl flex items-center justify-center">
+                    <span className="text-white text-lg">🍒</span>
+                  </div>
+                  <div>
+                    <h2 className={`text-2xl font-bold ${
+                      darkMode ? "text-white" : "text-gray-900"
+                    }`}>
+                      Create Promotions
+                    </h2>
+                    <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Select menu items and set promotional prices
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowPromotionForm(false);
+                    setSelectedItems([]);
+                    setSearchQuery("");
+                    setSelectedCategory("All");
+                  }}
+                  className={`p-2 rounded-xl transition-all duration-200 hover:rotate-90 ${
+                    darkMode ? "text-gray-400 hover:text-white hover:bg-gray-700" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Search and Filter Section */}
+            <div className={`p-6 border-b ${darkMode ? 'border-gray-600' : 'border-gray-200'} bg-inherit sticky top-[120px] z-10`}>
+              <div className="flex flex-col sm:flex-row gap-4">
+                {/* Search Bar */}
+                <div className="flex-1 relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg className={`w-5 h-5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search menu items..."
+                    className={`w-full pl-10 pr-4 py-3 rounded-xl border-2 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-red-500/20 ${
+                      darkMode 
+                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-red-500"
+                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-red-500"
+                    }`}
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      className={`absolute inset-y-0 right-0 pr-3 flex items-center ${
+                        darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+
+                {/* Category Filter */}
+                <div className="sm:w-48">
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className={`w-full px-4 py-3 rounded-xl border-2 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-red-500/20 ${
+                      darkMode 
+                        ? "bg-gray-700 border-gray-600 text-white focus:border-red-500"
+                        : "bg-white border-gray-300 text-gray-900 focus:border-red-500"
+                    }`}
+                  >
+                    {getAvailableCategories().map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Results Counter */}
+                <div className="flex items-center">
+                  <span className={`text-sm font-medium px-3 py-2 rounded-lg ${
+                    darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {getFilteredMenuItems().length} items
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex flex-col max-h-[calc(90vh-260px)]">
+              <div className="flex-1 overflow-y-auto p-6">
+                {getFilteredMenuItems().length === 0 ? (
+                  <div className="text-center py-16">
+                    <div className="text-6xl mb-4">🔍</div>
+                    <h3 className={`text-xl font-bold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      {searchQuery || selectedCategory !== "All" ? "No items found" : "No menu items available"}
+                    </h3>
+                    <p className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      {searchQuery || selectedCategory !== "All" 
+                        ? "Try adjusting your search or filter criteria"
+                        : "Add some menu items first to create promotions"
+                      }
+                    </p>
+                    {(searchQuery || selectedCategory !== "All") && (
+                      <button
+                        onClick={() => {
+                          setSearchQuery("");
+                          setSelectedCategory("All");
+                        }}
+                        className="mt-4 px-4 py-2 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white font-medium rounded-lg transition-all duration-200"
+                      >
+                        Clear Filters
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {getFilteredMenuItems().map((item) => {
+                    const isSelected = selectedItems.find(selected => selected._id === item._id);
+                    return (
+                      <div
+                        key={item._id}
+                        className={`relative rounded-xl shadow-lg overflow-hidden transition-all duration-300 border-2 cursor-pointer ${
+                          isSelected 
+                            ? darkMode 
+                              ? "border-red-500 bg-red-900/20" 
+                              : "border-red-500 bg-red-50"
+                            : darkMode 
+                              ? "border-gray-600 bg-gray-700 hover:border-gray-500" 
+                              : "border-gray-200 bg-white hover:border-gray-300"
+                        }`}
+                        onClick={() => handlePromotionToggle(item)}
+                      >
+                        {/* Selection indicator */}
+                        {isSelected && (
+                          <div className="absolute top-2 right-2 z-10 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
+                            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        )}
+
+                        {/* Category badge */}
+                        <div className="absolute top-2 left-2 z-10">
+                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                            darkMode ? 'bg-gray-600 text-gray-200' : 'bg-gray-200 text-gray-700'
+                          }`}>
+                            {item.category}
+                          </span>
+                        </div>
+
+                        {/* Image */}
+                        <img
+                          src={item.image || "https://via.placeholder.com/300x200/ef4444/ffffff?text=Menu+Item"}
+                          alt={item.name}
+                          className="w-full h-32 object-cover"
+                        />
+                        
+                        {/* Content */}
+                        <div className="p-4">
+                          <h3 className={`font-bold text-lg mb-2 ${
+                            darkMode ? "text-white" : "text-gray-900"
+                          }`}>
+                            {item.name}
+                          </h3>
+                          
+                          <div className="flex items-center justify-between mb-3">
+                            <span className={`text-sm font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                              Original Price:
+                            </span>
+                            <span className={`font-bold ${darkMode ? "text-gray-200" : "text-gray-700"}`}>
+                              {item.price} MMK
+                            </span>
+                          </div>
+
+                          {/* Promotion price input */}
+                          {isSelected && (
+                            <div className="mt-3">
+                              <label className={`block text-sm font-medium mb-2 ${
+                                darkMode ? "text-gray-300" : "text-gray-600"
+                              }`}>
+                                Promotion Price (MMK)
+                              </label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={isSelected.promotionPrice}
+                                onChange={(e) => handlePromotionPriceChange(item._id, e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                                className={`w-full px-3 py-2 rounded-lg border transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/50 ${
+                                  darkMode 
+                                    ? "bg-gray-600 border-gray-500 text-white placeholder-gray-400 focus:border-red-500"
+                                    : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-red-500"
+                                }`}
+                                placeholder={`Less than ${item.price}`}
+                                max={item.price - 0.01}
+                              />
+                              {/* Show potential savings preview */}
+                              {isSelected.promotionPrice && parseFloat(isSelected.promotionPrice) > 0 && parseFloat(isSelected.promotionPrice) < item.price && (
+                                <div className="mt-2 p-2 rounded-lg bg-green-100 dark:bg-green-900/20">
+                                  <div className="flex items-center justify-between text-sm">
+                                    <span className={`${darkMode ? 'text-green-400' : 'text-green-700'}`}>
+                                      Preview:
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <span className={`line-through text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                      {item.price} MMK
+                                    </span>
+                                    <span className={`font-bold text-sm ${darkMode ? 'text-green-400' : 'text-green-700'}`}>
+                                      {parseFloat(isSelected.promotionPrice)} MMK
+                                    </span>
+                                    <span className={`text-xs px-1 py-0.5 rounded ${darkMode ? 'bg-green-700 text-green-200' : 'bg-green-200 text-green-700'}`}>
+                                      -{calculateDiscount(item.price, parseFloat(isSelected.promotionPrice))}%
+                                    </span>
+                                  </div>
+                                  <div className={`text-xs mt-1 ${darkMode ? 'text-green-300' : 'text-green-600'}`}>
+                                    Save: {(item.price - parseFloat(isSelected.promotionPrice)).toFixed(2)} MMK
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  </div>
+                )}
+              </div>
+
+              {/* Action buttons */}
+              <div className={`flex gap-4 p-6 border-t sticky bottom-0 bg-inherit ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
+                <button
+                  onClick={() => {
+                    setShowPromotionForm(false);
+                    setSelectedItems([]);
+                    setSearchQuery("");
+                    setSelectedCategory("All");
+                  }}
+                  className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all duration-200 border-2 ${
+                    darkMode 
+                      ? "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:border-gray-500"
+                      : "bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200 hover:border-gray-400"
+                  }`}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSavePromotions}
+                  disabled={selectedItems.length === 0}
+                  className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-red-500/50 shadow-lg ${
+                    selectedItems.length === 0
+                      ? darkMode
+                        ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white'
+                  }`}
+                >
+                  Save Promotions ({selectedItems.length})
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Enhanced Add/Edit Form Modal */}
       {showForm && (
@@ -808,24 +1368,7 @@ function AdminPromotionMenuContent({
                             </div>
                           </label>
                         </div>
-                      </div>
-
-                      {/* OR divider */}
-                      <div className="relative">
-                        <div className={`absolute inset-0 flex items-center ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                          <div className={`w-full border-t ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}></div>
-                        </div>
-                        <div className="relative flex justify-center text-xs">
-                          <span className={`px-2 text-xs font-medium ${
-                            darkMode ? 'bg-gray-800 text-gray-400' : 'bg-white text-gray-500'
-                          }`}>
-                            OR
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* URL input option */}
-                      
+                      </div>  
                     </div>
 
                     {/* Image Preview */}

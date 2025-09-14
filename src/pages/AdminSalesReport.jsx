@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import jsPDF from "jspdf";
 import "jspdf-autotable";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line, CartesianGrid
@@ -28,6 +27,8 @@ export default function AdminSalesReport({ darkMode = false }) {
   const [lastUpdated, setLastUpdated] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [socket, setSocket] = useState(null);
+  const [feedbacks, setFeedbacks] = useState([]);
+
 
   // Fetch data from API
   const fetchAnalyticsData = async (period, isAutoRefresh = false) => {
@@ -63,6 +64,20 @@ export default function AdminSalesReport({ darkMode = false }) {
       if (!isAutoRefresh) setLoading(false);
     }
   };
+
+  const fetchFeedback = async () => {
+    try {
+      const response = await fetch(`${APIBASE}/feedback`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch feedback");
+      }
+      const data = await response.json();
+      setFeedbacks(data || []);
+    } catch (error) {
+      console.error("Error fetching feedback:", error);
+    }
+  };
+  
 
   // Fetch data when component mounts or active tab changes
   useEffect(() => {
@@ -124,29 +139,11 @@ export default function AdminSalesReport({ darkMode = false }) {
     return () => clearInterval(interval);
   }, [activeTab]);
 
-  // Export PDF
-  const exportPDF = () => {
-    const doc = new jsPDF();
-    doc.text(`Cherry Myo Sales Report - ${activeTab}`, 14, 16);
-    
-    // Add KPI summary
-    doc.text(`Period: ${activeTab}`, 14, 26);
-    doc.text(`Total Orders: ${kpi.orders}`, 14, 34);
-    doc.text(`Total Revenue: ${kpi.revenue.toLocaleString()} MMK`, 14, 42);
-    doc.text(`Average Order Value: ${kpi.aov} MMK`, 14, 50);
-    
-    // Add best sellers table
-    if (bestSellers.length > 0) {
-      doc.autoTable({
-        head: [["Item Name", "Quantity Sold", "Revenue (MMK)"]],
-        body: bestSellers.map((row) => [row.name, row.sold, row.revenue.toLocaleString()]),
-        startY: 60,
-      });
-    }
-    
-    doc.save(`cherry_myo_sales_report_${activeTab.toLowerCase()}.pdf`);
-  };
-
+  useEffect(() => {
+    fetchAnalyticsData(activeTab);
+    fetchFeedback(); // 🔥 fetch feedback separately
+  }, [activeTab]);
+  
   return (
     <AdminAuth>
       {({ user, handleLogout }) => (
@@ -252,7 +249,7 @@ export default function AdminSalesReport({ darkMode = false }) {
       {!loading && (
         <>
           {/* KPI Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 flex flex-col items-center shadow-md border border-pink-200 dark:border-pink-900">
           <span className="text-2xl">🧾</span>
           <span className="text-lg font-semibold mt-2">Orders</span>
@@ -268,12 +265,28 @@ export default function AdminSalesReport({ darkMode = false }) {
           <span className="text-lg font-semibold mt-2">Revenue</span>
           <span className="text-2xl font-bold text-pink-600 dark:text-pink-300">{kpi.revenue.toLocaleString()} MMK</span>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 flex flex-col items-center shadow-md border border-pink-200 dark:border-pink-900">
-          <span className="text-2xl">📊</span>
-          <span className="text-lg font-semibold mt-2">AOV</span>
-          <span className="text-2xl font-bold text-pink-600 dark:text-pink-300">{kpi.aov.toLocaleString()} MMK</span>
-        </div>
       </div>
+
+      {/* User Feedback Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-md border border-pink-200 dark:border-pink-900 mb-8">
+        <h2 className="font-semibold mb-4 text-pink-700 dark:text-pink-300">User Feedback</h2>
+        {feedbacks.length > 0 ? (
+          <ul className="space-y-4">
+            {feedbacks.map((fb, idx) => (
+              <li key={idx} className="border-b border-gray-200 dark:border-gray-700 pb-2">
+                <p className="text-gray-800 dark:text-gray-200">{fb.comment}</p>
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  – {fb.user || "Anonymous"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-gray-500 dark:text-gray-400">No feedback yet.</p>
+        )}
+      </div>
+
+
       {/* Charts and Table */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
         {/* Sales Over Time Chart */}
@@ -383,23 +396,6 @@ export default function AdminSalesReport({ darkMode = false }) {
               <p className="text-sm text-gray-400 dark:text-gray-500">Start taking orders to see analytics</p>
             </div>
           )}
-        </div>
-      </div>
-      {/* Period Comparison & Export */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-md border border-pink-200 dark:border-pink-900 flex flex-col md:flex-row items-center gap-4">
-          <span className="font-semibold text-pink-700 dark:text-pink-300">Period Comparison:</span>
-          <span className="text-sm">Orders: <span className="font-bold">{periodComparison.curr?.orders || 0}</span> vs <span className="text-gray-500">{periodComparison.prev?.orders || 0}</span></span>
-          <span className="text-sm">Revenue: <span className="font-bold">{(periodComparison.curr?.revenue || 0).toLocaleString()} MMK</span> vs <span className="text-gray-500">{(periodComparison.prev?.revenue || 0).toLocaleString()} MMK</span></span>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={exportPDF}
-            className="px-4 py-2 rounded bg-red-600 text-white font-medium hover:bg-red-700 transition-colors duration-200"
-            aria-label="Export PDF"
-          >
-            Export PDF
-          </button>
         </div>
       </div>
         </>

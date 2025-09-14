@@ -815,23 +815,6 @@ function AdminSpecialMenuContent({
                           </label>
                         </div>
                       </div>
-
-                      {/* OR divider */}
-                      <div className="relative">
-                        <div className={`absolute inset-0 flex items-center ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                          <div className={`w-full border-t ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}></div>
-                        </div>
-                        <div className="relative flex justify-center text-xs">
-                          <span className={`px-2 text-xs font-medium ${
-                            darkMode ? 'bg-gray-800 text-gray-400' : 'bg-white text-gray-500'
-                          }`}>
-                            OR
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* URL input option */}
-                      
                     </div>
 
                     {/* Image Preview */}

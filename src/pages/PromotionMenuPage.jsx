@@ -31,17 +31,19 @@ export default function PromotionMenuPage() {
     });
 
     socket.on("menu:new", (newItem) => {
-      if (newItem.category === "Promotion") {
+      if (newItem.promotion && newItem.promotion > 0) {
         setMenuItems((prev) => [...prev, newItem]);
       }
     });
 
     socket.on("menu:update", (updatedItem) => {
-      if (updatedItem.category === "Promotion") {
-        setMenuItems((prev) =>
-          prev.map((item) => (item._id === updatedItem._id ? updatedItem : item))
-        );
-      }
+      setMenuItems((prev) => {
+        const filtered = prev.filter(item => item._id !== updatedItem._id);
+        if (updatedItem.promotion && updatedItem.promotion > 0) {
+          return [...filtered, updatedItem];
+        }
+        return filtered;
+      });
     });
 
     socket.on("menu:delete", (id) => {
@@ -59,7 +61,8 @@ export default function PromotionMenuPage() {
       const res = await fetch(`${APIBASE}/menu`);
       if (!res.ok) throw new Error("Failed to fetch promotion menu");
       const data = await res.json();
-      const promotionItems = data.filter(item => item.category === "Promotion");
+      // Filter items that have promotions (promotion > 0)
+      const promotionItems = data.filter(item => item.promotion && item.promotion > 0);
       console.log(promotionItems)
       setMenuItems(promotionItems);
     } catch (err) {
@@ -70,6 +73,10 @@ export default function PromotionMenuPage() {
   };
 
   const getQuantity = (id) => cart[id]?.quantity || 0;
+
+  const calculateDiscount = (originalPrice, promotionPrice) => {
+    return Math.round(((originalPrice - promotionPrice) / originalPrice) * 100);
+  };
 
   const filteredItems = menuItems.filter((item) =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -141,10 +148,10 @@ export default function PromotionMenuPage() {
                     : "bg-pink-300 border border-pink-100"
                 }`}
               >
-                <span className={`absolute top-2 right-2 px-2 py-1 text-xs font-semibold rounded-full ${
+                <span className={`absolute top-2 left-2 px-2 py-1 text-xs font-semibold rounded-full ${
                   darkMode ? "bg-red-900 text-red-300" : "bg-red-100 text-red-800"
                 }`}>
-                  Promotion
+                  🎉 PROMO
                 </span>
                 {/* Out of Stock Badge */}
                 {item.outofstock && (
@@ -157,38 +164,34 @@ export default function PromotionMenuPage() {
                   alt={item.name}
                   className="w-32 h-32 object-cover rounded-lg mb-3 shadow-md"
                 />
-                <h2 className={`font-semibold text-lg text-center mb-2 ${
-                  darkMode ? "text-white" : "text-gray-800"
-                }`}>
-                  {item.name}
-                </h2>
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <h2 className={`font-semibold text-lg text-center ${
+                    darkMode ? "text-white" : "text-gray-800"
+                  }`}>
+                    {item.name}
+                  </h2>
+                  <span className="px-2 py-1 text-xs font-bold rounded-full bg-green-600 text-white">
+                    {calculateDiscount(item.price, item.promotion)}% OFF
+                  </span>
+                </div>
                 <p className="mb-4 text-center">
-                  {item.promotion > 0 && item.promotion < item.price ? (
-                    <>
-                      <span
-                        className={`mr-2 line-through ${
-                          darkMode ? "text-red-400" : "text-red-600"
-                        }`}
-                      >
-                        {item.price} MMK
-                      </span>
-                      <span
-                        className={`font-bold ${
-                          darkMode ? "text-pink-300" : "text-pink-900"
-                        }`}
-                      >
-                        {item.promotion} MMK
-                      </span>
-                    </>
-                  ) : (
-                    <span
-                      className={`font-bold ${
-                        darkMode ? "text-pink-300" : "text-pink-900"
-                      }`}
-                    >
-                      {item.price} MMK
-                    </span>
-                  )}
+                  <span
+                    className={`mr-2 line-through ${
+                      darkMode ? "text-red-400" : "text-red-600"
+                    }`}
+                  >
+                    {item.price} MMK
+                  </span>
+                  <span
+                    className={`font-bold ${
+                      darkMode ? "text-pink-300" : "text-pink-900"
+                    }`}
+                  >
+                    {item.promotion} MMK
+                  </span><br/>
+                  <span className={`text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                          You save: {(item.price - item.promotion)} MMK
+                        </span>
                 </p>
                 
                 <div className={`flex items-center mt-3 space-x-3 ${item.outofstock ? 'pointer-events-none' : ''}`}>
@@ -211,7 +214,10 @@ export default function PromotionMenuPage() {
                     {getQuantity(item._id)}
                   </span>
                   <button
-                    onClick={() => !item.outofstock && addToCart(item)}
+                    onClick={() => !item.outofstock && addToCart({
+                      ...item,
+                      price: item.promotion // Use promotional price for cart
+                    })}
                     disabled={item.outofstock}
                     className={`px-3 py-1 text-white rounded transition-colors duration-200 ${
                       item.outofstock 
@@ -242,14 +248,16 @@ export default function PromotionMenuPage() {
                     : "bg-pink-300 border-pink-100"
                 }`}
               >
-                <span className={`absolute top-2 right-2 px-2 py-1 text-xs font-semibold rounded-full ${
+                <span className={`absolute top-2 left-2 px-2 py-1 text-xs font-semibold rounded-full ${
                   darkMode ? "bg-red-900 text-red-300" : "bg-red-100 text-red-800"
                 }`}>
-                  Promotion
+                  🎉 PROMO
                 </span>
+                {/* Discount Badge */}
+                
                 {/* Out of Stock Badge */}
                 {item.outofstock && (
-                  <span className="absolute top-2 left-2 px-2 py-1 text-xs font-bold rounded-full bg-red-600 text-white z-10">
+                  <span className="absolute top-2 right-2 px-2 py-1 text-xs font-bold rounded-full bg-red-600 text-white z-10">
                     OUT OF STOCK
                   </span>
                 )}
@@ -259,17 +267,31 @@ export default function PromotionMenuPage() {
                   className="w-20 h-20 object-cover rounded-lg shadow-sm flex-shrink-0"
                 />
                 <div className="flex-1 min-w-0">
-                  <h2 className={`font-semibold text-lg mb-2 ${
-                    darkMode ? "text-white" : "text-gray-800"
-                  }`}>
-                    {item.name}
-                  </h2>
-                  <div className="flex items-center justify-between">
-                    <span className={`font-bold text-lg ${
-                      darkMode ? "text-pink-300" : "text-pink-600"
+                  <div className="flex items-center gap-2 mb-2">
+                    <h2 className={`font-semibold text-lg ${
+                      darkMode ? "text-white" : "text-gray-800"
                     }`}>
-                      {item.price} MMK
+                      {item.name}
+                    </h2>
+                    <span className="px-2 py-1 text-xs font-bold rounded-full bg-green-600 text-white">
+                      {calculateDiscount(item.price, item.promotion)}% OFF
                     </span>
+                  </div>
+                
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                      <span className={`line-through text-sm ${darkMode ? 'text-red-400' : 'text-red-600'}`}>
+                        {item.price} MMK
+                      </span>
+                      <span className={`font-bold text-lg ${
+                        darkMode ? "text-pink-300" : "text-pink-600"
+                      }`}>
+                        {item.promotion} MMK
+                      </span>
+                      <span className={`text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                          You save: {(item.price - item.promotion)} MMK
+                        </span>
+                    </div>
                     <div className={`flex items-center gap-3 ${item.outofstock ? 'pointer-events-none' : ''}`}>
                       <button
                         onClick={() => !item.outofstock && removeFromCart(item._id)}
@@ -290,7 +312,10 @@ export default function PromotionMenuPage() {
                         {getQuantity(item._id)}
                       </span>
                       <button
-                        onClick={() => !item.outofstock && addToCart(item)}
+                        onClick={() => !item.outofstock && addToCart({
+                          ...item,
+                          price: item.promotion // Use promotional price for cart
+                        })}
                         disabled={item.outofstock}
                         className={`w-8 h-8 flex items-center justify-center text-white rounded-full transition-all duration-200 hover:scale-110 ${
                           item.outofstock 
