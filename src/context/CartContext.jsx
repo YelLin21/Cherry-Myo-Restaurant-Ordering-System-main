@@ -4,7 +4,7 @@ import { useTable } from "./TableContext";
 const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
-  const { tableId } = useTable(); // 👈 use current tableId
+  const { tableId } = useTable(); // use current tableId
   const [cart, setCart] = useState({});
 
   // Load cart for this table from sessionStorage
