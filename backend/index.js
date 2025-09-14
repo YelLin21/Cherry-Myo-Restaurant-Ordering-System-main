@@ -13,6 +13,7 @@ app.get('/health', (_, res) => res.send('ok'));
 
 const allowedOrigins = [
   "http://localhost:5173",
+  "http://localhost:5174",
   "https://cherry-myo-restaurant-ordering-system-main.vercel.app"
   
 ];

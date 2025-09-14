@@ -70,6 +70,20 @@ export default function SpecialMenuPage() {
 
   const getQuantity = (id) => cart[id]?.quantity || 0;
 
+  const calculateDiscount = (originalPrice, promotionPrice) => {
+    if (!promotionPrice || promotionPrice <= 0 || promotionPrice >= originalPrice) {
+      return 0;
+    }
+    return Math.round(((originalPrice - promotionPrice) / originalPrice) * 100);
+  };
+
+  const hasValidPromotion = (item) => {
+    return item.promotion && 
+           typeof item.promotion === 'number' && 
+           item.promotion > 0 && 
+           item.promotion < item.price;
+  };
+
   const filteredItems = menuItems.filter((item) =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -160,11 +174,23 @@ export default function SpecialMenuPage() {
                   darkMode ? "text-white" : "text-gray-800"
                 }`}>
                   {item.name}
+                  
                 </h2>
                 <p className={`mb-4 font-bold ${
                   darkMode ? "text-pink-300" : "text-pink-900"
                 }`}>
-                  {item.price} MMK
+                  {hasValidPromotion(item) ? (
+                    <>
+                      <span className={`mr-2 line-through text-sm ${darkMode ? 'text-red-400' : 'text-red-600'}`}>
+                        {item.price} MMK
+                      </span>
+                      <span className={`font-bold ${darkMode ? 'text-pink-300' : 'text-pink-900'}`}>
+                        {item.promotion} MMK
+                      </span>
+                    </>
+                  ) : (
+                    <span>{item.price} MMK</span>
+                  )}
                 </p>
 
                 <div className={`flex items-center mt-3 space-x-3 ${item.outofstock ? 'pointer-events-none' : ''}`}>
@@ -187,7 +213,10 @@ export default function SpecialMenuPage() {
                     {getQuantity(item._id)}
                   </span>
                   <button
-                    onClick={() => !item.outofstock && addToCart(item)}
+                    onClick={() => !item.outofstock && addToCart({
+                      ...item,
+                      price: hasValidPromotion(item) ? item.promotion : item.price
+                    })}
                     disabled={item.outofstock}
                     className={`px-3 py-1 text-white rounded transition-colors duration-200 ${
                       item.outofstock 
@@ -235,17 +264,34 @@ export default function SpecialMenuPage() {
                   className="w-20 h-20 object-cover rounded-lg shadow-sm flex-shrink-0"
                 />
                 <div className="flex-1 min-w-0">
-                  <h2 className={`font-semibold text-lg mb-2 ${
-                    darkMode ? "text-white" : "text-gray-800"
-                  }`}>
-                    {item.name}
-                  </h2>
-                  <div className="flex items-center justify-between">
-                    <span className={`font-bold text-lg ${
-                      darkMode ? "text-pink-300" : "text-pink-600"
+                  <div className="flex items-center gap-2 mb-2">
+                    <h2 className={`font-semibold text-lg ${
+                      darkMode ? "text-white" : "text-gray-800"
                     }`}>
-                      {item.price} MMK
-                    </span>
+                      {item.name}
+                    </h2>
+                    
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                      {hasValidPromotion(item) ? (
+                        <>
+                          <span className={`line-through text-sm ${darkMode ? 'text-red-400' : 'text-red-600'}`}>
+                            {item.price} MMK
+                          </span>
+                          <span className={`font-bold text-lg ${darkMode ? "text-pink-300" : "text-pink-600"}`}>
+                            {item.promotion} MMK
+                          </span>
+                          <span className={`text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            You save: {(item.price - item.promotion)} MMK
+                          </span>
+                        </>
+                      ) : (
+                        <span className={`font-bold text-lg ${darkMode ? "text-pink-300" : "text-pink-600"}`}>
+                          {item.price} MMK
+                        </span>
+                      )}
+                    </div>
                     <div className={`flex items-center gap-3 ${item.outofstock ? 'pointer-events-none' : ''}`}>
                       <button
                         onClick={() => !item.outofstock && removeFromCart(item._id)}
@@ -266,7 +312,10 @@ export default function SpecialMenuPage() {
                         {getQuantity(item._id)}
                       </span>
                       <button
-                        onClick={() => !item.outofstock && addToCart(item)}
+                        onClick={() => !item.outofstock && addToCart({
+                          ...item,
+                          price: item.promotion && item.promotion > 0 ? item.promotion : item.price
+                        })}
                         disabled={item.outofstock}
                         className={`w-8 h-8 flex items-center justify-center text-white rounded-full transition-all duration-200 hover:scale-110 ${
                           item.outofstock 
