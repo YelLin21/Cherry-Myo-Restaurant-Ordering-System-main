@@ -372,7 +372,7 @@ export default function PromotionMenuPage() {
                 {/* Left: Totals */}
                 <div className={`${darkMode ? 'text-gray-200' : 'text-gray-800'} flex items-center gap-6`}>
                   <span className="font-semibold">
-                    Items:{' '}
+                    {totalItems === 1 ? 'Item' : 'Items'}:{' '}
                     {Object.values(cart).reduce((sum, { quantity }) => sum + quantity, 0)}
                   </span>
                   <span className="font-bold text-lg">
@@ -406,7 +406,7 @@ export default function PromotionMenuPage() {
           <div className="flex justify-between items-center">
            <p className={`font-semibold ${
               darkMode ? 'text-pink-300' : 'text-pink-900'
-            }`}>Item: {totalItems}</p>
+            }`}>{totalItems === 1 ? 'Item' : 'Items'}: {totalItems}</p>
             <p className={`font-semibold ${
               darkMode ? "text-pink-300" : "text-pink-900"
             }`}>🛒 Total: {total} MMK</p>
