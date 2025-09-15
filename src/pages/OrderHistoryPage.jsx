@@ -31,8 +31,12 @@ export default function OrderHistoryPage() {
 
   useEffect(() => {
     fetchOrderHistory();
+<<<<<<< Updated upstream
     
     // Set up real-time updates to remove paid orders
+=======
+
+>>>>>>> Stashed changes
     const socket = io(SOCKET_URL, {
       transports: ["websocket"],
     });
@@ -40,15 +44,45 @@ export default function OrderHistoryPage() {
     console.log("🔌 Socket connected to:", SOCKET_URL);
 
     // Listen for order updates (when orders are marked as paid)
+<<<<<<< Updated upstream
     socket.on("order:paid", (paidOrderId) => {
       console.log("📦 Order marked as paid - PERMANENTLY removing from customer view:", paidOrderId);
       
       // Show payment success modal
+=======
+    // socket.on("order:paid", (paidOrderId) => {
+    //   console.log("📦 Order marked as paid - PERMANENTLY removing from customer view:", paidOrderId);
+    //   console.log(sessionStorage.getItem("tableId") || "No table ID in session");
+    //   // Show payment success modal
+    //   setShowPaymentSuccessModal(true);
+
+    //   // Reset payment processing state
+    //   setIsPaymentProcessing(false);
+
+    //   setOrders((prev) => {
+    //     const filteredOrders = prev.filter(order => order._id !== paidOrderId);
+    //     console.log("📋 Orders before filtering:", prev.length, "After filtering:", filteredOrders.length);
+    //     console.log("🗑️ Order permanently removed from customer history");
+    //     return filteredOrders;
+    //   });
+    // });
+
+    socket.on("order:paid", ({ orderId, tableNumber }) => {
+      const currentTableId = (sessionStorage.getItem("tableId") || "").trim();
+
+      if (tableNumber?.toString().trim() !== currentTableId) {
+        console.log(`🚫 Ignored order:paid for Table ${tableNumber}`);
+        return;
+      }
+
+      console.log("📦 Order marked as paid for this table:", orderId);
+
+>>>>>>> Stashed changes
       setShowPaymentSuccessModal(true);
       
       // Reset payment processing state
       setIsPaymentProcessing(false);
-      
+
       setOrders((prev) => {
         const filteredOrders = prev.filter(order => order._id !== paidOrderId);
         console.log("📋 Orders before filtering:", prev.length, "After filtering:", filteredOrders.length);
@@ -56,6 +90,10 @@ export default function OrderHistoryPage() {
         return filteredOrders;
       });
     });
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 
     // Also listen for any order updates to double-check paid status
     socket.on("order:update", (updatedOrder) => {
@@ -108,10 +146,22 @@ export default function OrderHistoryPage() {
       const res = await fetch(`${APIBASE}/orders/customer`);
       if (!res.ok) throw new Error("Failed to fetch order history");
       const unpaidOrders = await res.json();
-      
+
       const currentTableId = (sessionStorage.getItem("tableId") || "").trim();
       const now = new Date();
+<<<<<<< Updated upstream
   
+=======
+
+      console.log("🔍 Current Table ID from sessionStorage:", currentTableId);
+      console.log("📋 All unpaid orders received:", unpaidOrders.map(order => ({
+        id: order._id.slice(-8),
+        table: order.tableNumber,
+        status: order.status,
+        paid: order.paid
+      })));
+
+>>>>>>> Stashed changes
       const tableOrders = unpaidOrders.filter(order => {
         const orderTime = new Date(order.createdAt);
         const isSameTable =
@@ -121,8 +171,9 @@ export default function OrderHistoryPage() {
           orderTime.getFullYear() === now.getFullYear() &&
           orderTime.getMonth() === now.getMonth() &&
           orderTime.getDate() === now.getDate();
-  
+
         const isWithin1Hour = now - orderTime <= 60 * 60 * 1000;
+<<<<<<< Updated upstream
   
         return isSameTable && isToday && isWithin1Hour;
       });
@@ -131,13 +182,28 @@ export default function OrderHistoryPage() {
       console.log("📊 Customer orders fetched:", tableOrders.length, "unpaid orders");
       console.log("📋 Detailed orders:", tableOrders.map(order => ({
         id: order._id,
+=======
+
+        console.log(`📊 Order ${order._id.slice(-8)}: table=${order.tableNumber}, currentTable=${currentTableId}, match=${isSameTable}, today=${isToday}, within1h=${isWithin1Hour}`);
+
+        return isSameTable && isToday && isWithin1Hour;
+      });
+
+      console.log("✅ Filtered table orders for table", currentTableId, ":", tableOrders.length);
+      console.log("📋 Detailed filtered orders:", tableOrders.map(order => ({
+        id: order._id.slice(-8),
+>>>>>>> Stashed changes
         table: order.tableNumber,
         status: order.status,
         paid: order.paid,
         items: order.items?.length || 0
       })));
+<<<<<<< Updated upstream
       console.log("✅ Paid orders are filtered at API level - will never appear on reload");
       
+=======
+
+>>>>>>> Stashed changes
       setOrders(tableOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
     } catch (err) {
       console.error("❌ Error fetching order history:", err);
@@ -146,6 +212,21 @@ export default function OrderHistoryPage() {
       setLoading(false);
     }
   };
+
+  const [qrCode, setQrCode] = useState(null);
+
+  useEffect(() => {
+    if (showQRModal) {
+      const tableId = sessionStorage.getItem("tableId"); // or however you track table
+      if (tableId) {
+        fetch(`http://localhost:5001/api/qr/table/${tableId}`)
+          .then(res => res.json())
+          .then(data => setQrCode(data.qrCode))
+          .catch(err => console.error("❌ Failed to load QR:", err));
+      }
+    }
+  }, [showQRModal]);
+
 
   const formatPrice = (price) => {
     return price.toLocaleString("en-US") + " MMK";
@@ -241,10 +322,10 @@ export default function OrderHistoryPage() {
       if (order.status === "readyForCheckout" && !timers[order._id]) {
         timers[order._id] = setTimeout(async () => {
           console.log(`🕐 Automatically updating order ${order._id} status to "sent" after 10 seconds`);
-          
+
           // Update status in backend first
           const success = await updateOrderStatus(order._id, "sent");
-          
+
           if (success) {
             // Only update local state if backend update was successful
             setOrders(prevOrders =>
@@ -255,7 +336,7 @@ export default function OrderHistoryPage() {
               )
             );
           }
-          
+
           delete timers[order._id];
         }, 10000); // 10 seconds
       }
@@ -288,8 +369,12 @@ export default function OrderHistoryPage() {
 
   const totalPrice = orders.reduce((sum, order) => sum + calculateOrderTotal(order.items), 0);
 
+<<<<<<< Updated upstream
   // Check if checkout should be enabled based on order statuses
   const canCheckout = orders.length > 0 && orders.every(order => 
+=======
+  const canCheckout = orders.length > 0 && orders.every(order =>
+>>>>>>> Stashed changes
     order.status === 'sent' || order.status === 'readyForCheckout' || order.status === 'completed'
   );
 
@@ -386,30 +471,30 @@ export default function OrderHistoryPage() {
         setShowQRModal(true);
         return;
       }
-  
-        const response = await fetch(`${APIBASE}/checkouts`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            orderId: firstOrder._id,
-            paymentMethod: paymentMethod,
-            finalAmount: totalPrice,
-            cashReceived: paymentMethod === "cash" ? totalPrice : null,
-            changeGiven: paymentMethod === "cash" ? 0 : null
-          })
-        });
 
-        if (!response.ok) throw new Error("Failed to record payment intent");
+      const response = await fetch(`${APIBASE}/checkouts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: firstOrder._id,
+          paymentMethod: paymentMethod,
+          finalAmount: totalPrice,
+          cashReceived: paymentMethod === "cash" ? totalPrice : null,
+          changeGiven: paymentMethod === "cash" ? 0 : null
+        })
+      });
 
-        const data = await response.json();
-        console.log("✅ Payment intent recorded:", data);
-        alert("Payment recorded! ✅ Waiting for admin approval.");
-        setShowPaymentModal(false);
+      if (!response.ok) throw new Error("Failed to record payment intent");
+
+      const data = await response.json();
+      console.log("✅ Payment intent recorded:", data);
+      alert("Payment recorded! ✅ Waiting for admin approval.");
+      setShowPaymentModal(false);
     } catch (err) {
-        console.error("❌ Payment error:", err);
-        alert("Payment failed. Please try again.");
+      console.error("❌ Payment error:", err);
+      alert("Payment failed. Please try again.");
     }
-};
+  };
 
 
   const handleReceiptUpload = (event) => {
@@ -496,7 +581,7 @@ export default function OrderHistoryPage() {
       setIsPaymentProcessing(false);
     }
   };
-  
+
 
   const handleCloseQRModal = () => {
     setReceiptFile(null);
@@ -504,19 +589,16 @@ export default function OrderHistoryPage() {
   };
 
   return (
-    <div className={`min-h-screen pt-10 pb-28 transition-colors duration-300 ${
-      darkMode ? "dark bg-gray-900" : "bg-gray-50"
-    }`}>
+    <div className={`min-h-screen pt-10 pb-28 transition-colors duration-300 ${darkMode ? "dark bg-gray-900" : "bg-gray-50"
+      }`}>
       <Navbar darkMode={darkMode} setDarkMode={setDarkMode} cartCount={totalItems} />
 
-      <main className={`pt-20 px-4 sm:px-6 lg:px-8 transition-colors duration-300 ${
-        darkMode ? "bg-gray-900" : "bg-gray-100"
-      }`}>
+      <main className={`pt-20 px-4 sm:px-6 lg:px-8 transition-colors duration-300 ${darkMode ? "bg-gray-900" : "bg-gray-100"
+        }`}>
         <div className="max-w-4xl mx-auto">
-          <h1 className={`text-3xl font-bold text-center mb-4 ${
-            darkMode ? "text-pink-300" : "text-pink-900"
-          }`}>
-           Orders History
+          <h1 className={`text-3xl font-bold text-center mb-4 ${darkMode ? "text-pink-300" : "text-pink-900"
+            }`}>
+            Orders History
           </h1>
 
           {loading && (
@@ -533,11 +615,10 @@ export default function OrderHistoryPage() {
               <p className="text-red-500 text-lg">{error}</p>
               <button
                 onClick={fetchOrderHistory}
-                className={`mt-4 px-6 py-2 rounded-lg ${
-                  darkMode 
-                    ? "bg-pink-600 text-white hover:bg-pink-500" 
+                className={`mt-4 px-6 py-2 rounded-lg ${darkMode
+                    ? "bg-pink-600 text-white hover:bg-pink-500"
                     : "bg-pink-600 text-white hover:bg-pink-700"
-                }`}
+                  }`}
               >
                 Try Again
               </button>
@@ -546,9 +627,8 @@ export default function OrderHistoryPage() {
 
           {!loading && !error && orders.length === 0 && (
             <div className="text-center py-12">
-              <ShoppingBag className={`mx-auto h-16 w-16 mb-4 ${
-                darkMode ? "text-gray-600" : "text-gray-400"
-              }`} />
+              <ShoppingBag className={`mx-auto h-16 w-16 mb-4 ${darkMode ? "text-gray-600" : "text-gray-400"
+                }`} />
               <p className={`text-xl mb-4 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
                 No pending orders
               </p>
@@ -557,11 +637,10 @@ export default function OrderHistoryPage() {
               </p>
               <button
                 onClick={() => navigate("/")}
-                className={`px-6 py-3 rounded-xl shadow ${
-                  darkMode 
-                    ? "bg-pink-600 text-white hover:bg-pink-500" 
+                className={`px-6 py-3 rounded-xl shadow ${darkMode
+                    ? "bg-pink-600 text-white hover:bg-pink-500"
                     : "bg-pink-600 text-white hover:bg-pink-700"
-                }`}
+                  }`}
               >
                 Browse Menu
               </button>
@@ -575,68 +654,61 @@ export default function OrderHistoryPage() {
                   <div
                     key={order._id}
                     onClick={() => handleOrderClick(order)}
-                    className={`p-4 rounded-xl border shadow-sm cursor-pointer transition-all duration-200 hover:shadow-md ${
-                      darkMode 
-                        ? "bg-gray-800 border-gray-600 hover:bg-gray-750" 
+                    className={`p-4 rounded-xl border shadow-sm cursor-pointer transition-all duration-200 hover:shadow-md ${darkMode
+                        ? "bg-gray-800 border-gray-600 hover:bg-gray-750"
                         : "bg-white border-gray-200 hover:bg-gray-50"
-                    }`}
+                      }`}
                   >
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className={`text-lg font-semibold ${
-                            darkMode ? "text-white" : "text-gray-900"
-                          }`}>
+                          <h3 className={`text-lg font-semibold ${darkMode ? "text-white" : "text-gray-900"
+                            }`}>
                             Order #{order._id.slice(-8)}
                           </h3>
                           <span className={getStatusBadge(order.status)}>
                             {displayStatusText(order.status)}
                           </span>
                         </div>
-                        
+
                         <div className="flex items-center gap-4 text-sm">
                           <div className="flex items-center gap-1">
-                            <Calendar className={`h-4 w-4 ${
-                              darkMode ? "text-gray-400" : "text-gray-500"
-                            }`} />
+                            <Calendar className={`h-4 w-4 ${darkMode ? "text-gray-400" : "text-gray-500"
+                              }`} />
                             <span className={darkMode ? "text-gray-300" : "text-gray-600"}>
                               {formatDate(order.createdAt)}
                             </span>
                           </div>
                           <div className="flex items-center gap-1">
-                            <Clock className={`h-4 w-4 ${
-                              darkMode ? "text-gray-400" : "text-gray-500"
-                            }`} />
+                            <Clock className={`h-4 w-4 ${darkMode ? "text-gray-400" : "text-gray-500"
+                              }`} />
                             <span className={darkMode ? "text-gray-300" : "text-gray-600"}>
                               {formatTime(order.createdAt)}
                             </span>
                           </div>
                           <div className="flex items-center gap-1">
-                            <span className={`text-sm ${
-                              darkMode ? "text-gray-300" : "text-gray-600"
-                            }`}>
+                            <span className={`text-sm ${darkMode ? "text-gray-300" : "text-gray-600"
+                              }`}>
                               Table: {order.tableNumber}
                             </span>
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="text-right">
                         <div className="flex items-center gap-1 mb-1">
-                          <span className={`text-lg font-bold ${
-                            darkMode ? "text-pink-300" : "text-pink-600"
-                          }`}>
+                          <span className={`text-lg font-bold ${darkMode ? "text-pink-300" : "text-pink-600"
+                            }`}>
                             {formatPrice(calculateOrderTotal(order.items))}
                           </span>
                         </div>
-                        <p className={`text-sm ${
-                          darkMode ? "text-gray-400" : "text-gray-500"
-                        }`}>
+                        <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-500"
+                          }`}>
                           {order.items.length} item{order.items.length > 1 ? 's' : ''}
                         </p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-2 text-sm">
                       <span className={darkMode ? "text-gray-400" : "text-gray-500"}>
                         Items:
@@ -662,15 +734,14 @@ export default function OrderHistoryPage() {
                     <button
                       onClick={handleCheckout}
                       disabled={!canCheckout || isPaymentProcessing}
-                      className={`px-6 py-3 rounded-xl shadow font-bold text-lg transition-colors duration-200 ${
-                        canCheckout && !isPaymentProcessing
-                          ? darkMode 
-                            ? 'bg-pink-600 text-white hover:bg-pink-500' 
+                      className={`px-6 py-3 rounded-xl shadow font-bold text-lg transition-colors duration-200 ${canCheckout && !isPaymentProcessing
+                          ? darkMode
+                            ? 'bg-pink-600 text-white hover:bg-pink-500'
                             : 'bg-pink-600 text-white hover:bg-pink-700'
                           : darkMode
                             ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
                             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      }`}
+                        }`}
                     >
                       {isPaymentProcessing ? 'Payment is under review...' : 'Checkout'}
                     </button>
@@ -684,40 +755,35 @@ export default function OrderHistoryPage() {
 
       {/* Order Details Modal */}
       {showOrderModal && selectedOrder && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" 
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
           onClick={() => setShowOrderModal(false)}
         >
-          <div 
-            className={`max-w-md w-full rounded-xl shadow-2xl max-h-[80vh] overflow-y-auto ${
-              darkMode ? 'bg-gray-800 border border-gray-600' : 'bg-white border border-gray-200'
-            }`}
+          <div
+            className={`max-w-md w-full rounded-xl shadow-2xl max-h-[80vh] overflow-y-auto ${darkMode ? 'bg-gray-800 border border-gray-600' : 'bg-white border border-gray-200'
+              }`}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className={`text-xl font-bold ${
-                  darkMode ? 'text-pink-300' : 'text-pink-900'
-                }`}>
+                <h2 className={`text-xl font-bold ${darkMode ? 'text-pink-300' : 'text-pink-900'
+                  }`}>
                   Order Details
                 </h2>
                 <button
                   onClick={() => setShowOrderModal(false)}
-                  className={`text-gray-400 hover:text-gray-600 ${
-                    darkMode ? 'hover:text-gray-300' : 'hover:text-gray-600'
-                  }`}
+                  className={`text-gray-400 hover:text-gray-600 ${darkMode ? 'hover:text-gray-300' : 'hover:text-gray-600'
+                    }`}
                 >
                   ✕
                 </button>
               </div>
 
-              <div className={`mb-4 p-3 rounded-lg ${
-                darkMode ? 'bg-gray-700' : 'bg-gray-50'
-              }`}>
+              <div className={`mb-4 p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'
+                }`}>
                 <div className="flex justify-between items-center mb-2">
-                  <span className={`text-sm font-medium ${
-                    darkMode ? 'text-gray-300' : 'text-gray-600'
-                  }`}>
+                  <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'
+                    }`}>
                     Order #{selectedOrder._id.slice(-8)}
                   </span>
                   <span className={getStatusBadge(selectedOrder.status)}>
@@ -725,45 +791,38 @@ export default function OrderHistoryPage() {
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className={`text-sm ${
-                    darkMode ? 'text-gray-300' : 'text-gray-600'
-                  }`}>
+                  <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'
+                    }`}>
                     {formatDate(selectedOrder.createdAt)} at {formatTime(selectedOrder.createdAt)}
                   </span>
-                  <span className={`text-sm ${
-                    darkMode ? 'text-gray-300' : 'text-gray-600'
-                  }`}>
+                  <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'
+                    }`}>
                     Table: {selectedOrder.tableNumber}
                   </span>
                 </div>
               </div>
 
               <div className="mb-4">
-                <h3 className={`text-lg font-semibold mb-3 ${
-                  darkMode ? 'text-white' : 'text-gray-900'
-                }`}>
+                <h3 className={`text-lg font-semibold mb-3 ${darkMode ? 'text-white' : 'text-gray-900'
+                  }`}>
                   Order Items
                 </h3>
                 <div className="space-y-3">
                   {selectedOrder.items.map((item, index) => (
-                    <div key={index} className={`flex justify-between items-center p-3 rounded-lg ${
-                      darkMode ? 'bg-gray-700' : 'bg-gray-50'
-                    }`}>
+                    <div key={index} className={`flex justify-between items-center p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'
+                      }`}>
                       <div className="flex-1">
-                        <h4 className={`font-medium ${
-                          darkMode ? 'text-white' : 'text-gray-900'
-                        }`}>
+                        <h4 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'
+                          }`}>
                           {item.name}
                         </h4>
-                        <p className={`text-sm ${
-                          darkMode ? 'text-gray-300' : 'text-gray-600'
-                        }`}>
+                        <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'
+                          }`}>
                           {formatPrice(item.price)} × {item.quantity}
                         </p>
                       </div>
-                      <div className={`font-bold ${
-                        darkMode ? 'text-pink-300' : 'text-pink-600'
-                      }`}>
+                      <div className={`font-bold ${darkMode ? 'text-pink-300' : 'text-pink-600'
+                        }`}>
                         {formatPrice(item.price * item.quantity)}
                       </div>
                     </div>
@@ -771,18 +830,15 @@ export default function OrderHistoryPage() {
                 </div>
               </div>
 
-              <div className={`border-t pt-4 ${
-                darkMode ? 'border-gray-600' : 'border-gray-200'
-              }`}>
+              <div className={`border-t pt-4 ${darkMode ? 'border-gray-600' : 'border-gray-200'
+                }`}>
                 <div className="flex justify-between items-center">
-                  <span className={`text-lg font-bold ${
-                    darkMode ? 'text-white' : 'text-gray-900'
-                  }`}>
+                  <span className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'
+                    }`}>
                     Total
                   </span>
-                  <span className={`text-xl font-bold ${
-                    darkMode ? 'text-pink-300' : 'text-pink-600'
-                  }`}>
+                  <span className={`text-xl font-bold ${darkMode ? 'text-pink-300' : 'text-pink-600'
+                    }`}>
                     {formatPrice(calculateOrderTotal(selectedOrder.items))}
                   </span>
                 </div>
@@ -794,44 +850,38 @@ export default function OrderHistoryPage() {
 
       {/* Payment Modal */}
       {showPaymentModal && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" 
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
           onClick={() => setShowPaymentModal(false)}
         >
-          <div 
-            className={`max-w-md w-full rounded-xl shadow-2xl ${
-              darkMode ? 'bg-gray-800 border border-gray-600' : 'bg-white border border-gray-200'
-            }`}
+          <div
+            className={`max-w-md w-full rounded-xl shadow-2xl ${darkMode ? 'bg-gray-800 border border-gray-600' : 'bg-white border border-gray-200'
+              }`}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h2 className={`text-xl font-bold ${
-                  darkMode ? 'text-pink-300' : 'text-pink-900'
-                }`}>
+                <h2 className={`text-xl font-bold ${darkMode ? 'text-pink-300' : 'text-pink-900'
+                  }`}>
                   Choose Payment Method
                 </h2>
                 <button
                   onClick={() => setShowPaymentModal(false)}
-                  className={`text-gray-400 hover:text-gray-600 ${
-                    darkMode ? 'hover:text-gray-300' : 'hover:text-gray-600'
-                  }`}
+                  className={`text-gray-400 hover:text-gray-600 ${darkMode ? 'hover:text-gray-300' : 'hover:text-gray-600'
+                    }`}
                 >
                   ✕
                 </button>
               </div>
 
-              <div className={`mb-6 p-4 rounded-lg text-center ${
-                darkMode ? 'bg-gray-700' : 'bg-gray-50'
-              }`}>
-                <p className={`text-lg font-semibold ${
-                  darkMode ? 'text-white' : 'text-gray-900'
+              <div className={`mb-6 p-4 rounded-lg text-center ${darkMode ? 'bg-gray-700' : 'bg-gray-50'
                 }`}>
+                <p className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'
+                  }`}>
                   Total Amount
                 </p>
-                <p className={`text-2xl font-bold ${
-                  darkMode ? 'text-pink-300' : 'text-pink-600'
-                }`}>
+                <p className={`text-2xl font-bold ${darkMode ? 'text-pink-300' : 'text-pink-600'
+                  }`}>
                   {totalPrice.toLocaleString('en-US')} MMK
                 </p>
               </div>
@@ -840,11 +890,10 @@ export default function OrderHistoryPage() {
                 {/* QR Code Payment Button */}
                 <button
                   onClick={() => handlePayment('scan')}
-                  className={`w-full p-4 rounded-xl border-2 transition-all duration-200 flex items-center justify-center gap-3 ${
-                    darkMode 
-                      ? 'border-blue-500 bg-blue-900 hover:bg-blue-800 text-blue-300' 
+                  className={`w-full p-4 rounded-xl border-2 transition-all duration-200 flex items-center justify-center gap-3 ${darkMode
+                      ? 'border-blue-500 bg-blue-900 hover:bg-blue-800 text-blue-300'
                       : 'border-blue-500 bg-blue-50 hover:bg-blue-100 text-blue-700'
-                  }`}
+                    }`}
                 >
                   <div className="text-2xl">📱</div>
                   <div>
@@ -856,11 +905,10 @@ export default function OrderHistoryPage() {
                 {/* Cash Payment Button */}
                 <button
                   onClick={() => handlePayment('cash')}
-                  className={`w-full p-4 rounded-xl border-2 transition-all duration-200 flex items-center justify-center gap-3 ${
-                    darkMode 
-                      ? 'border-green-500 bg-green-900 hover:bg-green-800 text-green-300' 
+                  className={`w-full p-4 rounded-xl border-2 transition-all duration-200 flex items-center justify-center gap-3 ${darkMode
+                      ? 'border-green-500 bg-green-900 hover:bg-green-800 text-green-300'
                       : 'border-green-500 bg-green-50 hover:bg-green-100 text-green-700'
-                  }`}
+                    }`}
                 >
                   <div className="text-2xl">💵</div>
                   <div>
@@ -875,70 +923,62 @@ export default function OrderHistoryPage() {
       )}
       {/* QR Code Payment Modal */}
       {showQRModal && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" 
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
           onClick={handleCloseQRModal}
         >
-          <div 
-            className={`max-w-md w-full rounded-xl shadow-2xl max-h-[90vh] overflow-y-auto ${
-              darkMode ? 'bg-gray-800 border border-gray-600' : 'bg-white border border-gray-200'
-            }`}
+          <div
+            className={`max-w-md w-full rounded-xl shadow-2xl max-h-[90vh] overflow-y-auto ${darkMode ? 'bg-gray-800 border border-gray-600' : 'bg-white border border-gray-200'
+              }`}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h2 className={`text-xl font-bold ${
-                  darkMode ? 'text-pink-300' : 'text-pink-900'
-                }`}>
+                <h2 className={`text-xl font-bold ${darkMode ? 'text-pink-300' : 'text-pink-900'
+                  }`}>
                   KBZ Pay QR Code
                 </h2>
                 <button
                   onClick={handleCloseQRModal}
-                  className={`text-gray-400 hover:text-gray-600 ${
-                    darkMode ? 'hover:text-gray-300' : 'hover:text-gray-600'
-                  }`}
+                  className={`text-gray-400 hover:text-gray-600 ${darkMode ? 'hover:text-gray-300' : 'hover:text-gray-600'
+                    }`}
                 >
                   ✕
                 </button>
               </div>
 
               {/* Total Amount */}
-              <div className={`mb-6 p-4 rounded-lg text-center ${
-                darkMode ? 'bg-gray-700' : 'bg-gray-50'
-              }`}>
-                <p className={`text-lg font-semibold ${
-                  darkMode ? 'text-white' : 'text-gray-900'
+              <div className={`mb-6 p-4 rounded-lg text-center ${darkMode ? 'bg-gray-700' : 'bg-gray-50'
                 }`}>
+                <p className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'
+                  }`}>
                   Total Amount
                 </p>
-                <p className={`text-2xl font-bold ${
-                  darkMode ? 'text-pink-300' : 'text-pink-600'
-                }`}>
+                <p className={`text-2xl font-bold ${darkMode ? 'text-pink-300' : 'text-pink-600'
+                  }`}>
                   {totalPrice.toLocaleString('en-US')} MMK
                 </p>
               </div>
 
               {/* QR Code Image */}
               <div className="mb-6 text-center">
-                <div className={`p-4 rounded-lg ${
-                  darkMode ? 'bg-blue-900' : 'bg-blue-50'
-                }`}>
-                  <p className={`text-lg font-semibold mb-4 ${
-                    darkMode ? 'text-blue-300' : 'text-blue-700'
+                <div className={`p-4 rounded-lg ${darkMode ? 'bg-blue-900' : 'bg-blue-50'
                   }`}>
+                  <p className={`text-lg font-semibold mb-4 ${darkMode ? 'text-blue-300' : 'text-blue-700'
+                    }`}>
                     Use KBZPay Scan to pay me
                   </p>
                   <div className="bg-white p-4 rounded-lg inline-block">
-                    <img 
-                      src="/image/kbz-qr-code.jpeg" 
-                      alt="KBZ Pay QR Code" 
-                      className="w-64 h-64 object-contain mx-auto"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'block';
-                      }}
-                    />
-                    <div style={{display: 'none'}} className="w-64 h-64 flex items-center justify-center bg-gray-100 rounded-lg">
+                    {qrCode ? (
+                      <img
+                        src={qrCode}
+                        alt="Dynamic QR Code"
+                        className="w-64 h-64 object-contain mx-auto"
+                      />
+                    ) : (
+                      <p className="text-gray-500 text-center">Loading QR Code...</p>
+                    )}
+                    <div style={{ display: 'none' }} className="w-64 h-64 flex items-center justify-center bg-gray-100 rounded-lg">
                       <p className="text-gray-500">QR Code Image Not Found</p>
                     </div>
                   </div>
@@ -952,16 +992,14 @@ export default function OrderHistoryPage() {
 
               {/* Upload Receipt Section */}
               <div className="mb-6">
-                <h3 className={`text-lg font-semibold mb-3 ${
-                  darkMode ? 'text-white' : 'text-gray-900'
-                }`}>
+                <h3 className={`text-lg font-semibold mb-3 ${darkMode ? 'text-white' : 'text-gray-900'
+                  }`}>
                   Upload Payment Receipt
                 </h3>
-                <div className={`border-2 border-dashed rounded-lg p-4 text-center ${
-                  darkMode 
-                    ? 'border-gray-600 bg-gray-700' 
+                <div className={`border-2 border-dashed rounded-lg p-4 text-center ${darkMode
+                    ? 'border-gray-600 bg-gray-700'
                     : 'border-gray-300 bg-gray-50'
-                }`}>
+                  }`}>
                   <input
                     type="file"
                     accept="image/*"
@@ -969,11 +1007,10 @@ export default function OrderHistoryPage() {
                     className="hidden"
                     id="receipt-upload"
                   />
-                  <label 
-                    htmlFor="receipt-upload" 
-                    className={`cursor-pointer block ${
-                      darkMode ? 'text-gray-300' : 'text-gray-600'
-                    }`}
+                  <label
+                    htmlFor="receipt-upload"
+                    className={`cursor-pointer block ${darkMode ? 'text-gray-300' : 'text-gray-600'
+                      }`}
                   >
                     {receiptFile ? (
                       <div>
@@ -998,15 +1035,14 @@ export default function OrderHistoryPage() {
               <button
                 onClick={handleSubmitReceipt}
                 disabled={!receiptFile}
-                className={`w-full py-3 px-6 rounded-xl font-bold text-lg transition-all duration-200 ${
-                  receiptFile
-                    ? darkMode 
-                      ? 'bg-green-600 hover:bg-green-500 text-white' 
+                className={`w-full py-3 px-6 rounded-xl font-bold text-lg transition-all duration-200 ${receiptFile
+                    ? darkMode
+                      ? 'bg-green-600 hover:bg-green-500 text-white'
                       : 'bg-green-600 hover:bg-green-700 text-white'
                     : darkMode
                       ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
+                  }`}
               >
                 Submit Payment Receipt
               </button>
@@ -1017,14 +1053,13 @@ export default function OrderHistoryPage() {
 
       {/* Payment Success Modal */}
       {showPaymentSuccessModal && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" 
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
           onClick={() => setShowPaymentSuccessModal(false)}
         >
-          <div 
-            className={`max-w-md w-full rounded-xl shadow-2xl ${
-              darkMode ? 'bg-gray-800 border border-gray-600' : 'bg-white border border-gray-200'
-            }`}
+          <div
+            className={`max-w-md w-full rounded-xl shadow-2xl ${darkMode ? 'bg-gray-800 border border-gray-600' : 'bg-white border border-gray-200'
+              }`}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6 text-center">
@@ -1037,15 +1072,13 @@ export default function OrderHistoryPage() {
               </div>
 
               {/* Success Message */}
-              <h2 className={`text-2xl font-bold mb-4 ${
-                darkMode ? 'text-green-400' : 'text-green-600'
-              }`}>
+              <h2 className={`text-2xl font-bold mb-4 ${darkMode ? 'text-green-400' : 'text-green-600'
+                }`}>
                 Payment Successful!
               </h2>
-              
-              <p className={`text-lg mb-6 ${
-                darkMode ? 'text-gray-300' : 'text-gray-700'
-              }`}>
+
+              <p className={`text-lg mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-700'
+                }`}>
                 Your payment has been processed successfully. Thank you for dining with us!
               </p>
 
@@ -1053,9 +1086,8 @@ export default function OrderHistoryPage() {
               <div className="mb-6">
                 <div className="flex justify-center items-center gap-2">
                   <span className="text-2xl animate-pulse">🍒</span>
-                  <span className={`text-lg font-semibold ${
-                    darkMode ? 'text-pink-300' : 'text-pink-600'
-                  }`}>
+                  <span className={`text-lg font-semibold ${darkMode ? 'text-pink-300' : 'text-pink-600'
+                    }`}>
                     Cherry Myo Restaurant
                   </span>
                   <span className="text-2xl animate-pulse">🍒</span>
@@ -1065,11 +1097,10 @@ export default function OrderHistoryPage() {
               {/* Close Button */}
               <button
                 onClick={() => setShowPaymentSuccessModal(false)}
-                className={`w-full py-3 px-6 rounded-xl font-bold text-lg transition-all duration-200 ${
-                  darkMode 
-                    ? 'bg-green-600 hover:bg-green-500 text-white' 
+                className={`w-full py-3 px-6 rounded-xl font-bold text-lg transition-all duration-200 ${darkMode
+                    ? 'bg-green-600 hover:bg-green-500 text-white'
                     : 'bg-green-600 hover:bg-green-700 text-white'
-                }`}
+                  }`}
               >
                 Awesome! Close
               </button>
