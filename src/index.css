@@ -28,6 +28,19 @@
   }
 }
 
+/* If you use a global CSS file */
+.swal-confirm {
+  background-color: #3085d6;
+  color: white;
+  padding: 0.5rem 1.25rem;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s ease;
+}
+
+.swal-confirm:hover {
+  background-color: #2563eb; /* custom hover color */
+}
+
 @layer utilities {
   .animate-blossom {
     animation: fall 12s linear infinite;
