@@ -58,7 +58,12 @@ export default function AdminSpecialMenuPage() {
       );
       
       if (existingItem) {
-        alert("You already have that item. Please choose a different name.");
+        Swal.fire({
+          title: 'Duplicate Item',
+          text: 'You already have that item. Please choose a different name.',
+          icon: 'warning',       // yellow ⚠️ icon
+          confirmButtonText: 'OK'
+        });        
         return;
       }
 
@@ -66,7 +71,12 @@ export default function AdminSpecialMenuPage() {
       const price = parseFloat(formData.price);
       if (isNaN(price) || price <= 0) {
         const action = editingItem ? "update" : "create";
-        alert(`Cannot ${action} menu item. Price must be greater than zero. Please enter a valid price.`);
+        Swal.fire({
+          title: 'Invalid Price',
+          text: `Cannot ${action} menu item. Price must be greater than zero. Please enter a valid price.`,
+          icon: 'warning',       // ⚠️ yellow warning icon
+          confirmButtonText: 'OK'
+        });        
         return;
       }
       
@@ -101,7 +111,12 @@ export default function AdminSpecialMenuPage() {
       setShowForm(false);
       fetchSpecialMenuItems();
     } catch (err) {
-      alert("Error: " + err.message);
+      Swal.fire({
+        title: 'Error',
+        text: `Error: ${err.message}`,
+        icon: 'error',           // red ❌ icon
+        confirmButtonText: 'OK'
+      });    
     }
   };
 
@@ -130,7 +145,12 @@ export default function AdminSpecialMenuPage() {
       
       setMenuItems(prev => prev.filter(item => item._id !== id));
     } catch (err) {
-      alert("Error: " + err.message);
+      Swal.fire({
+        title: 'Error',
+        text: `Error: ${err.message}`,
+        icon: 'error',           // red ❌ icon
+        confirmButtonText: 'OK'
+      });
     }
   };
 
@@ -148,7 +168,12 @@ export default function AdminSpecialMenuPage() {
       
       // Socket will handle the real-time update
     } catch (err) {
-      alert("Error: " + err.message);
+      Swal.fire({
+        title: 'Error',
+        text: `Error: ${err.message}`,
+        icon: 'error',           // red ❌ icon
+        confirmButtonText: 'OK'
+      });
     }
   };
 
@@ -176,14 +201,24 @@ export default function AdminSpecialMenuPage() {
       // Validate file type
       const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
       if (!validTypes.includes(file.type)) {
-        alert('Please select a valid image file (JPEG, PNG, GIF, or WebP)');
+        Swal.fire({
+          title: 'Invalid File',
+          text: 'Please select a valid image file (JPEG, PNG, GIF, or WebP).',
+          icon: 'error',          // ❌ red cross icon
+          confirmButtonText: 'OK'
+        });
         return;
       }
 
       // Validate file size (max 10MB)
       const maxSize = 10 * 1024 * 1024; // 10MB in bytes
       if (file.size > maxSize) {
-        alert('File size must be less than 10MB');
+        Swal.fire({
+          title: 'File Too Large',
+          text: 'File size must be less than 10 MB.',
+          icon: 'warning',        // ⚠️ yellow warning icon
+          confirmButtonText: 'OK'
+        });
         return;
       }
 
@@ -833,7 +868,12 @@ function AdminSpecialMenuContent({
                             onError={(e) => {
                               setImagePreview("");
                               setSelectedFile(null);
-                              alert("Failed to load image. Please check the URL or select a different file.");
+                              Swal.fire({
+                                title: 'Failed to Load Image',
+                                text: 'Please check the URL or select a different file.',
+                                icon: 'error',          // ❌ red cross icon for errors
+                                confirmButtonText: 'OK'
+                              });                            
                             }}
                           />
                           <button

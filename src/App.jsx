@@ -16,32 +16,48 @@ import AdminCheckoutPage from "./pages/AdminCheckout";
 import TableViewPage from "./pages/TableView";
 import { useDarkMode } from "./pages/DarkModeContext.jsx";
 import FeedbackPage from "./pages/FeedbackPage.jsx";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function App() {
   const { darkMode } = useDarkMode();
   
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/food" element={<FoodMenuPage />} />
-        <Route path="/grill" element={<GrillMenuPage />} />
-        <Route path="/beverages" element={<BeveragePage />} />
-        <Route path="/special" element={<SpecialMenuPage />} />
-        <Route path="/promotion" element={<PromotionMenuPage />} />
-        <Route path="/cart" element={<CartPage />} />
-        <Route path="/cart/:tableId" element={<CartPage />} />
-        <Route path="/order-history" element={<OrderHistoryPage />} />
-        <Route path="/admin" element={<AdminPage />} />
-        <Route path="/admin/special" element={<AdminSpecialMenuPage />} />
-        <Route path="/admin/promotion" element={<AdminPromotionMenuPage />} />
-        <Route path="/admin/sales-report" element={<AdminSalesReport darkMode={darkMode} />} />
-        <Route path="/kitchen" element={<KitchenPage />} />
-        <Route path="/checkout" element={<AdminCheckoutPage />} />
-        <Route path="/feedback" element={<FeedbackPage />} />
-        <Route path="/table/:tableId" element={<TableViewPage />} />
-      </Routes>
-    </Router>
-  );
-}export default App;
+    <>
+      <Router>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/food" element={<FoodMenuPage />} />
+          <Route path="/grill" element={<GrillMenuPage />} />
+          <Route path="/beverages" element={<BeveragePage />} />
+          <Route path="/special" element={<SpecialMenuPage />} />
+          <Route path="/promotion" element={<PromotionMenuPage />} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/cart/:tableId" element={<CartPage />} />
+          <Route path="/order-history" element={<OrderHistoryPage />} />
+          <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin/special" element={<AdminSpecialMenuPage />} />
+          <Route path="/admin/promotion" element={<AdminPromotionMenuPage />} />
+          <Route path="/admin/sales-report" element={<AdminSalesReport darkMode={darkMode} />} />
+          <Route path="/kitchen" element={<KitchenPage />} />
+          <Route path="/checkout" element={<AdminCheckoutPage />} />
+          <Route path="/feedback" element={<FeedbackPage />} />
+          <Route path="/table/:tableId" element={<TableViewPage />} />
+        </Routes>
+      </Router>
 
+      {/* Toast notifications container */}
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        pauseOnHover
+        draggable
+      />
+    </>
+  );
+}
+
+export default App;

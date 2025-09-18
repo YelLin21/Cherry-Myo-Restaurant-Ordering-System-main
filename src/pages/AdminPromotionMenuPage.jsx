@@ -5,6 +5,7 @@ import AdminAuth from "../components/AdminAuth.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { useDarkMode } from "./DarkModeContext.jsx";
 import { io } from "socket.io-client";
+import Swal from 'sweetalert2';
 
 const APIBASE = import.meta.env.VITE_API_URL;
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
@@ -69,14 +70,32 @@ export default function AdminPromotionMenuPage() {
       );
       
       if (existingItem) {
-        alert("You already have that item. Please choose a different name.");
-        return;
+        Swal.fire({
+                title: 'Already have that item',
+                text: 'You already have that item. Please choose a different name.',
+                icon: 'warning',
+                confirmButtonText: 'OK',
+                customClass: {
+                  confirmButton: 'swal-confirm'
+                },
+                buttonsStyling: false // <- disables default SweetAlert2 styles
+            })
+          return;
       }
       
       // Validate price - must be greater than zero
       const price = parseFloat(formData.price);
       if (isNaN(price) || price <= 0) {
-        alert("Price must be greater than zero. Please enter a valid price.");
+        Swal.fire({
+          title: 'Price must be greater than zero',
+          text: 'Price must be greater than zero. Please enter a valid price.',
+          icon: 'warning',
+          confirmButtonText: 'OK',
+          customClass: {
+            confirmButton: 'swal-confirm'
+          },
+          buttonsStyling: false // <- disables default SweetAlert2 styles
+        })
         return;
       }
       let imageData = formData.image;
@@ -110,8 +129,13 @@ export default function AdminPromotionMenuPage() {
       setShowForm(false);
       fetchPromotionMenuItems();
     } catch (err) {
-      alert("Error: " + err.message);
-    }
+      Swal.fire({
+        title: 'Error',
+        text: err.message,
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
+          }
   };
 
   const handleEdit = (item) => {
@@ -139,7 +163,12 @@ export default function AdminPromotionMenuPage() {
       
       setMenuItems(prev => prev.filter(item => item._id !== id));
     } catch (err) {
-      alert("Error: " + err.message);
+      Swal.fire({
+        title: 'Error',
+        text: `Error: ${err.message}`,
+        icon: 'error',           // red ❌ icon
+        confirmButtonText: 'OK'
+      });
     }
   };
 
@@ -157,7 +186,12 @@ export default function AdminPromotionMenuPage() {
       
       // Socket will handle the real-time update
     } catch (err) {
-      alert("Error: " + err.message);
+      Swal.fire({
+        title: 'Error',
+        text: `Error: ${err.message}`,
+        icon: 'error',           // red ❌ icon
+        confirmButtonText: 'OK'
+      });
     }
   };
 
@@ -183,7 +217,16 @@ export default function AdminPromotionMenuPage() {
       );
 
       if (validItems.length === 0) {
-        alert("Please set promotion prices for selected items.");
+        Swal.fire({
+          title: 'Please set promotion prices',
+          text: 'Please set promotion prices for selected items.',
+          icon: 'warning',
+          confirmButtonText: 'OK',
+          customClass: {
+            confirmButton: 'swal-confirm'
+          },
+          buttonsStyling: false // <- disables default SweetAlert2 styles
+        })
         return;
       }
 
@@ -191,7 +234,16 @@ export default function AdminPromotionMenuPage() {
         const promotionPrice = parseFloat(item.promotionPrice);
         
         if (promotionPrice >= item.price) {
-          alert(`Promotion price for "${item.name}" must be less than original price (${item.price} MMK)`);
+          Swal.fire({
+            title: 'Promotion price must be less than original price',
+            text: `Promotion price for "${item.name}" must be less than original price (${item.price} MMK)`,
+            icon: 'warning',
+            confirmButtonText: 'OK',
+            customClass: {
+              confirmButton: 'swal-confirm'
+            },
+            buttonsStyling: false // <- disables default SweetAlert2 styles
+          })
           return;
         }
 
@@ -207,10 +259,25 @@ export default function AdminPromotionMenuPage() {
       setShowPromotionForm(false);
       setSelectedItems([]);
       fetchPromotionMenuItems();
-      alert("Promotions saved successfully!");
+      Swal.fire({
+        title: 'Successfully saved',
+        text: `Promotions saved successfully!`,
+        icon: 'success',
+        confirmButtonText: 'OK',
+        customClass: {
+          confirmButton: 'swal-confirm'
+        },
+        buttonsStyling: false
+      })
+      return;
     } catch (err) {
-      alert("Error: " + err.message);
-    }
+      Swal.fire({
+        title: 'Error',
+        text: err.message,
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
+          }
   };
 
   const handleRemovePromotion = async (id) => {
@@ -229,8 +296,13 @@ export default function AdminPromotionMenuPage() {
       
       fetchPromotionMenuItems();
     } catch (err) {
-      alert("Error: " + err.message);
-    }
+      Swal.fire({
+        title: 'Error',
+        text: err.message,
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
+          }
   };
 
   // Filter menu items based on search query and category
@@ -299,14 +371,25 @@ export default function AdminPromotionMenuPage() {
       // Validate file type
       const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
       if (!validTypes.includes(file.type)) {
-        alert('Please select a valid image file (JPEG, PNG, GIF, or WebP)');
+        
+        aSwal.fire({
+          title: 'Invalid File',
+          text: 'Please select a valid image file (JPEG, PNG, GIF, or WebP).',
+          icon: 'error',          // ❌ red cross icon
+          confirmButtonText: 'OK' // text for the button
+        });
         return;
       }
 
       // Validate file size (max 10MB)
       const maxSize = 10 * 1024 * 1024; // 10MB in bytes
       if (file.size > maxSize) {
-        alert('File size must be less than 10MB');
+        Swal.fire({
+          title: 'File Too Large',
+          text: 'File size must be less than 10 MB.',
+          icon: 'warning',          // ⚠️ yellow icon
+          confirmButtonText: 'OK'   // button text
+        });
         return;
       }
 
@@ -1387,7 +1470,12 @@ function AdminPromotionMenuContent({
                             onError={(e) => {
                               setImagePreview("");
                               setSelectedFile(null);
-                              alert("Failed to load image. Please check the URL or select a different file.");
+                              Swal.fire({
+                                title: 'Failed to Load Image',
+                                text: 'Please check the URL or select a different file.',
+                                icon: 'error',           // ❌ red icon for errors
+                                confirmButtonText: 'OK'
+                              });
                             }}
                           />
                           <button
