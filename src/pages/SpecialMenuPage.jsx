@@ -187,6 +187,10 @@ export default function SpecialMenuPage() {
                       <span className={`font-bold ${darkMode ? 'text-pink-300' : 'text-pink-900'}`}>
                         {item.promotion} MMK
                       </span>
+                      <br />
+                      <span className={`pl-6 text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            You save: {(item.price - item.promotion)} MMK
+                          </span>
                     </>
                   ) : (
                     <span>{item.price} MMK</span>
