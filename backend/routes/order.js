@@ -1,6 +1,6 @@
-const express = require("express");
+import express from "express";
+import Order from "../models/Order.js";
 const router = express.Router();
-const Order = require("../models/Order");
 
 // GET all orders
 router.get("/", async (req, res) => {
@@ -16,23 +16,27 @@ router.get("/", async (req, res) => {
 router.get("/customer", async (req, res) => {
   try {
     // Only return orders that are NOT paid - customers should never see paid orders
-    const unpaidOrders = await Order.find({ 
-      $or: [
-        { paid: { $ne: true } },
-        { paid: { $exists: false } }
-      ]
+    const unpaidOrders = await Order.find({
+      $or: [{ paid: { $ne: true } }, { paid: { $exists: false } }],
     }).sort({ createdAt: -1 });
-    
-    console.log(`📋 Customer orders endpoint called - Total orders in DB: ${await Order.countDocuments()}`);
-    console.log(`📋 Paid orders in DB: ${await Order.countDocuments({ paid: true })}`);
+
+    console.log(
+      `📋 Customer orders endpoint called - Total orders in DB: ${await Order.countDocuments()}`
+    );
+    console.log(
+      `📋 Paid orders in DB: ${await Order.countDocuments({ paid: true })}`
+    );
     console.log(`📋 Unpaid orders returned: ${unpaidOrders.length}`);
-    console.log(`📋 Order details:`, unpaidOrders.map(order => ({
-      id: order._id.toString(),
-      table: order.tableNumber,
-      paid: order.paid,
-      status: order.status
-    })));
-    
+    console.log(
+      `📋 Order details:`,
+      unpaidOrders.map((order) => ({
+        id: order._id.toString(),
+        table: order.tableNumber,
+        paid: order.paid,
+        status: order.status,
+      }))
+    );
+
     res.json(unpaidOrders);
   } catch (error) {
     console.error("Error fetching customer orders:", error);
@@ -48,8 +52,18 @@ router.get("/checkout", async (req, res) => {
       paid: { $ne: true },
     }).sort({ createdAt: -1 });
 
-    console.log(`🧾 Checkout endpoint called - Found ${orders.length} orders with status readyForCheckout or sent`);
-    console.log("🧾 Order statuses:", orders.map(o => ({ id: o._id.toString(), table: o.tableNumber, status: o.status, paid: o.paid })));
+    console.log(
+      `🧾 Checkout endpoint called - Found ${orders.length} orders with status readyForCheckout or sent`
+    );
+    console.log(
+      "🧾 Order statuses:",
+      orders.map((o) => ({
+        id: o._id.toString(),
+        table: o.tableNumber,
+        status: o.status,
+        paid: o.paid,
+      }))
+    );
 
     res.json(orders);
   } catch (error) {
@@ -62,7 +76,7 @@ router.get("/checkout", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const { tableNumber, items } = req.body;
-    console.log(tableNumber, items)
+    console.log(tableNumber, items);
     if (!tableNumber || !items || !Array.isArray(items)) {
       return res.status(400).json({ error: "Invalid order format" });
     }
@@ -146,17 +160,17 @@ router.post("/mark-paid", async (req, res) => {
 
   try {
     console.log(`💰 Marking order ${orderId} as paid...`);
-    
+
     const existingOrder = await Order.findById(orderId);
     if (!existingOrder) {
       console.log(`❌ Order ${orderId} not found`);
       return res.status(404).json({ error: "Order not found" });
     }
-    
+
     console.log(`📋 Order ${orderId} current status:`, {
       table: existingOrder.tableNumber,
       paid: existingOrder.paid,
-      status: existingOrder.status
+      status: existingOrder.status,
     });
 
     const updated = await Order.findByIdAndUpdate(
@@ -168,13 +182,13 @@ router.post("/mark-paid", async (req, res) => {
     console.log(`✅ Order ${orderId} marked as paid successfully:`, {
       table: updated.tableNumber,
       paid: updated.paid,
-      status: updated.status
+      status: updated.status,
     });
 
     const io = req.app.get("io");
     io.emit("order:paid", {
       orderId: orderId,
-      tableNumber: existingOrder.tableNumber
+      tableNumber: existingOrder.tableNumber,
     });
 
     res.json({ message: "Order marked as paid", order: updated });
@@ -184,4 +198,4 @@ router.post("/mark-paid", async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

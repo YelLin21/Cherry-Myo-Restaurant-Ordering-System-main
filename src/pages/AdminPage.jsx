@@ -5,6 +5,7 @@ import AdminAuth from "../components/AdminAuth";
 import { useDarkMode } from "./DarkModeContext.jsx";
 import AdminNavbar from "../components/AdminNavbar.jsx";
 import { io } from "socket.io-client";
+import Swal from 'sweetalert2'
 
 const APIBASE = import.meta.env.VITE_API_URL;
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000" || "https://cherry-myo-restaurant-ordering-system.onrender.com";
@@ -31,7 +32,16 @@ export default function AdminPage() {
     );
     
     if (existingItem) {
-      alert("You already have that item in this category. Please choose a different name.");
+      Swal.fire({
+        title: 'No items selected',
+        text: 'You already have that item in this category. Please choose a different name.',
+        icon: 'warning',
+        confirmButtonText: 'OK',
+        customClass: {
+          confirmButton: 'swal-confirm'
+        },
+        buttonsStyling: false // <- disables default SweetAlert2 styles
+      })
       return;
     }
     
@@ -61,7 +71,16 @@ export default function AdminPage() {
     );
     
     if (existingItem) {
-      alert("You already have that item in this category. Please choose a different name.");
+      Swal.fire({
+        title: 'No items selected',
+        text: 'You already have that item in this category. Please choose a different name.',
+        icon: 'warning',
+        confirmButtonText: 'OK',
+        customClass: {
+          confirmButton: 'swal-confirm'
+        },
+        buttonsStyling: false // <- disables default SweetAlert2 styles
+      })
       return;
     }
     

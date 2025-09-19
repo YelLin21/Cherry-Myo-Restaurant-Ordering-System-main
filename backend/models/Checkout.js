@@ -1,31 +1,31 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const CheckoutSchema = new mongoose.Schema({
   orderId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Order",
-    required: true
+    required: true,
   },
   tableNumber: {
     type: String,
-    required: true
+    required: true,
   },
   paymentMethod: {
     type: String,
     enum: ["cash", "scan"],
-    required: true
+    required: true,
   },
   finalAmount: {
     type: Number,
-    required: true
+    required: true,
   },
-  cashReceived: Number,   // only if paymentMethod = cash
-  changeGiven: Number,    // only if paymentMethod = cash
-  slipImage: String,      // file path or URL to uploaded image
+  cashReceived: Number, // only if paymentMethod = cash
+  changeGiven: Number, // only if paymentMethod = cash
+  slipImage: String, // file path or URL to uploaded image
   createdAt: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
 });
 
-module.exports = mongoose.model("Checkout", CheckoutSchema);
+export default mongoose.model("Checkout", CheckoutSchema);

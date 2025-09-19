@@ -1,6 +1,6 @@
-const express = require("express");
+import express from "express";
+import Menu from "../models/Menu.js";
 const router = express.Router();
-const Menu = require("../models/Menu");
 
 router.get("/", async (req, res) => {
   const items = await Menu.find();
@@ -37,4 +37,4 @@ router.delete("/:id", async (req, res) => {
   res.json({ success: true });
 });
 
-module.exports = router;
+export default router;

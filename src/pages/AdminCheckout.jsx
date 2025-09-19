@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useDarkMode } from './DarkModeContext';
 import AdminNavbar from '../components/AdminNavbar';
 import { io } from 'socket.io-client';
+import Swal from 'sweetalert2';
 
 const APIBASE = import.meta.env.VITE_API_URL;
 const SOCKET_URL =
@@ -626,8 +627,6 @@ function CheckoutContent({ user, handleLogout }) {
         }));
     };
 
-
-
     const handleMarkAsPaid = async (tableOrder) => {
         try {
             const orderIds = Array.isArray(tableOrder.orderIds) ? tableOrder.orderIds : [tableOrder._id];
@@ -635,7 +634,16 @@ function CheckoutContent({ user, handleLogout }) {
             const finalTotal = calculateFinalTotal(tableOrder);
 
             if (!paymentMethod) {
-                alert(' Please select a payment method (QR Scan or Cash)');
+                Swal.fire({
+                    title: 'No items selected',
+                    text: 'Please select a payment method (QR Scan or Cash)',
+                    icon: 'warning',
+                    confirmButtonText: 'OK',
+                    customClass: {
+                        confirmButton: 'swal-confirm'
+                    },
+                    buttonsStyling: false // <- disables default SweetAlert2 styles
+                })
                 return;
             }
 
@@ -643,7 +651,16 @@ function CheckoutContent({ user, handleLogout }) {
             if (paymentMethod === 'cash') {
                 const cashReceived = cashAmounts[tableOrder._id];
                 if (!cashReceived || cashReceived < finalTotal) {
-                    alert('⚠️ Insufficient cash amount received');
+                    Swal.fire({
+                        title: 'No items selected',
+                        text: '⚠️ Insufficient cash amount received',
+                        icon: 'warning',
+                        confirmButtonText: 'OK',
+                        customClass: {
+                            confirmButton: 'swal-confirm'
+                        },
+                        buttonsStyling: false // <- disables default SweetAlert2 styles
+                    })
                     return;
                 }
             }
@@ -717,11 +734,18 @@ function CheckoutContent({ user, handleLogout }) {
                 console.error("Error generating PDF receipt:", pdfError);
                 // Continue even if PDF generation fails
             }
-
-            alert(`Table ${tableOrder.tableNumber} - ${orderCount} ${orderText} marked as paid\n💳 ${paymentText}\nReceipt downloaded\n Removed from customer order history.`);
         } catch (error) {
-            console.error('Error marking orders as paid:', error);
-            alert(' Failed to mark orders as paid. Please try again.');
+            Swal.fire({
+                title: 'No items selected',
+                text: 'Failed to mark orders as paid. Please try again.',
+                icon: 'warning',
+                confirmButtonText: 'OK',
+                customClass: {
+                    confirmButton: 'swal-confirm'
+                },
+                buttonsStyling: false // <- disables default SweetAlert2 styles
+            })
+            return;
         }
     };
 

@@ -1,11 +1,13 @@
-const Session = require("../models/Session");
+import Session from "../models/Session.js";
 
-async function validateSession(req, res, next) {
+const validateSession = async (req, res, next) => {
   const sessionToken = req.headers["x-session-token"];
   const tableId = req.body.tableId || req.query.tableId;
 
   if (!sessionToken || !tableId) {
-    return res.status(401).json({ error: "Session token and table ID required." });
+    return res
+      .status(401)
+      .json({ error: "Session token and table ID required." });
   }
 
   const session = await Session.findOne({
@@ -19,6 +21,6 @@ async function validateSession(req, res, next) {
   }
 
   next();
-}
+};
 
-module.exports = validateSession;
+export default validateSession;

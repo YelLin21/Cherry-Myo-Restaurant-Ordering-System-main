@@ -1,5 +1,5 @@
-const express = require("express");
-const QRCode = require("qrcode");
+import express from "express";
+import QRCode from "qrcode";
 const router = express.Router();
 
 const FRONTEND_BASE_URL = "http://localhost:5173";
@@ -26,7 +26,7 @@ router.get("/table/:tableId/image", async (req, res) => {
   QRCode.toFileStream(res, fullUrl);
 });
 
-module.exports = router;
+export default router;
 
 // router.get("/table/:tableId", async (req, res) => {
 //   const { tableId } = req.params;
@@ -49,7 +49,7 @@ module.exports = router;
 //   const fullUrl = `${baseUrl}/table/${tableId}`; // ← FIXED
 
 //   res.setHeader("Content-Type", "image/png");
-//   QRCode.toFileStream(res, fullUrl); 
+//   QRCode.toFileStream(res, fullUrl);
 // });
 
 // module.exports = router;
