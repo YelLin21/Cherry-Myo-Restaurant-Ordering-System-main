@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient.js";
+import Swal from 'sweetalert2';
 
 export default function AdminMenuForm({
   onAdd,
@@ -66,14 +67,32 @@ export default function AdminMenuForm({
     e.preventDefault();
 
     if (!name || !price || (!imageFile && !image)) {
-      alert("Please fill in both name and price and image.");
+      Swal.fire({
+        title: 'Name and Price required',
+        text: 'Please fill in both name and price and image.',
+        icon: 'warning',
+        confirmButtonText: 'OK',
+        customClass: {
+            confirmButton: 'swal-confirm'
+        },
+        buttonsStyling: false // <- disables default SweetAlert2 styles
+      })
       return;
     }
 
     // Validate price - must be greater than zero
     const priceValue = parseFloat(price);
     if (isNaN(priceValue) || priceValue <= 0) {
-      alert("Price must be greater than zero. Please enter a valid price.");
+      Swal.fire({
+        title: 'Price and Name required',
+        text: 'Price must be greater than zero. Please enter a valid price.',
+        icon: 'warning',
+        confirmButtonText: 'OK',
+        customClass: {
+            confirmButton: 'swal-confirm'
+        },
+        buttonsStyling: false // <- disables default SweetAlert2 styles
+      })
       return;
     }
     

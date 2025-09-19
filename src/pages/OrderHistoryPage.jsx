@@ -5,6 +5,7 @@ import Navbar from "../components/Navbar.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { useDarkMode } from "./DarkModeContext.jsx";
 import { io } from "socket.io-client";
+import Swal from 'sweetalert2';
 
 const APIBASE = import.meta.env.VITE_API_URL;
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
@@ -59,7 +60,6 @@ export default function OrderHistoryPage() {
       });
     });
     
-
     // Also listen for any order updates to double-check paid status
     socket.on("order:update", (updatedOrder) => {
       if (updatedOrder.paid === true) {
@@ -310,7 +310,12 @@ export default function OrderHistoryPage() {
 
   const handleCheckout = () => {
     if (!canCheckout) {
-      alert('Please wait for all orders to be ready before checkout. Orders must be sent to your table first.');
+      Swal.fire({
+        title: 'Cannot Checkout Yet',
+        text: 'Please wait for all orders to be ready before checkout. Orders must be sent to your table first.',
+        icon: 'warning',        // ⚠️ yellow warning icon
+        confirmButtonText: 'OK'
+      });      
       return;
     }
     setShowPaymentModal(true);
@@ -322,13 +327,23 @@ export default function OrderHistoryPage() {
 
     const currentTableId = sessionStorage.getItem("tableId");
     if (!currentTableId) {
-      alert("Table ID missing. Cannot process checkout.");
+      Swal.fire({
+        title: 'Table ID Missing',
+        text: 'Cannot process checkout.',
+        icon: 'error',          // ❌ red error icon
+        confirmButtonText: 'OK'
+      });      
       return;
     }
 
     const firstOrder = orders[0];
     if (!firstOrder) {
-      alert("No orders found to checkout.");
+      Swal.fire({
+        title: 'No Orders Found',
+        text: 'No orders found to checkout.',
+        icon: 'warning',        // ⚠️ yellow warning icon
+        confirmButtonText: 'OK'
+      });      
       return;
     }
 
@@ -354,11 +369,21 @@ export default function OrderHistoryPage() {
 
         const data = await response.json();
         console.log(" Payment intent recorded:", data);
-        alert("Payment recorded!  Waiting for admin approval.");
+        Swal.fire({
+          title: 'Payment Recorded!',
+          text: 'Waiting for admin approval.',
+          icon: 'success',         // ✅ green checkmark icon
+          confirmButtonText: 'OK'
+        });
         setShowPaymentModal(false);
     } catch (err) {
         console.error(" Payment error:", err);
-        alert("Payment failed. Please try again.");
+        Swal.fire({
+          title: 'Payment Failed',
+          text: 'Please try again.',
+          icon: 'error',           // ❌ red cross icon
+          confirmButtonText: 'OK'
+        });
     }
 };
 
@@ -372,7 +397,12 @@ export default function OrderHistoryPage() {
 
   const handleSubmitReceipt = async () => {
     if (!receiptFile) {
-      alert("Please upload your payment receipt first!");
+      Swal.fire({
+        title: 'Payment Receipt Missing',
+        text: 'Please upload your payment receipt first!',
+        icon: 'warning',         // ⚠️ yellow warning icon
+        confirmButtonText: 'OK'
+      });      
       return;
     }
 
@@ -380,14 +410,24 @@ export default function OrderHistoryPage() {
 
     const currentTableId = sessionStorage.getItem("tableId");
     if (!currentTableId) {
-      alert("Table ID missing. Cannot process checkout.");
+      Swal.fire({
+        title: 'Table ID Missing',
+        text: 'Cannot process checkout.',
+        icon: 'error',           // ❌ red cross icon
+        confirmButtonText: 'OK'
+      });
       setIsPaymentProcessing(false);
       return;
     }
 
     const firstOrder = orders[0];
     if (!firstOrder) {
-      alert("No orders found to checkout.");
+      Swal.fire({
+        title: 'No Orders Found',
+        text: 'No orders found to checkout.',
+        icon: 'warning',        // ⚠️ yellow warning icon
+        confirmButtonText: 'OK'
+      });
       setIsPaymentProcessing(false);
       return;
     }
@@ -417,7 +457,12 @@ export default function OrderHistoryPage() {
       // Do NOT setIsPaymentProcessing(false) here
     } catch (err) {
       console.error(" Receipt submission error:", err);
-      alert("Failed to submit receipt. Please try again.");
+      Swal.fire({
+        title: 'Submission Failed',
+        text: 'Failed to submit receipt. Please try again.',
+        icon: 'error',          // ❌ red cross icon
+        confirmButtonText: 'OK'
+      });
       setIsPaymentProcessing(false);
     }
   };

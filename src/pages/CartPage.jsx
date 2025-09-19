@@ -6,6 +6,7 @@ import { useCart } from "../context/CartContext.jsx";
 import { useDarkMode } from "./DarkModeContext.jsx";
 import "../index.css";
 import { useTable } from "../context/TableContext.jsx";
+import Swal from 'sweetalert2'
 
 const APIBASE = import.meta.env.VITE_API_URL;
 
@@ -102,7 +103,16 @@ export default function CartPage() {
 
   const handleCheckoutClick = () => {
     if (!tableId) {
-      alert("No table assigned. Please scan your QR code again.");
+      Swal.fire({
+        title: 'No items selected',
+        text: 'Please select at least one item to order.',
+        icon: 'warning',
+        confirmButtonText: 'OK',
+        customClass: {
+          confirmButton: 'swal-confirm'
+        },
+        buttonsStyling: false 
+      })
       return;
     }
 
@@ -111,7 +121,16 @@ export default function CartPage() {
     );
 
     if (selectedCartItems.length === 0) {
-      alert("Please select at least one item to order.");
+      Swal.fire({
+        title: 'No items selected',
+        text: 'Please select at least one item to order.',
+        icon: 'warning',
+        confirmButtonText: 'OK',
+        customClass: {
+          confirmButton: 'swal-confirm'
+        },
+        buttonsStyling: false 
+      })
       return;
     }
 
@@ -155,7 +174,12 @@ export default function CartPage() {
         navigate("/order-history");
       }, 2000);
     } catch (err) {
-      alert("Failed to send order.");
+      Swal.fire({
+        title: 'Order Failed',
+        text: 'Failed to send order.',
+        icon: 'error',          // ❌ red cross icon
+        confirmButtonText: 'OK'
+      });      
       console.error(err);
     } finally {
       setLoading(false);

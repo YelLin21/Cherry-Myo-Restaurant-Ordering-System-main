@@ -3,6 +3,7 @@ import { io } from "socket.io-client";
 import AdminNavbar from "../components/AdminNavbar.jsx";
 import { onAuthStateChanged, signOut, signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { auth, signInWithGoogle } from "../firebase";
+import { toast } from "react-toastify";
 
 // Simple Google SVG icon component
 function GoogleIcon({ className = "w-6 h-6" }) {
@@ -62,7 +63,6 @@ export default function KitchenPage() {
     }
   }, [resetMessage]);
 
-  // Load remembered admin email
   useEffect(() => {
     const rememberedAdmin = localStorage.getItem('rememberAdmin');
     const rememberedEmail = localStorage.getItem('adminEmail');
@@ -327,10 +327,20 @@ export default function KitchenPage() {
 
       saveProcessedId(orderId);
       setOrders((prev) => prev.filter((order) => order._id !== orderId));
-      alert("✅ Order sent to Admin Checkout.");
+      toast.success("✅ Order sent to Admin Checkout!", {
+        position: "top-right", // ✅ use string instead of toast.POSITION.TOP_RIGHT
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });   
     } catch (error) {
       console.error(error);
-      alert("❌ Failed to mark order as processing.");
+      toast.error("❌ Failed to mark order as processing.", {
+        position: "top-right",
+        autoClose: 3000,
+      });  
     }
   };
 
