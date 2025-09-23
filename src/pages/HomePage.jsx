@@ -22,7 +22,7 @@ export default function HomePage() {
     {
       title: "Grill",
       subtitle: "Fire up the flavor",
-      img: "/image/grill.jpg",
+      img: "/image/grill 1.jpg",
       icon: "🔥",
       route: "/grill",
     },
@@ -36,7 +36,7 @@ export default function HomePage() {
     {
       title: "Special",
       subtitle: "Chef's special dishes",
-      img: "/image/food menu.jpg",
+      img: "/image/special.jpg",
       icon: "🌟",
       route: "/special",
     },
