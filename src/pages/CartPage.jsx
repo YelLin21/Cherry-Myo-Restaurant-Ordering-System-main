@@ -204,37 +204,52 @@ export default function CartPage() {
         {Object.values(cart).length > 0 ? (
           <ul className="space-y-4">
             {Object.values(cart).map(({ item, quantity }) => (
-              <li key={item._id} className={`flex items-center gap-4 p-4 rounded-xl border shadow-sm transition-all duration-200 hover:shadow-md ${darkMode ? "bg-gray-800 border-gray-600" : "bg-pink-300 border-pink-100"}`}>
-                {/* Checkbox */}
-                <input
-                  type="checkbox"
-                  className="h-5 w-5 rounded border-gray-300 focus:ring-pink-500 flex-shrink-0"
-                  checked={!!selectedItems[item._id]}
-                  onChange={() => handleCheckboxChange(item._id)}
-                />
+              <li key={item._id} className={`flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-xl border shadow-sm transition-all duration-200 hover:shadow-md ${darkMode ? "bg-gray-800 border-gray-600" : "bg-pink-300 border-pink-100"}`}>
                 
-                {/* Image */}
-                <img 
-                  src={item.image || "https://via.placeholder.com/80"} 
-                  alt={item.name} 
-                  className="w-20 h-20 object-cover rounded-lg shadow-sm flex-shrink-0" 
-                />
-                
-                {/* Content Container */}
-                <div className="flex-1 min-w-0">
-                  {/* Item Name */}
-                  <h2 className={`font-semibold text-lg mb-2 truncate ${darkMode ? "text-white" : "text-gray-900"}`}>
-                    {item.name}
-                  </h2>
+                {/* Mobile: Top row with checkbox and image */}
+                <div className="flex items-center gap-4 w-full sm:w-auto">
+                  {/* Checkbox */}
+                  <input
+                    type="checkbox"
+                    className="h-5 w-5 rounded border-gray-300 focus:ring-pink-500 flex-shrink-0"
+                    checked={!!selectedItems[item._id]}
+                    onChange={() => handleCheckboxChange(item._id)}
+                  />
                   
-                  {/* Price and Quantity Container */}
-                  <div className="flex items-center justify-between">
-                    {/* Price */}
+                  {/* Image */}
+                  <img 
+                    src={item.image || "https://via.placeholder.com/80"} 
+                    alt={item.name} 
+                    className="w-20 h-20 object-cover rounded-lg shadow-sm flex-shrink-0" 
+                  />
+                  
+                  {/* Item Name - visible on mobile */}
+                  <div className="flex-1 sm:hidden">
+                    <h2 className={`font-semibold text-lg break-words ${darkMode ? "text-white" : "text-gray-900"}`}>
+                      {item.name}
+                    </h2>
                     <span className={`font-bold text-lg ${darkMode ? "text-pink-300" : "text-pink-600"}`}>
                       {formatPrice(item.price)}
                     </span>
-                    
-                    {/* Quantity Controls */}
+                  </div>
+                </div>
+                
+                {/* Content Container - Desktop layout */}
+                <div className="flex-1 min-w-0 hidden sm:block">
+                  {/* Item Name */}
+                  <h2 className={`font-semibold text-lg mb-1 break-words ${darkMode ? "text-white" : "text-gray-900"}`}>
+                    {item.name}
+                  </h2>
+                  
+                  {/* Price */}
+                  <div className="mb-2">
+                    <span className={`font-bold text-lg ${darkMode ? "text-pink-300" : "text-pink-600"}`}>
+                      {formatPrice(item.price)}
+                    </span>
+                  </div>
+                  
+                  {/* Quantity Controls Container */}
+                  <div className="flex justify-end">
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() => removeFromCart(item._id)}
@@ -254,6 +269,28 @@ export default function CartPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Mobile: Price and controls row */}
+                <div className="flex items-center justify-end w-full sm:hidden">
+                  {/* Quantity Controls */}
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => removeFromCart(item._id)}
+                      className={`w-8 h-8 flex items-center justify-center text-white rounded transition-all duration-200 hover:scale-110 ${darkMode ? "bg-gray-600 hover:bg-gray-500" : "bg-gray-600 hover:bg-gray-700"}`}
+                    >
+                      −
+                    </button>
+                    <span className={`min-w-[2rem] text-center font-bold text-lg ${darkMode ? "text-white" : "text-gray-800"}`}>
+                      {quantity}
+                    </span>
+                    <button
+                      onClick={() => addToCart(item)}
+                      className={`w-8 h-8 flex items-center justify-center text-white rounded transition-all duration-200 hover:scale-110 ${darkMode ? "bg-pink-600 hover:bg-pink-500" : "bg-red-500 hover:bg-red-600"}`}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
               </li>
             ))}
           </ul>
@@ -266,34 +303,79 @@ export default function CartPage() {
       </main>
 
       {Object.values(cart).length > 0 && (
-        <div className={`fixed bottom-0 left-0 right-0 flex flex-wrap items-center justify-between px-4 py-3 shadow-inner gap-3 ${darkMode ? "bg-gray-800 border-t border-gray-700 text-white" : "bg-white border-t border-gray-200 text-black"}`}>
-          <div className="flex items-center gap-2">
-            <input type="checkbox" className="w-5 h-5" checked={allSelected} onChange={handleSelectAll} />
-            <span className="text-sm">All</span>
-            {Object.values(selectedItems).some((v) => v) && (
-              <button onClick={handleDeleteSelected} className="ml-2 text-red-500 hover:text-red-700">
-                <Trash2 size={20} />
+        <div className={`fixed bottom-0 left-0 right-0 px-4 py-3 shadow-inner ${darkMode ? "bg-gray-800 border-t border-gray-700 text-white" : "bg-white border-t border-gray-200 text-black"}`}>
+          
+          {/* Mobile Layout */}
+          <div className="flex sm:hidden flex-col gap-3">
+            {/* First Row: Select All and Delete */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <input type="checkbox" className="w-5 h-5" checked={allSelected} onChange={handleSelectAll} />
+                <span className="text-sm">All</span>
+                {Object.values(selectedItems).some((v) => v) && (
+                  <button onClick={handleDeleteSelected} className="ml-2 text-red-500 hover:text-red-700">
+                    <Trash2 size={20} />
+                  </button>
+                )}
+              </div>
+              <div className="text-sm font-medium">
+                Subtotal: <span className="text-pink-600 font-bold">{formatPrice(selectedTotal)}</span>
+              </div>
+            </div>
+            
+            {/* Second Row: Table Input and Checkout Button */}
+            <div className="flex items-center gap-3">
+              <input
+                type="text"
+                value={`Table ${tableId || ""}`}
+                disabled  
+                className={`flex-1 px-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-pink-400 ${
+                  darkMode ? "bg-gray-800 text-white border-gray-600 placeholder-gray-400" : "bg-white border-gray-300 text-black"
+                }`}
+              />
+              <button
+                onClick={handleCheckoutClick}
+                className={`px-4 py-2 rounded-xl text-white text-sm font-semibold shadow whitespace-nowrap ${loading || orderSent ? "bg-gray-400 cursor-not-allowed" : "bg-pink-600 hover:bg-pink-700"}`}
+                disabled={loading || orderSent}
+              >
+                {loading ? "Sending..." : `Order (${Object.keys(selectedItems).filter((id) => selectedItems[id]).length})`}
               </button>
-            )}
+            </div>
           </div>
 
-          <input
-            type="text"
-            value={`Table ${tableId || ""}`}   // show "Table 1", "Table 2", etc.
-            disabled  
-            className={`w-full sm:w-auto px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-pink-400 ${
-              darkMode ? "bg-gray-800 text-white border-gray-600 placeholder-gray-400" : "bg-white border-gray-300 text-black"
-            }`}
-          />
+          {/* Desktop Layout */}
+          <div className="hidden sm:flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <input type="checkbox" className="w-5 h-5" checked={allSelected} onChange={handleSelectAll} />
+              <span className="text-sm">All</span>
+              {Object.values(selectedItems).some((v) => v) && (
+                <button onClick={handleDeleteSelected} className="ml-2 text-red-500 hover:text-red-700">
+                  <Trash2 size={20} />
+                </button>
+              )}
+            </div>
 
-          <div className="text-sm font-medium">Subtotal: <span className="text-pink-600 font-bold">{formatPrice(selectedTotal)}</span></div>
-          <button
-            onClick={handleCheckoutClick}
-            className={`px-5 py-2 rounded-xl text-white text-sm font-semibold shadow ${loading || orderSent ? "bg-gray-400 cursor-not-allowed" : "bg-pink-600 hover:bg-pink-700"}`}
-            disabled={loading || orderSent}
-          >
-            {loading ? "Sending..." : `Confirm Order (${Object.keys(selectedItems).filter((id) => selectedItems[id]).length})`}
-          </button>
+            <input
+              type="text"
+              value={`Table ${tableId || ""}`}
+              disabled  
+              className={`px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-pink-400 ${
+                darkMode ? "bg-gray-800 text-white border-gray-600 placeholder-gray-400" : "bg-white border-gray-300 text-black"
+              }`}
+            />
+
+            <div className="text-sm font-medium">
+              Subtotal: <span className="text-pink-600 font-bold">{formatPrice(selectedTotal)}</span>
+            </div>
+            
+            <button
+              onClick={handleCheckoutClick}
+              className={`px-5 py-2 rounded-xl text-white text-sm font-semibold shadow whitespace-nowrap ${loading || orderSent ? "bg-gray-400 cursor-not-allowed" : "bg-pink-600 hover:bg-pink-700"}`}
+              disabled={loading || orderSent}
+            >
+              {loading ? "Sending..." : `Confirm Order (${Object.keys(selectedItems).filter((id) => selectedItems[id]).length})`}
+            </button>
+          </div>
         </div>
       )}
 
