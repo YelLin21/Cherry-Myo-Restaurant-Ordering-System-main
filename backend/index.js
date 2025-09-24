@@ -4,7 +4,9 @@ import { Server } from "socket.io";
 import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
-dotenv.config({ path: "../.env" });
+
+
+dotenv.config({ path: "./.env" });
 
 const app = express();
 const server = http.createServer(app);
@@ -14,6 +16,7 @@ app.get("/health", (_, res) => res.send("ok now: (from script)"));
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
+  "http://localhost:3000",
   "https://cherry-myo-restaurant-ordering-system-main.vercel.app"
   
 ];
@@ -64,6 +67,7 @@ import sessionRoutes from "./routes/session.js";
 import analyticsRoutes from "./routes/analytics.js";
 import feedbackRoutes from "./routes/feedback.js";
 import checkoutRoutes from "./routes/checkout.js";
+import promptpayRoutes from "./routes/promptpay.js";
 
 app.use("/api/menu", menuRoutes);
 app.use("/api/orders", orderRoutes);
@@ -72,8 +76,10 @@ app.use("/api/session", sessionRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/checkouts", checkoutRoutes);
+app.use("/api/payments", promptpayRoutes);
+//app.use("/payments",promptpayRoutes);
 
-const PORT = process.env.PORT || 5001;
+const PORT = process.env.API_PORT || process.env.PORT || 5001;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });

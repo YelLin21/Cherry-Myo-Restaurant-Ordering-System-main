@@ -21,21 +21,35 @@ export default function OrderHistoryPage() {
   const [receiptFile, setReceiptFile] = useState(null);
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
   const [showPaymentSuccessModal, setShowPaymentSuccessModal] = useState(false);
+  const [ppInfo, setPpInfo] = useState({ promptPayIdMasked: "", merchantName: "" });
 
   const navigate = useNavigate();
   const { totalItems } = useCart();
   const { darkMode, setDarkMode } = useDarkMode();
 
+ // Apply dark mode to the body
   useEffect(() => {
     document.body.classList.toggle("dark", darkMode);
   }, [darkMode]);
-
+ // Fetch order history
   useEffect(() => {
     fetchOrderHistory();
+  }, []);
     
+// Fetch PromptPay info
+  useEffect(() => {
+    if (!APIBASE) return;
+    fetch(`${APIBASE}/payments/promptpay/info`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("promptpay info failed"))))
+      .then(setPpInfo)
+      .catch(() => { /* silent */ });
+  }, []); 
+
+// Handle socket connection
+  useEffect(() => {
     const socket = io(SOCKET_URL, {
       transports: ["websocket"],
-    });
+    }); 
 
     console.log(" Socket connected to:", SOCKET_URL);
 
@@ -860,8 +874,15 @@ export default function OrderHistoryPage() {
                 <h2 className={`text-xl font-bold ${
                   darkMode ? 'text-pink-300' : 'text-pink-900'
                 }`}>
-                  KBZ Pay QR Code
+                  PromptPay
                 </h2>
+                {(ppInfo.merchantName || ppInfo.promptPayIdMasked) && (
+  <div className={`mt-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+    {ppInfo.merchantName && <>Merchant: <strong>{ppInfo.merchantName}</strong><br/></>}
+    {ppInfo.promptPayIdMasked && <>Receiver: <strong>{ppInfo.promptPayIdMasked}</strong></>}
+  </div>
+)}
+
                 <button
                   onClick={handleCloseQRModal}
                   className={`text-gray-400 hover:text-gray-600 ${
@@ -896,21 +917,22 @@ export default function OrderHistoryPage() {
                   <p className={`text-lg font-semibold mb-4 ${
                     darkMode ? 'text-blue-300' : 'text-blue-700'
                   }`}>
-                    Use KBZPay Scan to pay me
+                    Use Scan to Pay
+                  </p>
+                  <p className={`text-lg font-semibold mb-4 ${darkMode ? 'text-blue-300' : 'text-blue-700'}`}>
+                    Scan with Banking app (PromptPay)
                   </p>
                   <div className="bg-white p-4 rounded-lg inline-block">
-                    <img 
-                      src="/image/kbz-qr-code.jpeg" 
-                      alt="KBZ Pay QR Code" 
-                      className="w-64 h-64 object-contain mx-auto"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'block';
-                      }}
-                    />
-                    <div style={{display: 'none'}} className="w-64 h-64 flex items-center justify-center bg-gray-100 rounded-lg">
-                      <p className="text-gray-500">QR Code Image Not Found</p>
-                    </div>
+                    <div className="bg-white p-4 rounded-lg inline-block">
+  <img
+  src="http://localhost:5001/api/payments/promptpay/qr"
+  alt="PromptPay QR"
+  className="w-64 h-64 object-contain mx-auto"
+/>
+  <div style={{display: 'none'}} className="w-64 h-64 flex items-center justify-center bg-gray-100 rounded-lg">
+    <p className="text-gray-500">QR not available</p>
+  </div>
+</div>
                   </div>
                   {/* <p className={`text-sm mt-2 ${
                     darkMode ? 'text-blue-400' : 'text-blue-600'
