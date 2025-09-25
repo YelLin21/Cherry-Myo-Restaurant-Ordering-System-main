@@ -66,8 +66,7 @@ import qrRoutes from "./routes/qrCode.js";
 import sessionRoutes from "./routes/session.js";
 import analyticsRoutes from "./routes/analytics.js";
 import feedbackRoutes from "./routes/feedback.js";
-import checkoutRoutes from "./routes/checkout.js";
-import promptpayRoutes from "./routes/promptpay.js";
+import checkoutRoutes from "./routes/checkout.js";  ;
 
 app.use("/api/menu", menuRoutes);
 app.use("/api/orders", orderRoutes);
@@ -76,8 +75,7 @@ app.use("/api/session", sessionRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/checkouts", checkoutRoutes);
-app.use("/api/payments", promptpayRoutes);
-//app.use("/payments",promptpayRoutes);
+
 
 const PORT = process.env.API_PORT || process.env.PORT || 5001;
 server.listen(PORT, () => {
