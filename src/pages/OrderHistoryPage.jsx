@@ -18,38 +18,23 @@ export default function OrderHistoryPage() {
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
-  const [receiptFile, setReceiptFile] = useState(null);
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
   const [showPaymentSuccessModal, setShowPaymentSuccessModal] = useState(false);
-  const [ppInfo, setPpInfo] = useState({ promptPayIdMasked: "", merchantName: "" });
 
   const navigate = useNavigate();
   const { totalItems } = useCart();
   const { darkMode, setDarkMode } = useDarkMode();
 
- // Apply dark mode to the body
   useEffect(() => {
     document.body.classList.toggle("dark", darkMode);
   }, [darkMode]);
- // Fetch order history
+
   useEffect(() => {
     fetchOrderHistory();
-  }, []);
     
-// Fetch PromptPay info
-  useEffect(() => {
-    if (!APIBASE) return;
-    fetch(`${APIBASE}/payments/promptpay/info`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("promptpay info failed"))))
-      .then(setPpInfo)
-      .catch(() => { /* silent */ });
-  }, []); 
-
-// Handle socket connection
-  useEffect(() => {
     const socket = io(SOCKET_URL, {
       transports: ["websocket"],
-    }); 
+    });
 
     console.log(" Socket connected to:", SOCKET_URL);
 
@@ -402,24 +387,7 @@ export default function OrderHistoryPage() {
 };
 
 
-  const handleReceiptUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      setReceiptFile(file);
-    }
-  };
-
   const handleSubmitReceipt = async () => {
-    if (!receiptFile) {
-      Swal.fire({
-        title: 'Payment Receipt Missing',
-        text: 'Please upload your payment receipt first!',
-        icon: 'warning',         // ⚠️ yellow warning icon
-        confirmButtonText: 'OK'
-      });      
-      return;
-    }
-
     setIsPaymentProcessing(true);
 
     const currentTableId = sessionStorage.getItem("tableId");
@@ -431,6 +399,7 @@ export default function OrderHistoryPage() {
         confirmButtonText: 'OK'
       });
       setIsPaymentProcessing(false);
+      
       return;
     }
 
@@ -439,7 +408,7 @@ export default function OrderHistoryPage() {
       Swal.fire({
         title: 'No Orders Found',
         text: 'No orders found to checkout.',
-        icon: 'warning',        // ⚠️ yellow warning icon
+        icon: 'warning',        // yellow warning icon
         confirmButtonText: 'OK'
       });
       setIsPaymentProcessing(false);
@@ -447,33 +416,35 @@ export default function OrderHistoryPage() {
     }
 
     try {
-      // build form data for file + payload
-      const formData = new FormData();
-      formData.append("slipImage", receiptFile); //  your receipt file
-      formData.append("orderId", firstOrder._id);
-      formData.append("paymentMethod", "scan");
-      formData.append("finalAmount", totalPrice);
-
       const response = await fetch(`${APIBASE}/checkouts`, {
         method: "POST",
-        body: formData, //  don't set headers manually for FormData
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          orderId: firstOrder._id,
+          paymentMethod: "scan",
+          finalAmount: totalPrice
+        })
       });
 
-      if (!response.ok) throw new Error("Failed to submit receipt");
+      if (!response.ok) throw new Error("Failed to process payment");
 
       const data = await response.json();
-      console.log(" Receipt submitted:", data);
+      console.log(" Payment processed:", data);
 
       // Reset and close
-      setReceiptFile(null);
       setShowQRModal(false);
+      setShowPaymentModal(false);
+      // Navigate back to order history page
+      navigate('/order-history');
       // Keep isPaymentProcessing true until admin marks as paid
       // Do NOT setIsPaymentProcessing(false) here
     } catch (err) {
-      console.error(" Receipt submission error:", err);
+      console.error(" Payment processing error:", err);
       Swal.fire({
-        title: 'Submission Failed',
-        text: 'Failed to submit receipt. Please try again.',
+        title: 'Payment Failed',
+        text: 'Failed to process payment. Please try again.',
         icon: 'error',          // ❌ red cross icon
         confirmButtonText: 'OK'
       });
@@ -483,8 +454,9 @@ export default function OrderHistoryPage() {
   
 
   const handleCloseQRModal = () => {
-    setReceiptFile(null);
     setShowQRModal(false);
+    setShowPaymentModal(false);
+    navigate('/order-history');
   };
 
   return (
@@ -565,100 +537,88 @@ export default function OrderHistoryPage() {
                         : "bg-white border-gray-200 hover:bg-gray-50"
                     }`}
                   >
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className={`text-lg font-semibold ${
-                            darkMode ? "text-white" : "text-gray-900"
-                          }`}>
-                            Order #{order._id.slice(-8)}
-                          </h3>
-                          <span className={getStatusBadge(order.status)}>
-                            {displayStatusText(order.status)}
-                          </span>
-                        </div>
-                        
-                        <div className="flex items-center gap-4 text-sm">
-                          <div className="flex items-center gap-1">
-                            <Calendar className={`h-4 w-4 ${
-                              darkMode ? "text-gray-400" : "text-gray-500"
-                            }`} />
-                            <span className={darkMode ? "text-gray-300" : "text-gray-600"}>
-                              {formatDate(order.createdAt)}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Clock className={`h-4 w-4 ${
-                              darkMode ? "text-gray-400" : "text-gray-500"
-                            }`} />
-                            <span className={darkMode ? "text-gray-300" : "text-gray-600"}>
-                              {formatTime(order.createdAt)}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span className={`text-sm ${
-                              darkMode ? "text-gray-300" : "text-gray-600"
-                            }`}>
-                              Table: {order.tableNumber}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="text-right">
-                        <div className="flex items-center gap-1 mb-1">
-                          <span className={`text-lg font-bold ${
-                            darkMode ? "text-pink-300" : "text-pink-600"
-                          }`}>
-                            {formatPrice(calculateOrderTotal(order.items))}
-                          </span>
-                        </div>
-                        <p className={`text-sm ${
-                          darkMode ? "text-gray-400" : "text-gray-500"
-                        }`}>
-                          {order.items.length} item{order.items.length > 1 ? 's' : ''}
-                        </p>
-                      </div>
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className={`text-lg font-semibold ${
+                        darkMode ? "text-white" : "text-gray-900"
+                      }`}>
+                        Order #{order._id.slice(-8)}
+                      </h3>
+                      <span className={`text-lg font-bold ${
+                        darkMode ? "text-pink-300" : "text-pink-600"
+                      }`}>
+                        {formatPrice(calculateOrderTotal(order.items))}
+                      </span>
+                    </div>
+
+                    <div className="mb-2">
+                      <span className={getStatusBadge(order.status)}>
+                        {displayStatusText(order.status)}
+                      </span>
                     </div>
                     
-                    <div className="flex items-center gap-2 text-sm">
+                    <div className="text-sm mb-2">
                       <span className={darkMode ? "text-gray-400" : "text-gray-500"}>
                         Items:
                       </span>
-                      <span className={darkMode ? "text-gray-300" : "text-gray-600"}>
+                      <span className={`ml-1 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
                         {order.items.map(item => item.name).join(", ")}
                       </span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 text-sm">
+                      <div className="flex items-center gap-1">
+                        <Calendar className={`h-4 w-4 ${
+                          darkMode ? "text-gray-400" : "text-gray-500"
+                        }`} />
+                        <span className={darkMode ? "text-gray-300" : "text-gray-600"}>
+                          {formatDate(order.createdAt)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className={`h-4 w-4 ${
+                          darkMode ? "text-gray-400" : "text-gray-500"
+                        }`} />
+                        <span className={darkMode ? "text-gray-300" : "text-gray-600"}>
+                          {formatTime(order.createdAt)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className={darkMode ? "text-gray-300" : "text-gray-600"}>
+                          Table: {order.tableNumber}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
-              <div className="fixed bottom-0 left-0 w-full bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 p-4 z-40">
-                <div className="max-w-4xl mx-auto flex flex-col sm:flex-row justify-between items-center">
-                  <div className="font-bold text-xl mb-2 sm:mb-0">
-                    Total: <span className={darkMode ? 'text-pink-300' : 'text-pink-600'}>{totalPrice.toLocaleString('en-US')} MMK</span>
+              <div className="fixed bottom-0 left-0 w-full bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 px-4 py-3 z-40">
+                <div className="max-w-4xl mx-auto">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium">Total:</span>
+                    <span className={`text-xl font-bold ${darkMode ? 'text-pink-300' : 'text-pink-600'}`}>
+                      {totalPrice.toLocaleString('en-US')} MMK
+                    </span>
                   </div>
-                  <div className="flex flex-col items-end">
-                    {!canCheckout && (
-                      <p className={`text-sm mb-2 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>
-                        Wait for orders to be ready
-                      </p>
-                    )}
-                    <button
-                      onClick={handleCheckout}
-                      disabled={!canCheckout || isPaymentProcessing}
-                      className={`px-6 py-3 rounded-xl shadow font-bold text-lg transition-colors duration-200 ${
-                        canCheckout && !isPaymentProcessing
-                          ? darkMode 
-                            ? 'bg-pink-600 text-white hover:bg-pink-500' 
-                            : 'bg-pink-600 text-white hover:bg-pink-700'
-                          : darkMode
-                            ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      }`}
-                    >
-                      {(isPaymentProcessing && !showPaymentSuccessModal) ? 'Payment is under review...' : 'Checkout'}
-                    </button>
-                  </div>
+                  {!canCheckout && (
+                    <p className={`text-xs text-center mb-2 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>
+                      Wait for orders to be ready
+                    </p>
+                  )}
+                  <button
+                    onClick={handleCheckout}
+                    disabled={!canCheckout || isPaymentProcessing}
+                    className={`w-full py-2.5 rounded-lg text-center font-bold text-base transition-colors duration-200 ${
+                      canCheckout && !isPaymentProcessing
+                        ? darkMode 
+                          ? 'bg-pink-600 text-white hover:bg-pink-500' 
+                          : 'bg-pink-600 text-white hover:bg-pink-700'
+                        : darkMode
+                          ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                  >
+                    {(isPaymentProcessing && !showPaymentSuccessModal) ? 'Payment is under review...' : 'Checkout'}
+                  </button>
                 </div>
               </div>
             </>
@@ -874,15 +834,8 @@ export default function OrderHistoryPage() {
                 <h2 className={`text-xl font-bold ${
                   darkMode ? 'text-pink-300' : 'text-pink-900'
                 }`}>
-                  PromptPay
+                  QR Code
                 </h2>
-                {(ppInfo.merchantName || ppInfo.promptPayIdMasked) && (
-  <div className={`mt-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-    {ppInfo.merchantName && <>Merchant: <strong>{ppInfo.merchantName}</strong><br/></>}
-    {ppInfo.promptPayIdMasked && <>Receiver: <strong>{ppInfo.promptPayIdMasked}</strong></>}
-  </div>
-)}
-
                 <button
                   onClick={handleCloseQRModal}
                   className={`text-gray-400 hover:text-gray-600 ${
@@ -917,22 +870,21 @@ export default function OrderHistoryPage() {
                   <p className={`text-lg font-semibold mb-4 ${
                     darkMode ? 'text-blue-300' : 'text-blue-700'
                   }`}>
-                    Use Scan to Pay
-                  </p>
-                  <p className={`text-lg font-semibold mb-4 ${darkMode ? 'text-blue-300' : 'text-blue-700'}`}>
-                    Scan with Banking app (PromptPay)
+                    Use QR Scan to pay me
                   </p>
                   <div className="bg-white p-4 rounded-lg inline-block">
-                    <div className="bg-white p-4 rounded-lg inline-block">
-  <img
-  src="http://localhost:5001/api/payments/promptpay/qr"
-  alt="PromptPay QR"
-  className="w-64 h-64 object-contain mx-auto"
-/>
-  <div style={{display: 'none'}} className="w-64 h-64 flex items-center justify-center bg-gray-100 rounded-lg">
-    <p className="text-gray-500">QR not available</p>
-  </div>
-</div>
+                    <img 
+                      src="/image/QR.jpeg" 
+                      alt=" QR Code" 
+                      className="w-64 h-64 object-contain mx-auto"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'block';
+                      }}
+                    />
+                    <div style={{display: 'none'}} className="w-64 h-64 flex items-center justify-center bg-gray-100 rounded-lg">
+                      <p className="text-gray-500">QR Code Image Not Found</p>
+                    </div>
                   </div>
                   {/* <p className={`text-sm mt-2 ${
                     darkMode ? 'text-blue-400' : 'text-blue-600'
@@ -942,65 +894,16 @@ export default function OrderHistoryPage() {
                 </div>
               </div>
 
-              {/* Upload Receipt Section */}
-              <div className="mb-6">
-                <h3 className={`text-lg font-semibold mb-3 ${
-                  darkMode ? 'text-white' : 'text-gray-900'
-                }`}>
-                  Upload Payment Receipt
-                </h3>
-                <div className={`border-2 border-dashed rounded-lg p-4 text-center ${
-                  darkMode 
-                    ? 'border-gray-600 bg-gray-700' 
-                    : 'border-gray-300 bg-gray-50'
-                }`}>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleReceiptUpload}
-                    className="hidden"
-                    id="receipt-upload"
-                  />
-                  <label 
-                    htmlFor="receipt-upload" 
-                    className={`cursor-pointer block ${
-                      darkMode ? 'text-gray-300' : 'text-gray-600'
-                    }`}
-                  >
-                    {receiptFile ? (
-                      <div>
-                        <div className="text-2xl mb-2">✅</div>
-                        <p className="font-medium text-green-600">
-                          {receiptFile.name}
-                        </p>
-                        <p className="text-sm">Click to change file</p>
-                      </div>
-                    ) : (
-                      <div>
-                        <div className="text-4xl mb-2">📁</div>
-                        <p className="font-medium">Click to upload receipt</p>
-                        <p className="text-sm">PNG, JPG up to 10MB</p>
-                      </div>
-                    )}
-                  </label>
-                </div>
-              </div>
-
               {/* Submit Button */}
               <button
                 onClick={handleSubmitReceipt}
-                disabled={!receiptFile}
                 className={`w-full py-3 px-6 rounded-xl font-bold text-lg transition-all duration-200 ${
-                  receiptFile
-                    ? darkMode 
-                      ? 'bg-green-600 hover:bg-green-500 text-white' 
-                      : 'bg-green-600 hover:bg-green-700 text-white'
-                    : darkMode
-                      ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  darkMode 
+                    ? 'bg-green-600 hover:bg-green-500 text-white' 
+                    : 'bg-green-600 hover:bg-green-700 text-white'
                 }`}
               >
-                Submit Payment Receipt
+                Confirm Payment
               </button>
             </div>
           </div>
