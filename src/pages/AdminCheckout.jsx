@@ -760,6 +760,134 @@ function CheckoutContent({ user, handleLogout }) {
         return Math.max(total - discountAmount, 0);
     };
 
+    // Keep only basic English letters, numbers, spaces, and common punctuation.
+// Everything else (including Myanmar) is removed.
+function safeAscii(text) {
+  if (!text) return '';
+  return String(text)
+    .normalize('NFKC')
+    .replace(/[^A-Za-z0-9 .,:;'"\-_/#+&%@!?\[\]]+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+// 58mm thermal print (TEXT-ONLY) via hidden iframe 
+function printThermal58(order, { discountPercent = 0, paymentMethod, cashReceived = 0 }) {
+  const COLS = 30;
+  const ascii = (t) => String(t ?? '')
+    .normalize('NFKC')
+    .replace(/[^A-Za-z0-9 .,:;'"\-_/#+&%@!?[\]]+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const padL = (l, r = '') => {
+    const left = String(l), right = String(r);
+    const pad = Math.max(0, COLS - left.length - right.length);
+    return left + ' '.repeat(pad) + right;
+  };
+  const wrap = (s) => {
+    const out = []; let t = String(s ?? '');
+    while (t.length) { out.push(t.slice(0, COLS)); t = t.slice(COLS); }
+    return out;
+  };
+  const n0 = (x) => (Number(x) || 0).toFixed(0);
+
+  const items = Array.isArray(order?.items) ? order.items : [];
+  let subtotal = 0;
+  const lines = [];
+
+  lines.push('Cherry Myo');
+  lines.push('Restaurant (MM)');
+  lines.push('-'.repeat(COLS));
+
+  const now = new Date();
+  const tableLabel = ascii(order?.tableNumber ?? order?.tableName ?? '');
+  lines.push(`Table: ${tableLabel || '-'}`);
+  lines.push(padL(
+    `Date: ${now.toLocaleDateString()}`,
+    now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  ));
+  lines.push('-'.repeat(COLS));
+  lines.push('Items:');
+
+  items.forEach((it, i) => {
+    const name = ascii(it?.name) || `Item ${i + 1}`;
+    const qty = Number(it?.quantity || it?.qty || 0);
+    const price = Number(it?.price || 0);
+    const tot = qty * price; subtotal += tot;
+
+    wrap(name).forEach((ln, idx) => lines.push((idx === 0 ? '' : ' ') + ln));
+    lines.push(padL(`${qty} x ${n0(price)} `, `${n0(tot)} MMK`));
+  });
+
+  lines.push('-'.repeat(COLS));
+  const discAmt = Math.round((Number(discountPercent) / 100) * subtotal);
+  const finalTotal = Math.max(subtotal - discAmt, 0);
+  lines.push(padL('Subtotal:', `${n0(subtotal)} MMK`));
+  if (discountPercent > 0) lines.push(padL(`Discount(${discountPercent}%):`, `-${n0(discAmt)} MMK`));
+  lines.push(padL('Final Total:', `${n0(finalTotal)} MMK`));
+  lines.push('');
+
+  const paidCash = paymentMethod === 'cash';
+  lines.push(`Method: ${paidCash ? 'Cash' : 'QR Scan'}`);
+  if (paidCash) {
+    const cash = Number(cashReceived) || 0;
+    const change = Math.max(0, cash - finalTotal);
+    lines.push(padL('Cash:', `${n0(cash)} MMK`));
+    lines.push(padL('Change:', `${n0(change)} MMK`));
+  }
+
+  lines.push('');
+  lines.push('Thank you!');
+  // form feed often ignored by browsers, but harmless
+  lines.push('\f');
+
+  const html = `<!doctype html>
+<meta charset="utf-8">
+<style>
+  @page { margin: 0; }            /* remove default margins */
+  html, body { margin:0; padding:0; }
+  body { font: 12px monospace; }  /* fixed-width for alignment */
+  pre  { white-space: pre; margin: 0; line-height: 1.25; }
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+<pre>${lines.join('\n')}</pre>`;
+
+  // --- print via hidden iframe (no popup) ---
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+
+  // set handlers BEFORE attaching srcdoc for reliable onload
+  iframe.onload = () => {
+    const w = iframe.contentWindow;
+    if (!w) return cleanup();
+    // give layout a tick, then print
+    requestAnimationFrame(() => {
+      const after = () => cleanup();
+      w.addEventListener('afterprint', after, { once: true });
+      w.focus();
+      w.print();
+      // Fallback cleanup in case afterprint doesn't fire (some browsers)
+      setTimeout(after, 1500);
+    });
+  };
+
+  const cleanup = () => {
+    try { document.body.removeChild(iframe); } catch {}
+  };
+
+  iframe.srcdoc = html; // more reliable than doc.write
+  document.body.appendChild(iframe);
+}
+
+
+    // Function to generate PDF receipt
     const generateReceiptPDF = async (order) => {
         const doc = new jsPDF();
         const orderItems = Array.isArray(order.items) ? order.items : [];
@@ -876,7 +1004,7 @@ function CheckoutContent({ user, handleLogout }) {
             const itemTotal = (item.price || 0) * (item.quantity || 0);
             
             // Handle long item names more carefully
-            let itemName = item.name || 'Unknown Item';
+            let itemName = safeAscii(item?.name) || `Item ${index + 1}`;
             if (itemName.length > 30) {
                 itemName = itemName.substring(0, 30) + '...';
             }
@@ -966,7 +1094,16 @@ function CheckoutContent({ user, handleLogout }) {
         
         // Save the PDF
         const fileName = `Cherry-Myo-Receipt-Table-${order.tableNumber}-${new Date().toISOString().slice(0, 10)}.pdf`;
-        doc.save(fileName);
+        doc.save(fileName); //to save
+      
+
+        printThermal58(order, {
+  discountPercent: discounts[order._id] || 0,
+  paymentMethod: paymentMethods[order._id],
+  cashReceived: cashAmounts[order._id] || 0,
+});
+
+        console.log("PDF receipt generated:", fileName);
     };
 
     // Debug log for checkout orders
@@ -1504,6 +1641,16 @@ function CheckoutContent({ user, handleLogout }) {
                                                             </span>
                                                         )}
                                                     </button>
+                                                    <button
+  onClick={() => printThermal58(order, {
+    discountPercent: discounts[order._id] || 0,
+    paymentMethod: paymentMethods[order._id],
+    cashReceived: cashAmounts[order._id] || 0,
+  })}
+  className="ml-3 px-6 py-3 rounded-xl font-bold bg-white/80 hover:bg-white text-pink-700"
+>
+  🧾 Print 58mm Receipt
+</button>
 
                                                     {/* Payment Status */}
                                                     <div className="mt-3 text-right">
