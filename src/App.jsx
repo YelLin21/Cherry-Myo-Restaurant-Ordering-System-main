@@ -19,6 +19,9 @@ import FeedbackPage from "./pages/FeedbackPage.jsx";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+// 🔑 Import your AdminAuth wrapper
+import AdminAuth from "./components/AdminAuth.jsx";
+
 function App() {
   const { darkMode } = useDarkMode();
   
@@ -26,6 +29,7 @@ function App() {
     <>
       <Router>
         <Routes>
+          {/* Customer routes (no AdminAuth) */}
           <Route path="/" element={<HomePage />} />
           <Route path="/food" element={<FoodMenuPage />} />
           <Route path="/grill" element={<GrillMenuPage />} />
@@ -35,14 +39,65 @@ function App() {
           <Route path="/cart" element={<CartPage />} />
           <Route path="/cart/:tableId" element={<CartPage />} />
           <Route path="/order-history" element={<OrderHistoryPage />} />
-          <Route path="/admin" element={<AdminPage />} />
-          <Route path="/admin/special" element={<AdminSpecialMenuPage />} />
-          <Route path="/admin/promotion" element={<AdminPromotionMenuPage />} />
-          <Route path="/admin/sales-report" element={<AdminSalesReport darkMode={darkMode} />} />
-          <Route path="/kitchen" element={<KitchenPage />} />
-          <Route path="/checkout" element={<AdminCheckoutPage />} />
           <Route path="/feedback" element={<FeedbackPage />} />
           <Route path="/table/:tableId" element={<TableViewPage />} />
+          <Route path="/kitchen" element={<KitchenPage />} />
+
+          {/* Admin routes (wrapped in AdminAuth) */}
+          <Route
+            path="/admin"
+            element={
+              <AdminAuth>
+                {({ user, handleLogout }) => (
+                  <AdminPage user={user} onLogout={handleLogout} />
+                )}
+              </AdminAuth>
+            }
+          />
+          <Route
+            path="/admin/special"
+            element={
+              <AdminAuth>
+                {({ user, handleLogout }) => (
+                  <AdminSpecialMenuPage user={user} onLogout={handleLogout} />
+                )}
+              </AdminAuth>
+            }
+          />
+          <Route
+            path="/admin/promotion"
+            element={
+              <AdminAuth>
+                {({ user, handleLogout }) => (
+                  <AdminPromotionMenuPage user={user} onLogout={handleLogout} />
+                )}
+              </AdminAuth>
+            }
+          />
+          <Route
+            path="/admin/sales-report"
+            element={
+              <AdminAuth>
+                {({ user, handleLogout }) => (
+                  <AdminSalesReport
+                    user={user}
+                    onLogout={handleLogout}
+                    darkMode={darkMode}
+                  />
+                )}
+              </AdminAuth>
+            }
+          />
+          <Route
+            path="/checkout"
+            element={
+              <AdminAuth>
+                {({ user, handleLogout }) => (
+                  <AdminCheckoutPage user={user} onLogout={handleLogout} />
+                )}
+              </AdminAuth>
+            }
+          />
         </Routes>
       </Router>
 

@@ -77,7 +77,7 @@ export default function KitchenPage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       console.log("Auth state changed:", user?.email);
-
+ 
       if (user) {
         // Check if the user email is in the admin list
         if (!ADMIN_EMAIL.includes(user.email)) {

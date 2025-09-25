@@ -63,12 +63,11 @@ export default function AdminAuth({ children, onLogout }) {
         if (user && !ADMIN_EMAIL.includes(user.email)) {
           setLoginError("You are not authorized to access the admin page.");
           setUser(null);
-          await signOut(auth);
           setLoading(false);
           return;
         }
         setUser(user);
-        setLoginError(""); // Clear any previous errors
+        setLoginError("");
       } catch (error) {
         console.error("Auth state change error:", error);
         setLoginError("Authentication error occurred. Please try again.");
@@ -82,7 +81,7 @@ export default function AdminAuth({ children, onLogout }) {
       unsubscribe();
     };
   }, []);
-
+  
   const handleLogin = async () => {
     setLoginError("");
     
