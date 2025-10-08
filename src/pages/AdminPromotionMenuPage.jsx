@@ -5,7 +5,7 @@ import AdminAuth from "../components/AdminAuth.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { useDarkMode } from "./DarkModeContext.jsx";
 import { io } from "socket.io-client";
-import Swal from 'sweetalert2';
+import Swal from "sweetalert2";
 
 const APIBASE = import.meta.env.VITE_API_URL;
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
@@ -296,13 +296,13 @@ export default function AdminPromotionMenuPage() {
       
       fetchPromotionMenuItems();
     } catch (err) {
-      Swal.fire({
-        title: 'Error',
-        text: err.message,
-        icon: 'error',
-        confirmButtonText: 'OK'
-      });
-          }
+Swal.fire({
+  title: 'Error',
+  text: err.message,
+  icon: 'error',
+  confirmButtonText: 'OK'
+});
+    }
   };
 
   // Filter menu items based on search query and category
