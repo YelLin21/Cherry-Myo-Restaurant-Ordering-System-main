@@ -77,7 +77,7 @@ export default function KitchenPage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       console.log("Auth state changed:", user?.email);
-
+ 
       if (user) {
         // Check if the user email is in the admin list
         if (!ADMIN_EMAIL.includes(user.email)) {
@@ -327,8 +327,8 @@ export default function KitchenPage() {
 
       saveProcessedId(orderId);
       setOrders((prev) => prev.filter((order) => order._id !== orderId));
-      toast.success("✅ Order sent to Admin Checkout!", {
-        position: "top-right", // ✅ use string instead of toast.POSITION.TOP_RIGHT
+      toast.success("✅ Order ready for waiter delivery!", {
+        position: "top-right",
         autoClose: 3000,
         hideProgressBar: false,
         closeOnClick: true,

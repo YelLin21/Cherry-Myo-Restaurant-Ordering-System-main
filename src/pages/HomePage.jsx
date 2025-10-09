@@ -79,7 +79,7 @@ export default function HomePage() {
       />
 
       {/* SLIDER + SEARCH */}
-      <div className="relative pt-20"> {/* Removed pt-24 to eliminate space between navbar and slider */}
+      <div className="relative"> 
         <Slider
           autoplay
           autoplaySpeed={4000}
@@ -87,7 +87,7 @@ export default function HomePage() {
           arrows={false}
           dots
           pauseOnHover
-          className="relative h-64 sm:h-80 md:h-[28rem] lg:h-[32rem] overflow-hidden"
+          className="relative h-64 sm:h-80 md:h-[28rem] lg:h-[32rem] overflow-hidden mt-16 sm:mt-20 md:mt-24"
         >
           {sliderImages.map((img, index) => (
             <div key={index}>

@@ -7,7 +7,7 @@ const router = express.Router();
 router.delete("/clear-data", async (req, res) => {
   try {
     await Order.deleteMany({});
-    console.log("🗑️ All orders cleared from database");
+    console.log(" All orders cleared from database");
     res.json({ message: "All data cleared successfully" });
   } catch (error) {
     console.error("Error clearing data:", error);
@@ -16,9 +16,33 @@ router.delete("/clear-data", async (req, res) => {
 });
 
 // Helper function to get date range based on period
-const getDateRange = (period) => {
+const getDateRange = (period, startDate = null, endDate = null) => {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // Handle custom date range
+  if (period === "Custom" && startDate && endDate) {
+    const customStart = new Date(startDate);
+    const customEnd = new Date(endDate);
+    // Set end date to end of day
+    customEnd.setHours(23, 59, 59, 999);
+    
+    // Calculate previous period (same duration, shifted back)
+    const duration = customEnd.getTime() - customStart.getTime();
+    const prevEnd = new Date(customStart.getTime());
+    const prevStart = new Date(customStart.getTime() - duration);
+    
+    return {
+      current: {
+        start: customStart,
+        end: customEnd,
+      },
+      previous: {
+        start: prevStart,
+        end: prevEnd,
+      },
+    };
+  }
 
   switch (period) {
     case "Daily":
@@ -81,8 +105,8 @@ const getDateRange = (period) => {
 // GET /analytics/dashboard - Get dashboard analytics
 router.get("/dashboard", async (req, res) => {
   try {
-    const { period = "Daily" } = req.query;
-    const dateRange = getDateRange(period);
+    const { period = "Daily", startDate, endDate } = req.query;
+    const dateRange = getDateRange(period, startDate, endDate);
 
     // Get current period data
     const currentOrders = await Order.find({
@@ -162,24 +186,20 @@ const calculateStats = (orders) => {
 
 // Get best selling items
 const getBestSellers = async (dateRange) => {
-  const orders = await Order.find({
+   const orders = await Order.find({
     createdAt: { $gte: dateRange.start, $lt: dateRange.end },
   });
 
-  const itemStats = {};
+  const itemCounts = {};
   orders.forEach((order) => {
     order.items.forEach((item) => {
-      if (!itemStats[item.name]) {
-        itemStats[item.name] = { sold: 0, revenue: 0 };
-      }
-      itemStats[item.name].sold += item.quantity;
-      itemStats[item.name].revenue += item.price * item.quantity;
+      itemCounts[item.name] = (itemCounts[item.name] || 0) + item.quantity;
     });
   });
 
-  return Object.entries(itemStats)
-    .map(([name, stats]) => ({ name, ...stats }))
-    .sort((a, b) => b.revenue - a.revenue)
+  return Object.entries(itemCounts)
+    .map(([name, sold]) => ({ name, sold }))
+    .sort((a, b) => b.sold - a.sold)
     .slice(0, 10);
 };
 
@@ -207,6 +227,10 @@ const getSalesOverTime = async (dateRange, period) => {
         break;
       case "Yearly":
         dateKey = orderDate.getFullYear().toString();
+        break;
+      case "Custom":
+        // For custom ranges, use daily granularity
+        dateKey = orderDate.toISOString().split("T")[0];
         break;
       default:
         dateKey = orderDate.toISOString().split("T")[0];

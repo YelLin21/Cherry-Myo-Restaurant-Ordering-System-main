@@ -7,12 +7,16 @@ import { Link } from "react-router-dom";
 import AdminAuth from "../components/AdminAuth.jsx";
 import { io } from "socket.io-client";
 
-const TABS = ["Daily", "Weekly", "Monthly", "Yearly"];
+const TABS = ["Daily", "Weekly", "Monthly", "Yearly", "Custom"];
 const CHERRY_COLORS = ["#e11d48", "#f472b6", "#be185d", "#fbbf24", "#a21caf", "#f43f5e"];
 const APIBASE = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 
 export default function AdminSalesReport({ darkMode = false }) {
   const [activeTab, setActiveTab] = useState("Daily");
+  const [customDateRange, setCustomDateRange] = useState({
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0]
+  });
   const [kpi, setKpi] = useState({ orders: 0, items: 0, revenue: 0, aov: 0 });
   const [bestSellers, setBestSellers] = useState([]);
   const [salesOverTime, setSalesOverTime] = useState([]);
@@ -35,7 +39,14 @@ export default function AdminSalesReport({ darkMode = false }) {
     if (!isAutoRefresh) setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${APIBASE}/analytics/dashboard?period=${period}`);
+      let url = `${APIBASE}/analytics/dashboard?period=${period}`;
+      
+      // Add custom date range parameters if using custom period
+      if (period === 'Custom') {
+        url += `&startDate=${customDateRange.startDate}&endDate=${customDateRange.endDate}`;
+      }
+      
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error('Failed to fetch analytics data');
       }
@@ -84,6 +95,13 @@ export default function AdminSalesReport({ darkMode = false }) {
     fetchAnalyticsData(activeTab);
   }, [activeTab]);
 
+  // Fetch data when custom date range changes (but only if Custom tab is active)
+  useEffect(() => {
+    if (activeTab === 'Custom') {
+      fetchAnalyticsData('Custom');
+    }
+  }, [customDateRange]);
+
   // Socket.IO connection and real-time updates
   useEffect(() => {
     const newSocket = io(APIBASE.replace('/api', ''), {
@@ -94,7 +112,7 @@ export default function AdminSalesReport({ darkMode = false }) {
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
-      console.log('🔌 Connected to Socket.IO server');
+      console.log(' Connected to Socket.IO server');
       setIsConnected(true);
     });
 
@@ -105,17 +123,17 @@ export default function AdminSalesReport({ darkMode = false }) {
 
     // Listen for order events that should trigger data refresh
     newSocket.on('order:new', (order) => {
-      console.log('📦 New order received:', order);
+      console.log(' New order received:', order);
       fetchAnalyticsData(activeTab, true);
     });
 
     newSocket.on('order:update', (order) => {
-      console.log('🔄 Order updated:', order);
+      console.log(' Order updated:', order);
       fetchAnalyticsData(activeTab, true);
     });
 
     newSocket.on('order:paid', (orderId) => {
-      console.log('💰 Order paid:', orderId);
+      console.log(' Order paid:', orderId);
       fetchAnalyticsData(activeTab, true);
     });
 
@@ -125,7 +143,7 @@ export default function AdminSalesReport({ darkMode = false }) {
     });
 
     return () => {
-      console.log('🔌 Cleaning up Socket.IO connection');
+      console.log(' Cleaning up Socket.IO connection');
       newSocket.disconnect();
     };
   }, [activeTab]);
@@ -170,18 +188,29 @@ export default function AdminSalesReport({ darkMode = false }) {
           <h1 className={`text-2xl md:text-3xl font-bold ${darkMode ? 'text-pink-300' : 'text-pink-700'}`}>Sales Report</h1>
         </div>
         
-        {/* Last Updated Display */}
-        {lastUpdated && (
-          <div className={`text-sm flex items-center ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+        {/* Time Interval and Last Updated Display */}
+        <div className={`text-sm flex flex-col items-end ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          {/* Current Time Interval */}
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs">📊</span>
+            <span className="font-medium">
+              {activeTab === 'Custom' 
+                ? `${customDateRange.startDate} to ${customDateRange.endDate}`
+                : `${activeTab} View`
+              }
+            </span>
+          </div>
+          
+          {/* Connection Status and Last Updated */}
+          {lastUpdated && (
             <div className="flex items-center gap-2">
               <span className={`text-xs ${isConnected ? 'text-green-500' : 'text-red-500'}`}>
                 {isConnected ? '🟢 Live' : '🔴 Offline'}
               </span>
               <span>Last updated: {lastUpdated.toLocaleTimeString()}</span>
             </div>
-          </div>
-          
-        )}
+          )}
+        </div>
         <button
             onClick={handleLogout}
             className={`px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2 ${
@@ -221,6 +250,129 @@ export default function AdminSalesReport({ darkMode = false }) {
         ))}
       </div>
 
+      {/* Custom Date Range Section */}
+      {activeTab === 'Custom' && (
+        <div className={`mb-6 p-4 rounded-2xl border ${
+          darkMode 
+            ? 'bg-gray-800 border-pink-900' 
+            : 'bg-white border-pink-200'
+        } shadow-md`}>
+          <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${
+            darkMode ? 'text-pink-300' : 'text-pink-700'
+          }`}>
+            <span className="text-xl">📅</span>
+            Select Date Range
+          </h3>
+          <div className="flex flex-col sm:flex-row gap-4 items-center">
+            <div className="flex flex-col sm:flex-row gap-4 items-center flex-1">
+              <div className="flex items-center gap-2">
+                <label className={`text-sm font-medium ${
+                  darkMode ? 'text-gray-300' : 'text-gray-700'
+                }`}>
+                  From:
+                </label>
+                <input
+                  type="date"
+                  value={customDateRange.startDate}
+                  onChange={(e) => setCustomDateRange(prev => ({
+                    ...prev,
+                    startDate: e.target.value
+                  }))}
+                  className={`px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-pink-400 ${
+                    darkMode 
+                      ? 'bg-gray-700 border-gray-600 text-white' 
+                      : 'bg-white border-gray-300 text-gray-900'
+                  }`}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <label className={`text-sm font-medium ${
+                  darkMode ? 'text-gray-300' : 'text-gray-700'
+                }`}>
+                  To:
+                </label>
+                <input
+                  type="date"
+                  value={customDateRange.endDate}
+                  min={customDateRange.startDate}
+                  onChange={(e) => setCustomDateRange(prev => ({
+                    ...prev,
+                    endDate: e.target.value
+                  }))}
+                  className={`px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-pink-400 ${
+                    darkMode 
+                      ? 'bg-gray-700 border-gray-600 text-white' 
+                      : 'bg-white border-gray-300 text-gray-900'
+                  }`}
+                />
+              </div>
+            </div>
+            <button
+              onClick={() => fetchAnalyticsData('Custom')}
+              disabled={loading || new Date(customDateRange.startDate) > new Date(customDateRange.endDate)}
+              className={`px-6 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2 ${
+                darkMode
+                  ? 'bg-pink-600 text-white hover:bg-pink-700'
+                  : 'bg-pink-600 text-white hover:bg-pink-700'
+              } disabled:opacity-50 disabled:cursor-not-allowed shadow-md`}
+              title={new Date(customDateRange.startDate) > new Date(customDateRange.endDate) ? 'Start date cannot be after end date' : ''}
+            >
+              <span className="text-sm">🔍</span>
+              Apply Filter
+            </button>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              onClick={() => {
+                const today = new Date().toISOString().split('T')[0];
+                setCustomDateRange({ startDate: today, endDate: today });
+              }}
+              className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                darkMode
+                  ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Today
+            </button>
+            <button
+              onClick={() => {
+                const today = new Date();
+                const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+                setCustomDateRange({
+                  startDate: lastWeek.toISOString().split('T')[0],
+                  endDate: today.toISOString().split('T')[0]
+                });
+              }}
+              className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                darkMode
+                  ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Last 7 Days
+            </button>
+            <button
+              onClick={() => {
+                const today = new Date();
+                const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
+                setCustomDateRange({
+                  startDate: lastMonth.toISOString().split('T')[0],
+                  endDate: today.toISOString().split('T')[0]
+                });
+              }}
+              className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                darkMode
+                  ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Last 30 Days
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Loading State */}
       {loading && (
         <div className="flex items-center justify-center py-8">
@@ -249,7 +401,7 @@ export default function AdminSalesReport({ darkMode = false }) {
       {!loading && (
         <>
           {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 flex flex-col items-center shadow-md border border-pink-200 dark:border-pink-900">
           <span className="text-2xl">🧾</span>
           <span className="text-lg font-semibold mt-2">Orders</span>
@@ -265,6 +417,15 @@ export default function AdminSalesReport({ darkMode = false }) {
           <span className="text-lg font-semibold mt-2">Revenue</span>
           <span className="text-2xl font-bold text-pink-600 dark:text-pink-300">{kpi.revenue.toLocaleString()} MMK</span>
         </div>
+        {activeTab === 'Custom' && (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 flex flex-col items-center shadow-md border border-pink-200 dark:border-pink-900">
+            <span className="text-2xl">📅</span>
+            <span className="text-lg font-semibold mt-2">Duration</span>
+            <span className="text-2xl font-bold text-pink-600 dark:text-pink-300">
+              {Math.ceil((new Date(customDateRange.endDate) - new Date(customDateRange.startDate)) / (1000 * 60 * 60 * 24)) + 1} Days
+            </span>
+          </div>
+        )}
       </div>
 
       {/* User Feedback Section */}
@@ -369,7 +530,7 @@ export default function AdminSalesReport({ darkMode = false }) {
         </div>
         {/* Best Sellers Table */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-md border border-pink-200 dark:border-pink-900 overflow-x-auto">
-          <h2 className="font-semibold mb-2 text-pink-700 dark:text-pink-300">Best-Selling Foods</h2>
+          <h2 className="font-semibold mb-2 text-pink-700 dark:text-pink-300">Revenue</h2>
           {bestSellers.length > 0 ? (
             <table className="min-w-full divide-y divide-pink-200 dark:divide-pink-900">
               <thead>
