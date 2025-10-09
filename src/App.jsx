@@ -14,6 +14,7 @@ import AdminSalesReport from "./pages/AdminSalesReport";
 import KitchenPage from "./pages/KitchenPage";
 import AdminCheckoutPage from "./pages/AdminCheckout"; 
 import TableViewPage from "./pages/TableView";
+import WaiterPage from "./pages/WaiterPage";
 import { useDarkMode } from "./pages/DarkModeContext.jsx";
 import FeedbackPage from "./pages/FeedbackPage.jsx";
 import { ToastContainer } from "react-toastify";
@@ -40,6 +41,7 @@ function App() {
           <Route path="/admin/promotion" element={<AdminPromotionMenuPage />} />
           <Route path="/admin/sales-report" element={<AdminSalesReport darkMode={darkMode} />} />
           <Route path="/kitchen" element={<KitchenPage />} />
+          <Route path="/waiter" element={<WaiterPage />} />
           <Route path="/checkout" element={<AdminCheckoutPage />} />
           <Route path="/feedback" element={<FeedbackPage />} />
           <Route path="/table/:tableId" element={<TableViewPage />} />

@@ -204,13 +204,16 @@ export default function OrderHistoryPage() {
     }
   };
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (order) => {
+    const status = order.displayStatus || order.status;
     const baseClasses = "px-2 py-1 rounded-full text-xs font-medium";
     switch (status) {
       case "pending":
         return `${baseClasses} ${darkMode ? "bg-yellow-900 text-yellow-300" : "bg-yellow-100 text-yellow-800"}`;
       case "preparing":
         return `${baseClasses} ${darkMode ? "bg-blue-900 text-blue-300" : "bg-blue-100 text-blue-800"}`;
+      case "readyForWaiter":
+        return `${baseClasses} ${darkMode ? "bg-orange-900 text-orange-300" : "bg-orange-100 text-orange-800"}`;
       case "ready":
         return `${baseClasses} ${darkMode ? "bg-green-900 text-green-300" : "bg-green-100 text-green-800"}`;
       case "completed":
@@ -248,31 +251,32 @@ export default function OrderHistoryPage() {
     }
   };
 
-  // Automatically update status from "readyForCheckout" to "sent" after 10 seconds
+  // Automatically update status for checkout availability
   useEffect(() => {
     const timers = {};
 
     orders.forEach(order => {
-      if (order.status === "readyForCheckout" && !timers[order._id]) {
+      // If order is sent, automatically make it ready for checkout after a short delay
+      if (order.status === "sent" && !timers[order._id]) {
         timers[order._id] = setTimeout(async () => {
-          console.log(` Automatically updating order ${order._id} status to "sent" after 10 seconds`);
+          console.log(` Automatically updating order ${order._id} status to "readyForCheckout" for checkout purposes`);
           
-          // Update status in backend first
-          const success = await updateOrderStatus(order._id, "sent");
+          // Update status in backend first - this is internal for checkout logic
+          const success = await updateOrderStatus(order._id, "readyForCheckout");
           
           if (success) {
-            // Only update local state if backend update was successful
+            // Update local state for checkout availability, but keep display as "sent"
             setOrders(prevOrders =>
               prevOrders.map(prevOrder =>
                 prevOrder._id === order._id
-                  ? { ...prevOrder, status: "sent" }
+                  ? { ...prevOrder, status: "readyForCheckout", displayStatus: "sent" }
                   : prevOrder
               )
             );
           }
           
           delete timers[order._id];
-        }, 10000); // 10 seconds
+        }, 5000); // 5 seconds after waiter marks as sent
       }
     });
 
@@ -283,16 +287,69 @@ export default function OrderHistoryPage() {
   }, [orders]);
 
   // Update the display text for statuses
-  const displayStatusText = (status) => {
+  const displayStatusText = (order) => {
+    const status = order.displayStatus || order.status;
     switch (status) {
-      case "readyForCheckout":
+      case "pending":
+        return "Your order is processing";
+      case "readyForWaiter":
         return "Your order is sending to your table";
+      case "readyForCheckout":
+        return order.displayStatus === "sent" ? "Sent" : "Your order is sending to your table";
       case "sent":
         return "Sent";
-      case "pending":
-        return "Preparing your order";
       default:
         return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+  };
+
+  // Function to call waiter
+  const handleCallWaiter = async () => {
+    const currentTableId = sessionStorage.getItem("tableId");
+    
+    if (!currentTableId) {
+      Swal.fire({
+        title: 'Table ID Missing',
+        text: 'Cannot call waiter without table information.',
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch(`${APIBASE}/waiter/call`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tableNumber: currentTableId,
+          timestamp: new Date().toISOString()
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to call waiter');
+      }
+
+      Swal.fire({
+        title: 'Waiter Called!',
+        text: `Waiter has been notified for Table ${currentTableId}`,
+        icon: 'success',
+        confirmButtonText: 'OK',
+        timer: 3000,
+        timerProgressBar: true
+      });
+
+    } catch (error) {
+      console.error('Error calling waiter:', error);
+      Swal.fire({
+        title: 'Call Failed',
+        text: 'Failed to call waiter. Please try again.',
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
     }
   };
 
@@ -551,8 +608,8 @@ export default function OrderHistoryPage() {
                     </div>
 
                     <div className="mb-2">
-                      <span className={getStatusBadge(order.status)}>
-                        {displayStatusText(order.status)}
+                      <span className={getStatusBadge(order)}>
+                        {displayStatusText(order)}
                       </span>
                     </div>
                     
@@ -604,21 +661,38 @@ export default function OrderHistoryPage() {
                       Wait for orders to be ready
                     </p>
                   )}
-                  <button
-                    onClick={handleCheckout}
-                    disabled={!canCheckout || isPaymentProcessing}
-                    className={`w-full py-2.5 rounded-lg text-center font-bold text-base transition-colors duration-200 ${
-                      canCheckout && !isPaymentProcessing
-                        ? darkMode 
-                          ? 'bg-pink-600 text-white hover:bg-pink-500' 
-                          : 'bg-pink-600 text-white hover:bg-pink-700'
-                        : darkMode
-                          ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    }`}
-                  >
-                    {(isPaymentProcessing && !showPaymentSuccessModal) ? 'Payment is under review...' : 'Checkout'}
-                  </button>
+                  
+                  {/* Buttons Container - Side by Side */}
+                  <div className="flex gap-2 mb-2">
+                    {/* Call Waiter Button */}
+                    <button
+                      onClick={handleCallWaiter}
+                      className={`flex-1 py-2 rounded-lg text-center font-bold text-sm transition-colors duration-200 flex items-center justify-center gap-2 ${
+                        darkMode 
+                          ? 'bg-blue-600 text-white hover:bg-blue-500' 
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
+                    >
+                      <span>🔔</span>
+                      Call Waiter
+                    </button>
+
+                    <button
+                      onClick={handleCheckout}
+                      disabled={!canCheckout || isPaymentProcessing}
+                      className={`flex-1 py-2.5 rounded-lg text-center font-bold text-base transition-colors duration-200 ${
+                        canCheckout && !isPaymentProcessing
+                          ? darkMode 
+                            ? 'bg-pink-600 text-white hover:bg-pink-500' 
+                            : 'bg-pink-600 text-white hover:bg-pink-700'
+                          : darkMode
+                            ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      {(isPaymentProcessing && !showPaymentSuccessModal) ? 'Payment is under review...' : 'Checkout'}
+                    </button>
+                  </div>
                 </div>
               </div>
             </>
@@ -664,8 +738,8 @@ export default function OrderHistoryPage() {
                   }`}>
                     Order #{selectedOrder._id.slice(-8)}
                   </span>
-                  <span className={getStatusBadge(selectedOrder.status)}>
-                    {displayStatusText(selectedOrder.status)}
+                  <span className={getStatusBadge(selectedOrder)}>
+                    {displayStatusText(selectedOrder)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
