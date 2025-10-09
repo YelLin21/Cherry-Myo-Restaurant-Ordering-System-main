@@ -6,7 +6,9 @@ import { useCart } from "../context/CartContext.jsx";
 import { useDarkMode } from "./DarkModeContext.jsx";
 import { io } from "socket.io-client";
 import Swal from 'sweetalert2';
+import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import CardPaymentForm from "../components/CardPaymentForm.jsx";
+import { loadStripe } from "@stripe/stripe-js";
 
 const APIBASE = import.meta.env.VITE_API_URL;
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
@@ -26,6 +28,7 @@ export default function OrderHistoryPage() {
   const navigate = useNavigate();
   const { totalItems } = useCart();
   const { darkMode, setDarkMode } = useDarkMode();
+  const firstOrder = orders.length > 0 ? orders[0] : null;
 
   useEffect(() => {
     document.body.classList.toggle("dark", darkMode);
@@ -111,6 +114,10 @@ export default function OrderHistoryPage() {
     };
   }, []);
 
+  const removeOrderFromHistory = (orderId) => {
+    setOrders((prev) => prev.filter((order) => String(order._id) !== String(orderId)));
+  };
+  
   const handlePaymentSuccess = (orderId) => {
     removeOrderFromHistory(orderId);
     setShowCardModal(false);
