@@ -4,6 +4,8 @@ import { Server } from "socket.io";
 import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
+
+
 dotenv.config({ path: "../.env" });
 
 const app = express();
@@ -14,6 +16,7 @@ app.get("/health", (_, res) => res.send("ok now: (from script)"));
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
+  "http://localhost:3000",
   "https://cherry-myo-restaurant-ordering-system-main.vercel.app"
   
 ];
@@ -50,7 +53,7 @@ mongoose
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
 io.on("connection", (socket) => {
-  console.log("🔌 Socket connected:", socket.id);
+  console.log(" Socket connected:", socket.id);
 
   socket.on("disconnect", () => {
     console.log("❌ Socket disconnected:", socket.id);
@@ -64,6 +67,7 @@ import sessionRoutes from "./routes/session.js";
 import analyticsRoutes from "./routes/analytics.js";
 import feedbackRoutes from "./routes/feedback.js";
 import checkoutRoutes from "./routes/checkout.js";
+import waiterRoutes from "./routes/waiter.js";
 
 app.use("/api/menu", menuRoutes);
 app.use("/api/orders", orderRoutes);
@@ -72,8 +76,10 @@ app.use("/api/session", sessionRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/checkouts", checkoutRoutes);
+app.use("/api/waiter", waiterRoutes);
 
-const PORT = process.env.PORT || 5001;
+
+const PORT = process.env.API_PORT || process.env.PORT || 5001;
 server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(` Server running on port ${PORT}`);
 });

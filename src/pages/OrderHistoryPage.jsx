@@ -18,7 +18,6 @@ export default function OrderHistoryPage() {
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
-  const [receiptFile, setReceiptFile] = useState(null);
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
   const [showPaymentSuccessModal, setShowPaymentSuccessModal] = useState(false);
 
@@ -205,13 +204,16 @@ export default function OrderHistoryPage() {
     }
   };
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (order) => {
+    const status = order.displayStatus || order.status;
     const baseClasses = "px-2 py-1 rounded-full text-xs font-medium";
     switch (status) {
       case "pending":
         return `${baseClasses} ${darkMode ? "bg-yellow-900 text-yellow-300" : "bg-yellow-100 text-yellow-800"}`;
       case "preparing":
         return `${baseClasses} ${darkMode ? "bg-blue-900 text-blue-300" : "bg-blue-100 text-blue-800"}`;
+      case "readyForWaiter":
+        return `${baseClasses} ${darkMode ? "bg-orange-900 text-orange-300" : "bg-orange-100 text-orange-800"}`;
       case "ready":
         return `${baseClasses} ${darkMode ? "bg-green-900 text-green-300" : "bg-green-100 text-green-800"}`;
       case "completed":
@@ -249,31 +251,32 @@ export default function OrderHistoryPage() {
     }
   };
 
-  // Automatically update status from "readyForCheckout" to "sent" after 10 seconds
+  // Automatically update status for checkout availability
   useEffect(() => {
     const timers = {};
 
     orders.forEach(order => {
-      if (order.status === "readyForCheckout" && !timers[order._id]) {
+      // If order is sent, automatically make it ready for checkout after a short delay
+      if (order.status === "sent" && !timers[order._id]) {
         timers[order._id] = setTimeout(async () => {
-          console.log(` Automatically updating order ${order._id} status to "sent" after 10 seconds`);
+          console.log(` Automatically updating order ${order._id} status to "readyForCheckout" for checkout purposes`);
           
-          // Update status in backend first
-          const success = await updateOrderStatus(order._id, "sent");
+          // Update status in backend first - this is internal for checkout logic
+          const success = await updateOrderStatus(order._id, "readyForCheckout");
           
           if (success) {
-            // Only update local state if backend update was successful
+            // Update local state for checkout availability, but keep display as "sent"
             setOrders(prevOrders =>
               prevOrders.map(prevOrder =>
                 prevOrder._id === order._id
-                  ? { ...prevOrder, status: "sent" }
+                  ? { ...prevOrder, status: "readyForCheckout", displayStatus: "sent" }
                   : prevOrder
               )
             );
           }
           
           delete timers[order._id];
-        }, 10000); // 10 seconds
+        }, 5000); // 5 seconds after waiter marks as sent
       }
     });
 
@@ -284,16 +287,69 @@ export default function OrderHistoryPage() {
   }, [orders]);
 
   // Update the display text for statuses
-  const displayStatusText = (status) => {
+  const displayStatusText = (order) => {
+    const status = order.displayStatus || order.status;
     switch (status) {
-      case "readyForCheckout":
+      case "pending":
+        return "Your order is processing";
+      case "readyForWaiter":
         return "Your order is sending to your table";
+      case "readyForCheckout":
+        return order.displayStatus === "sent" ? "Sent" : "Your order is sending to your table";
       case "sent":
         return "Sent";
-      case "pending":
-        return "Preparing your order";
       default:
         return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+  };
+
+  // Function to call waiter
+  const handleCallWaiter = async () => {
+    const currentTableId = sessionStorage.getItem("tableId");
+    
+    if (!currentTableId) {
+      Swal.fire({
+        title: 'Table ID Missing',
+        text: 'Cannot call waiter without table information.',
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch(`${APIBASE}/waiter/call`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tableNumber: currentTableId,
+          timestamp: new Date().toISOString()
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to call waiter');
+      }
+
+      Swal.fire({
+        title: 'Waiter Called!',
+        text: `Waiter has been notified for Table ${currentTableId}`,
+        icon: 'success',
+        confirmButtonText: 'OK',
+        timer: 3000,
+        timerProgressBar: true
+      });
+
+    } catch (error) {
+      console.error('Error calling waiter:', error);
+      Swal.fire({
+        title: 'Call Failed',
+        text: 'Failed to call waiter. Please try again.',
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
     }
   };
 
@@ -388,24 +444,7 @@ export default function OrderHistoryPage() {
 };
 
 
-  const handleReceiptUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      setReceiptFile(file);
-    }
-  };
-
   const handleSubmitReceipt = async () => {
-    if (!receiptFile) {
-      Swal.fire({
-        title: 'Payment Receipt Missing',
-        text: 'Please upload your payment receipt first!',
-        icon: 'warning',         // ⚠️ yellow warning icon
-        confirmButtonText: 'OK'
-      });      
-      return;
-    }
-
     setIsPaymentProcessing(true);
 
     const currentTableId = sessionStorage.getItem("tableId");
@@ -417,6 +456,7 @@ export default function OrderHistoryPage() {
         confirmButtonText: 'OK'
       });
       setIsPaymentProcessing(false);
+      
       return;
     }
 
@@ -425,7 +465,7 @@ export default function OrderHistoryPage() {
       Swal.fire({
         title: 'No Orders Found',
         text: 'No orders found to checkout.',
-        icon: 'warning',        // ⚠️ yellow warning icon
+        icon: 'warning',        // yellow warning icon
         confirmButtonText: 'OK'
       });
       setIsPaymentProcessing(false);
@@ -433,33 +473,35 @@ export default function OrderHistoryPage() {
     }
 
     try {
-      // build form data for file + payload
-      const formData = new FormData();
-      formData.append("slipImage", receiptFile); //  your receipt file
-      formData.append("orderId", firstOrder._id);
-      formData.append("paymentMethod", "scan");
-      formData.append("finalAmount", totalPrice);
-
       const response = await fetch(`${APIBASE}/checkouts`, {
         method: "POST",
-        body: formData, //  don't set headers manually for FormData
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          orderId: firstOrder._id,
+          paymentMethod: "scan",
+          finalAmount: totalPrice
+        })
       });
 
-      if (!response.ok) throw new Error("Failed to submit receipt");
+      if (!response.ok) throw new Error("Failed to process payment");
 
       const data = await response.json();
-      console.log(" Receipt submitted:", data);
+      console.log(" Payment processed:", data);
 
       // Reset and close
-      setReceiptFile(null);
       setShowQRModal(false);
+      setShowPaymentModal(false);
+      // Navigate back to order history page
+      navigate('/order-history');
       // Keep isPaymentProcessing true until admin marks as paid
       // Do NOT setIsPaymentProcessing(false) here
     } catch (err) {
-      console.error(" Receipt submission error:", err);
+      console.error(" Payment processing error:", err);
       Swal.fire({
-        title: 'Submission Failed',
-        text: 'Failed to submit receipt. Please try again.',
+        title: 'Payment Failed',
+        text: 'Failed to process payment. Please try again.',
         icon: 'error',          // ❌ red cross icon
         confirmButtonText: 'OK'
       });
@@ -469,8 +511,9 @@ export default function OrderHistoryPage() {
   
 
   const handleCloseQRModal = () => {
-    setReceiptFile(null);
     setShowQRModal(false);
+    setShowPaymentModal(false);
+    navigate('/order-history');
   };
 
   return (
@@ -551,88 +594,93 @@ export default function OrderHistoryPage() {
                         : "bg-white border-gray-200 hover:bg-gray-50"
                     }`}
                   >
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className={`text-lg font-semibold ${
-                            darkMode ? "text-white" : "text-gray-900"
-                          }`}>
-                            Order #{order._id.slice(-8)}
-                          </h3>
-                          <span className={getStatusBadge(order.status)}>
-                            {displayStatusText(order.status)}
-                          </span>
-                        </div>
-                        
-                        <div className="flex items-center gap-4 text-sm">
-                          <div className="flex items-center gap-1">
-                            <Calendar className={`h-4 w-4 ${
-                              darkMode ? "text-gray-400" : "text-gray-500"
-                            }`} />
-                            <span className={darkMode ? "text-gray-300" : "text-gray-600"}>
-                              {formatDate(order.createdAt)}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Clock className={`h-4 w-4 ${
-                              darkMode ? "text-gray-400" : "text-gray-500"
-                            }`} />
-                            <span className={darkMode ? "text-gray-300" : "text-gray-600"}>
-                              {formatTime(order.createdAt)}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span className={`text-sm ${
-                              darkMode ? "text-gray-300" : "text-gray-600"
-                            }`}>
-                              Table: {order.tableNumber}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="text-right">
-                        <div className="flex items-center gap-1 mb-1">
-                          <span className={`text-lg font-bold ${
-                            darkMode ? "text-pink-300" : "text-pink-600"
-                          }`}>
-                            {formatPrice(calculateOrderTotal(order.items))}
-                          </span>
-                        </div>
-                        <p className={`text-sm ${
-                          darkMode ? "text-gray-400" : "text-gray-500"
-                        }`}>
-                          {order.items.length} item{order.items.length > 1 ? 's' : ''}
-                        </p>
-                      </div>
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className={`text-lg font-semibold ${
+                        darkMode ? "text-white" : "text-gray-900"
+                      }`}>
+                        Order #{order._id.slice(-8)}
+                      </h3>
+                      <span className={`text-lg font-bold ${
+                        darkMode ? "text-pink-300" : "text-pink-600"
+                      }`}>
+                        {formatPrice(calculateOrderTotal(order.items))}
+                      </span>
+                    </div>
+
+                    <div className="mb-2">
+                      <span className={getStatusBadge(order)}>
+                        {displayStatusText(order)}
+                      </span>
                     </div>
                     
-                    <div className="flex items-center gap-2 text-sm">
+                    <div className="text-sm mb-2">
                       <span className={darkMode ? "text-gray-400" : "text-gray-500"}>
                         Items:
                       </span>
-                      <span className={darkMode ? "text-gray-300" : "text-gray-600"}>
+                      <span className={`ml-1 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
                         {order.items.map(item => item.name).join(", ")}
                       </span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 text-sm">
+                      <div className="flex items-center gap-1">
+                        <Calendar className={`h-4 w-4 ${
+                          darkMode ? "text-gray-400" : "text-gray-500"
+                        }`} />
+                        <span className={darkMode ? "text-gray-300" : "text-gray-600"}>
+                          {formatDate(order.createdAt)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className={`h-4 w-4 ${
+                          darkMode ? "text-gray-400" : "text-gray-500"
+                        }`} />
+                        <span className={darkMode ? "text-gray-300" : "text-gray-600"}>
+                          {formatTime(order.createdAt)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className={darkMode ? "text-gray-300" : "text-gray-600"}>
+                          Table: {order.tableNumber}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
-              <div className="fixed bottom-0 left-0 w-full bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 p-4 z-40">
-                <div className="max-w-4xl mx-auto flex flex-col sm:flex-row justify-between items-center">
-                  <div className="font-bold text-xl mb-2 sm:mb-0">
-                    Total: <span className={darkMode ? 'text-pink-300' : 'text-pink-600'}>{totalPrice.toLocaleString('en-US')} MMK</span>
+              <div className="fixed bottom-0 left-0 w-full bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 px-4 py-3 z-40">
+                <div className="max-w-4xl mx-auto">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium">Total:</span>
+                    <span className={`text-xl font-bold ${darkMode ? 'text-pink-300' : 'text-pink-600'}`}>
+                      {totalPrice.toLocaleString('en-US')} MMK
+                    </span>
                   </div>
-                  <div className="flex flex-col items-end">
-                    {!canCheckout && (
-                      <p className={`text-sm mb-2 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>
-                        Wait for orders to be ready
-                      </p>
-                    )}
+                  {!canCheckout && (
+                    <p className={`text-xs text-center mb-2 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>
+                      Wait for orders to be ready
+                    </p>
+                  )}
+                  
+                  {/* Buttons Container - Side by Side */}
+                  <div className="flex gap-2 mb-2">
+                    {/* Call Waiter Button */}
+                    <button
+                      onClick={handleCallWaiter}
+                      className={`flex-1 py-2 rounded-lg text-center font-bold text-sm transition-colors duration-200 flex items-center justify-center gap-2 ${
+                        darkMode 
+                          ? 'bg-blue-600 text-white hover:bg-blue-500' 
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
+                    >
+                      <span>🔔</span>
+                      Call Waiter
+                    </button>
+
                     <button
                       onClick={handleCheckout}
                       disabled={!canCheckout || isPaymentProcessing}
-                      className={`px-6 py-3 rounded-xl shadow font-bold text-lg transition-colors duration-200 ${
+                      className={`flex-1 py-2.5 rounded-lg text-center font-bold text-base transition-colors duration-200 ${
                         canCheckout && !isPaymentProcessing
                           ? darkMode 
                             ? 'bg-pink-600 text-white hover:bg-pink-500' 
@@ -690,8 +738,8 @@ export default function OrderHistoryPage() {
                   }`}>
                     Order #{selectedOrder._id.slice(-8)}
                   </span>
-                  <span className={getStatusBadge(selectedOrder.status)}>
-                    {displayStatusText(selectedOrder.status)}
+                  <span className={getStatusBadge(selectedOrder)}>
+                    {displayStatusText(selectedOrder)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -860,7 +908,7 @@ export default function OrderHistoryPage() {
                 <h2 className={`text-xl font-bold ${
                   darkMode ? 'text-pink-300' : 'text-pink-900'
                 }`}>
-                  KBZ Pay QR Code
+                  QR Code
                 </h2>
                 <button
                   onClick={handleCloseQRModal}
@@ -896,12 +944,12 @@ export default function OrderHistoryPage() {
                   <p className={`text-lg font-semibold mb-4 ${
                     darkMode ? 'text-blue-300' : 'text-blue-700'
                   }`}>
-                    Use KBZPay Scan to pay me
+                    Use QR Scan to pay me
                   </p>
                   <div className="bg-white p-4 rounded-lg inline-block">
                     <img 
-                      src="/image/kbz-qr-code.jpeg" 
-                      alt="KBZ Pay QR Code" 
+                      src="/image/QR.jpeg" 
+                      alt=" QR Code" 
                       className="w-64 h-64 object-contain mx-auto"
                       onError={(e) => {
                         e.target.style.display = 'none';
@@ -920,65 +968,16 @@ export default function OrderHistoryPage() {
                 </div>
               </div>
 
-              {/* Upload Receipt Section */}
-              <div className="mb-6">
-                <h3 className={`text-lg font-semibold mb-3 ${
-                  darkMode ? 'text-white' : 'text-gray-900'
-                }`}>
-                  Upload Payment Receipt
-                </h3>
-                <div className={`border-2 border-dashed rounded-lg p-4 text-center ${
-                  darkMode 
-                    ? 'border-gray-600 bg-gray-700' 
-                    : 'border-gray-300 bg-gray-50'
-                }`}>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleReceiptUpload}
-                    className="hidden"
-                    id="receipt-upload"
-                  />
-                  <label 
-                    htmlFor="receipt-upload" 
-                    className={`cursor-pointer block ${
-                      darkMode ? 'text-gray-300' : 'text-gray-600'
-                    }`}
-                  >
-                    {receiptFile ? (
-                      <div>
-                        <div className="text-2xl mb-2">✅</div>
-                        <p className="font-medium text-green-600">
-                          {receiptFile.name}
-                        </p>
-                        <p className="text-sm">Click to change file</p>
-                      </div>
-                    ) : (
-                      <div>
-                        <div className="text-4xl mb-2">📁</div>
-                        <p className="font-medium">Click to upload receipt</p>
-                        <p className="text-sm">PNG, JPG up to 10MB</p>
-                      </div>
-                    )}
-                  </label>
-                </div>
-              </div>
-
               {/* Submit Button */}
               <button
                 onClick={handleSubmitReceipt}
-                disabled={!receiptFile}
                 className={`w-full py-3 px-6 rounded-xl font-bold text-lg transition-all duration-200 ${
-                  receiptFile
-                    ? darkMode 
-                      ? 'bg-green-600 hover:bg-green-500 text-white' 
-                      : 'bg-green-600 hover:bg-green-700 text-white'
-                    : darkMode
-                      ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  darkMode 
+                    ? 'bg-green-600 hover:bg-green-500 text-white' 
+                    : 'bg-green-600 hover:bg-green-700 text-white'
                 }`}
               >
-                Submit Payment Receipt
+                Confirm Payment
               </button>
             </div>
           </div>

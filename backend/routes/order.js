@@ -72,6 +72,34 @@ router.get("/checkout", async (req, res) => {
   }
 });
 
+// GET orders ready for waiter (to be delivered to tables)
+router.get("/ready-for-waiter", async (req, res) => {
+  try {
+    const orders = await Order.find({
+      status: "readyForWaiter",
+      paid: { $ne: true },
+    }).sort({ processedAt: -1 });
+
+    console.log(
+      `🍽️ Waiter orders endpoint called - Found ${orders.length} orders ready for waiter`
+    );
+    console.log(
+      "🍽️ Order details:",
+      orders.map((o) => ({
+        id: o._id.toString(),
+        table: o.tableNumber,
+        status: o.status,
+        processedAt: o.processedAt,
+      }))
+    );
+
+    res.json(orders);
+  } catch (error) {
+    console.error("Error fetching waiter orders:", error);
+    res.status(500).json({ error: "Failed to fetch waiter orders" });
+  }
+});
+
 // POST create a new order
 router.post("/", async (req, res) => {
   try {
@@ -127,13 +155,13 @@ router.put("/:id/status", async (req, res) => {
   }
 });
 
-// PUT mark order as ready for checkout
+// PUT mark order as ready for waiter
 router.put("/:id/process", async (req, res) => {
   try {
     const updated = await Order.findByIdAndUpdate(
       req.params.id,
       {
-        status: "readyForCheckout",
+        status: "readyForWaiter",
         processedAt: new Date(),
       },
       { new: true }
@@ -142,7 +170,7 @@ router.put("/:id/process", async (req, res) => {
     if (!updated) return res.status(404).send("Order not found");
 
     const io = req.app.get("io");
-    io.emit("order:readyForCheckout", updated);
+    io.emit("order:readyForWaiter", updated);
 
     res.json(updated);
   } catch (err) {
