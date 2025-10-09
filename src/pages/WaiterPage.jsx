@@ -48,43 +48,6 @@ export default function WaiterPage() {
 
   // Initialize audio after user interaction
   useEffect(() => {
-    const initializeAudio = () => {
-      if (!audioInitialized && !alertAudio) {
-        try {
-          // Try notification.mp3 first
-          const audio = new Audio("/sounds/notification.mp3");
-          audio.volume = 0.8;
-          audio.preload = "auto";
-          
-          // Test if audio can be loaded
-          audio.addEventListener('canplaythrough', () => {
-            console.log("✅ Audio loaded successfully");
-            setAlertAudio(audio);
-            setAudioInitialized(true);
-          });
-
-          audio.addEventListener('error', (e) => {
-            console.log("❌ Could not load notification.mp3, using fallback sound");
-            // Fallback to system beep sound
-            const fallbackAudio = new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559MEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+TyvmgfCEOe4PK8digCKGrA6OGYSAoUX7Pp56VQEwxMpuPwtGEcBzmP1/LNeSsFJHfH8N+QQAkUXrPo66hWFAlEnOTzwmkgCUWh4vK2fB0DJHDC5ucvH8ueI7RuEKhlI/Qa");
-            fallbackAudio.volume = 0.8;
-            setAlertAudio(fallbackAudio);
-            setAudioInitialized(true);
-          });
-
-          // Load the audio
-          audio.load();
-        } catch (error) {
-          console.error("Audio initialization error:", error);
-          // Create fallback audio immediately
-          const fallbackAudio = new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+TyvmgfCEOe4PK8digCKGrA6OGYSAoUX7Pp56VQEwxMpuPwtGEcBzmP1/LNeSsFJHfH8N+QQAkUXrPo66hWFAlEnOTzwmkgCUWh4vK2fB0DJHDC5ucvH8ueI7RuEKhlI/Qa");
-          fallbackAudio.volume = 0.8;
-          setAlertAudio(fallbackAudio);
-          setAudioInitialized(true);
-        }
-      }
-    };
-
     // Initialize audio on any user interaction
     const handleUserInteraction = () => {
       initializeAudio();
@@ -766,26 +729,26 @@ export default function WaiterPage() {
         ))}
       </div>
 
-      <div className="relative z-10 p-6">
+      <div className="relative z-10 p-3 sm:p-4 md:p-6">
         {/* Header Section */}
-        <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-blue-200/50 p-8 mb-8 transform hover:scale-[1.02] transition-all duration-300">
-          <div className="flex flex-col lg:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-6">
+        <div className="bg-white/80 backdrop-blur-lg rounded-2xl sm:rounded-3xl shadow-2xl border border-blue-200/50 p-4 sm:p-6 md:p-8 mb-6 sm:mb-8 transform hover:scale-[1.02] transition-all duration-300">
+          <div className="flex flex-col lg:flex-row justify-between items-center gap-4 sm:gap-6">
+            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-6 text-center sm:text-left">
               <div className="relative">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center shadow-xl relative overflow-hidden">
-                  <span className="text-white text-3xl font-bold">🍽️</span>
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center shadow-xl relative overflow-hidden">
+                  <span className="text-white text-2xl sm:text-3xl font-bold">🍽️</span>
                   <div className="absolute inset-0 bg-gradient-to-t from-blue-600/20 to-transparent"></div>
                 </div>
-                <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center animate-bounce">
+                <div className="absolute -top-2 -right-2 w-5 h-5 sm:w-6 sm:h-6 bg-blue-500 rounded-full flex items-center justify-center animate-bounce">
                   <span className="text-white text-xs">🔔</span>
                 </div>
               </div>
               <div>
-                <h1 className="text-4xl lg:text-5xl font-bold mb-2 text-blue-700"
+                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-1 sm:mb-2 text-blue-700"
                   style={{ fontFamily: 'ui-rounded, system-ui, sans-serif' }}>
                   Cherry Myo's Waiter
                 </h1>
-                <p className="text-lg text-blue-700 font-medium flex items-center gap-2">
+                <p className="text-sm sm:text-base md:text-lg text-blue-700 font-medium flex items-center justify-center sm:justify-start gap-2">
                   <span>🏃‍♂️</span>
                   Service Dashboard
                   <span>🏃‍♂️</span>
@@ -802,15 +765,15 @@ export default function WaiterPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-6 bg-white/60 backdrop-blur-sm rounded-2xl px-6 py-4 border border-blue-200">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-bold">
+            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 lg:gap-6 bg-white/60 backdrop-blur-sm rounded-xl sm:rounded-2xl px-4 sm:px-6 py-3 sm:py-4 border border-blue-200 w-full lg:w-auto">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center">
+                <span className="text-white text-xs sm:text-sm font-bold">
                   {user.displayName?.charAt(0) || user.email?.charAt(0)}
                 </span>
               </div>
               <div className="flex flex-col justify-center">
-                <span className="font-semibold text-sm leading-tight">{user.displayName || 'Waiter'}</span>
-                <span className="text-xs opacity-75 leading-tight">{user.email}</span>
+                <span className="font-semibold text-xs sm:text-sm leading-tight">{user.displayName || 'Waiter'}</span>
+                <span className="text-xs opacity-75 leading-tight hidden sm:block">{user.email}</span>
               </div>
 
               {/* <div className="w-px h-12 bg-blue-200"></div> */}
@@ -825,16 +788,19 @@ export default function WaiterPage() {
                 <span className="hidden sm:inline">Test Voice</span>
               </button> */}
 
-              <div className="w-px h-12 bg-blue-200"></div>
+              <div className="hidden sm:block w-px h-8 lg:h-12 bg-blue-200"></div>
+              
+              
+
               <button
                 onClick={handleLogout}
-                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-500/50 flex items-center gap-2"
+                className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold rounded-lg sm:rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-500/50 flex items-center gap-2 w-full sm:w-auto justify-center"
                 style={{ fontFamily: 'ui-rounded, system-ui, sans-serif' }}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
                 </svg>
-                Sign Out
+                <span className="text-sm sm:text-base">Sign Out</span>
               </button>
             </div>
           </div>
@@ -842,41 +808,41 @@ export default function WaiterPage() {
 
         {/* Waiter Calls Section */}
         {waiterCalls.length > 0 && (
-          <div className="bg-red-50/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-red-200/50 p-8 mb-8 transform hover:scale-[1.02] transition-all duration-300">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-500 to-pink-600 flex items-center justify-center shadow-xl pulse-glow">
-                <span className="text-white text-2xl font-bold">🔔</span>
+          <div className="bg-red-50/80 backdrop-blur-lg rounded-2xl sm:rounded-3xl shadow-2xl border border-red-200/50 p-4 sm:p-6 md:p-8 mb-6 sm:mb-8 transform hover:scale-[1.02] transition-all duration-300">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3 sm:gap-4 mb-4 sm:mb-6 text-center sm:text-left">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-red-500 to-pink-600 flex items-center justify-center shadow-xl pulse-glow">
+                <span className="text-white text-xl sm:text-2xl font-bold">🔔</span>
               </div>
               <div>
-                <h2 className="text-3xl font-bold text-red-700 mb-1"
+                <h2 className="text-2xl sm:text-3xl font-bold text-red-700 mb-1"
                   style={{ fontFamily: 'ui-rounded, system-ui, sans-serif' }}>
                   Waiter Calls
                 </h2>
-                <p className="text-lg text-red-600 font-medium">
+                <p className="text-base sm:text-lg text-red-600 font-medium">
                   {waiterCalls.length} table{waiterCalls.length !== 1 ? 's' : ''} calling for service
                 </p>
               </div>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
               {waiterCalls.map((call, index) => (
                 <div
                   key={`${call.tableNumber}-${call.timestamp}`}
-                  className="bg-white/90 backdrop-blur-lg rounded-2xl shadow-xl border border-red-200/50 p-6 transform hover:scale-[1.02] transition-all duration-300 pulse-glow"
+                  className="bg-white/90 backdrop-blur-lg rounded-xl sm:rounded-2xl shadow-xl border border-red-200/50 p-4 sm:p-6 transform hover:scale-[1.02] transition-all duration-300 pulse-glow"
                 >
-                  <div className="flex justify-between items-center mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
-                        <span className="text-white text-lg font-bold">#{call.tableNumber}</span>
+                  <div className="flex justify-between items-center mb-3 sm:mb-4">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-red-500 to-pink-600 rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg">
+                        <span className="text-white text-sm sm:text-lg font-bold">#{call.tableNumber}</span>
                       </div>
                       <div>
-                        <h3 className="text-xl font-bold text-red-700">Table {call.tableNumber}</h3>
-                        <p className="text-sm text-red-600">Needs assistance</p>
+                        <h3 className="text-lg sm:text-xl font-bold text-red-700">Table {call.tableNumber}</h3>
+                        <p className="text-xs sm:text-sm text-red-600">Needs assistance</p>
                       </div>
                     </div>
                     <button
                       onClick={() => handleDismissCall(call.tableNumber)}
-                      className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors duration-200"
+                      className="p-1.5 sm:p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors duration-200"
                     >
                       ✕
                     </button>
@@ -929,17 +895,17 @@ export default function WaiterPage() {
         )}
 
         {/* Ready Orders Section */}
-        <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-blue-200/50 p-8 mb-8">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-xl">
-              <span className="text-white text-2xl font-bold">📋</span>
+        <div className="bg-white/80 backdrop-blur-lg rounded-2xl sm:rounded-3xl shadow-2xl border border-blue-200/50 p-4 sm:p-6 md:p-8 mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3 sm:gap-4 mb-4 sm:mb-6 text-center sm:text-left">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-xl">
+              <span className="text-white text-xl sm:text-2xl font-bold">📋</span>
             </div>
             <div>
-              <h2 className="text-3xl font-bold text-green-700 mb-1"
+              <h2 className="text-2xl sm:text-3xl font-bold text-green-700 mb-1"
                 style={{ fontFamily: 'ui-rounded, system-ui, sans-serif' }}>
                 Orders Ready to Serve
               </h2>
-              <p className="text-lg text-green-600 font-medium">
+              <p className="text-base sm:text-lg text-green-600 font-medium">
                 {readyOrders.length} order{readyOrders.length !== 1 ? 's' : ''} ready for delivery
               </p>
             </div>
@@ -958,36 +924,36 @@ export default function WaiterPage() {
           )}
 
           {/* Orders Grid */}
-          <div className="grid gap-8 lg:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-4 sm:gap-6 md:gap-8 md:grid-cols-2 xl:grid-cols-3">
             {readyOrders.map((order, index) => (
               <div
                 key={order._id}
-                className="bg-white/90 backdrop-blur-lg rounded-3xl shadow-2xl border border-green-200/50 p-8 transform hover:scale-[1.02] transition-all duration-300 hover:shadow-3xl relative overflow-hidden"
+                className="bg-white/90 backdrop-blur-lg rounded-2xl sm:rounded-3xl shadow-2xl border border-green-200/50 p-4 sm:p-6 md:p-8 transform hover:scale-[1.02] transition-all duration-300 hover:shadow-3xl relative overflow-hidden"
                 style={{
                   animationDelay: `${index * 100}ms`,
                   animation: 'slideInUp 0.6s ease-out forwards'
                 }}
               >
                 {/* Order Header */}
-                <div className="flex justify-between items-start mb-6 relative">
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg pulse-glow">
-                      <span className="text-white text-2xl font-bold">#{order.tableNumber}</span>
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4 mb-4 sm:mb-6 relative">
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg pulse-glow">
+                      <span className="text-white text-lg sm:text-xl md:text-2xl font-bold">#{order.tableNumber}</span>
                     </div>
                     <div>
-                      <h2 className="text-2xl font-bold text-green-700 mb-1" style={{ fontFamily: 'ui-rounded, system-ui, sans-serif' }}>
+                      <h2 className="text-xl sm:text-2xl font-bold text-green-700 mb-1" style={{ fontFamily: 'ui-rounded, system-ui, sans-serif' }}>
                         Table {order.tableNumber}
                       </h2>
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
                         <span>🍽️</span>
                         <span>{order.items.length} item{order.items.length !== 1 ? 's' : ''}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="text-right bg-green-50 rounded-2xl p-4 border border-green-200">
+                  <div className="text-center sm:text-right bg-green-50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-green-200 w-full sm:w-auto">
                     <div className="text-xs text-green-600 font-medium mb-1">Ready Time</div>
-                    <div className="text-sm font-bold text-green-800">
+                    <div className="text-xs sm:text-sm font-bold text-green-800">
                       {order.processedAt ? new Date(order.processedAt).toLocaleString('en-US', {
                         hour: '2-digit',
                         minute: '2-digit',
@@ -1000,28 +966,28 @@ export default function WaiterPage() {
                 </div>
 
                 {/* Order Items */}
-                <div className="bg-green-50/50 rounded-2xl p-6 mb-6 border border-green-100">
-                  <div className="flex justify-between items-center font-bold text-green-800 border-b-2 border-green-200 pb-3 mb-4">
-                    <span className="flex items-center gap-2">
+                <div className="bg-green-50/50 rounded-xl sm:rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6 border border-green-100">
+                  <div className="flex justify-between items-center font-bold text-green-800 border-b-2 border-green-200 pb-2 sm:pb-3 mb-3 sm:mb-4 text-sm sm:text-base">
+                    <span className="flex items-center gap-1 sm:gap-2">
                       <span>🍴</span>
                       <span>Dish</span>
                     </span>
                     <span className="text-center">
                       <span>🧮</span>
-                      <span>Qty</span>
+                      <span className="hidden sm:inline">Qty</span>
                     </span>
                   </div>
-                  <ul className="space-y-3">
+                  <ul className="space-y-2 sm:space-y-3">
                     {order.items.map((item, idx) => (
                       <li
                         key={idx}
-                        className="flex justify-between items-center py-3 px-4 bg-white/70 rounded-xl border border-green-100 hover:bg-white/90 transition-all duration-200 hover:shadow-md"
+                        className="flex justify-between items-center py-2 sm:py-3 px-3 sm:px-4 bg-white/70 rounded-lg sm:rounded-xl border border-green-100 hover:bg-white/90 transition-all duration-200 hover:shadow-md"
                       >
-                        <span className="font-medium text-gray-800 flex items-center gap-2">
-                          <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                          {item.name}
+                        <span className="font-medium text-gray-800 flex items-center gap-1 sm:gap-2 text-sm sm:text-base">
+                          <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full"></span>
+                          <span className="line-clamp-2">{item.name}</span>
                         </span>
-                        <span className="bg-green-100 text-green-700 font-bold px-3 py-1 rounded-full text-sm text-center">
+                        <span className="bg-green-100 text-green-700 font-bold px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm text-center min-w-[2rem] sm:min-w-[2.5rem]">
                           {item.quantity}
                         </span>
                       </li>
@@ -1033,10 +999,10 @@ export default function WaiterPage() {
                 <div className="text-center">
                   <button
                     onClick={() => handleMarkAsSent(order._id)}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 transform hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-green-500/50 flex items-center justify-center gap-3 text-lg"
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 sm:py-4 px-4 sm:px-6 rounded-xl sm:rounded-2xl transition-all duration-300 transform hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-green-500/50 flex items-center justify-center gap-2 sm:gap-3 text-base sm:text-lg"
                     style={{ fontFamily: 'ui-rounded, system-ui, sans-serif' }}
                   >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                     </svg>
                     <span>Sent to Table</span>
