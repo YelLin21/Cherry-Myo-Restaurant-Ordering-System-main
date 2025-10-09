@@ -53,7 +53,7 @@ mongoose
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
 io.on("connection", (socket) => {
-  console.log("🔌 Socket connected:", socket.id);
+  console.log(" Socket connected:", socket.id);
 
   socket.on("disconnect", () => {
     console.log("❌ Socket disconnected:", socket.id);
@@ -79,5 +79,5 @@ app.use("/api/checkouts", checkoutRoutes);
 
 const PORT = process.env.API_PORT || process.env.PORT || 5001;
 server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(` Server running on port ${PORT}`);
 });

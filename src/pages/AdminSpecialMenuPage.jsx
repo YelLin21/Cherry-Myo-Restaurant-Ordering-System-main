@@ -171,7 +171,7 @@ export default function AdminSpecialMenuPage() {
       Swal.fire({
         title: 'Error',
         text: `Error: ${err.message}`,
-        icon: 'error',           // red ❌ icon
+        icon: 'error',           
         confirmButtonText: 'OK'
       });
     }
@@ -204,7 +204,7 @@ export default function AdminSpecialMenuPage() {
         Swal.fire({
           title: 'Invalid File',
           text: 'Please select a valid image file (JPEG, PNG, GIF, or WebP).',
-          icon: 'error',          // ❌ red cross icon
+          icon: 'error',          
           confirmButtonText: 'OK'
         });
         return;
@@ -216,7 +216,7 @@ export default function AdminSpecialMenuPage() {
         Swal.fire({
           title: 'File Too Large',
           text: 'File size must be less than 10 MB.',
-          icon: 'warning',        // ⚠️ yellow warning icon
+          icon: 'warning',        //  yellow warning icon
           confirmButtonText: 'OK'
         });
         return;
@@ -871,7 +871,7 @@ function AdminSpecialMenuContent({
                               Swal.fire({
                                 title: 'Failed to Load Image',
                                 text: 'Please check the URL or select a different file.',
-                                icon: 'error',          // ❌ red cross icon for errors
+                                icon: 'error',          
                                 confirmButtonText: 'OK'
                               });                            
                             }}
