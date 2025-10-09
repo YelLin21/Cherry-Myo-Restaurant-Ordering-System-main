@@ -11,9 +11,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@stripe/react-stripe-js": "^5.2.0",
+    "@stripe/stripe-js": "^8.0.0",
     "@supabase/supabase-js": "^2.50.0",
+    "axios": "^1.12.2",
     "cors": "^2.8.5",
-    "dotenv": "^16.5.0",
+    "dotenv": "^16.6.1",
     "express": "^5.1.0",
     "fdir": "^6.4.4",
     "firebase": "^12.1.0",
@@ -39,6 +42,7 @@
     "slick-carousel": "^1.8.1",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
+    "stripe": "^19.1.0",
     "sweetalert2": "^11.23.0",
     "tinyglobby": "^0.2.13"
   },
