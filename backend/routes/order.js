@@ -179,6 +179,27 @@ router.put("/:id/process", async (req, res) => {
   }
 });
 
+router.put("/:id/paid", async (req, res) => {
+  try {
+    const updated = await Order.findByIdAndUpdate(
+      req.params.id,
+      { paid: true, processedAt: new Date() },
+      { new: true }
+    );
+
+    if (!updated) return res.status(404).send("Order not found");
+
+    // Optional: notify frontend via Socket.IO
+    const io = req.app.get("io");
+    io.emit("order:paid", updated);
+
+    res.json(updated);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Server error");
+  }
+});
+
 // POST mark order as paid
 router.post("/mark-paid", async (req, res) => {
   const { orderId } = req.body;
