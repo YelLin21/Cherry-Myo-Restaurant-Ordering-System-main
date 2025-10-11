@@ -963,7 +963,8 @@ function printThermal58(order, { discountPercent = 0, paymentMethod, cashReceive
         
         const receiptInfo = [
             [`Table: ${order.tableNumber}`, `Receipt #: ${Date.now().toString().slice(-8)}`],
-            [`Date: ${new Date().toLocaleDateString()}`, `Time: ${new Date().toLocaleTimeString()}`]
+            [`Order: ${order.orderNumber || order._id.slice(-8)}`, `Date: ${new Date().toLocaleDateString()}`],
+            [`Time: ${new Date().toLocaleTimeString()}`, ``]
         ];
         
         let yPos = 75;

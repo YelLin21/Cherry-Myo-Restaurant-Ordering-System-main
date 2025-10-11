@@ -190,16 +190,24 @@ const getBestSellers = async (dateRange) => {
     createdAt: { $gte: dateRange.start, $lt: dateRange.end },
   });
 
-  const itemCounts = {};
+  const itemData = {};
   orders.forEach((order) => {
     order.items.forEach((item) => {
-      itemCounts[item.name] = (itemCounts[item.name] || 0) + item.quantity;
+      if (!itemData[item.name]) {
+        itemData[item.name] = { sold: 0, revenue: 0 };
+      }
+      itemData[item.name].sold += item.quantity;
+      itemData[item.name].revenue += item.price * item.quantity;
     });
   });
 
-  return Object.entries(itemCounts)
-    .map(([name, sold]) => ({ name, sold }))
-    .sort((a, b) => b.sold - a.sold)
+  return Object.entries(itemData)
+    .map(([name, data]) => ({ 
+      name, 
+      sold: data.sold, 
+      revenue: Math.round(data.revenue) 
+    }))
+    .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 10);
 };
 
