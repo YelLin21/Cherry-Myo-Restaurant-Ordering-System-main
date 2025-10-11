@@ -6,9 +6,13 @@ import { useCart } from "../context/CartContext.jsx";
 import { useDarkMode } from "./DarkModeContext.jsx";
 import { io } from "socket.io-client";
 import Swal from 'sweetalert2';
+import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import CardPaymentForm from "../components/CardPaymentForm.jsx";
+import { loadStripe } from "@stripe/stripe-js";
 
 const APIBASE = import.meta.env.VITE_API_URL;
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
+const stripePromise = loadStripe("pk_test_51QDrLfLUvxdBWUIqRJOiJByIbUq265bcc6M7UyinYcVXrc4NcZsOd673ru7a5n8kn67TjnzwkgHwTUOQU5L6O9im00Krkf5fO1"); 
 
 export default function OrderHistoryPage() {
   const [orders, setOrders] = useState([]);
@@ -17,13 +21,14 @@ export default function OrderHistoryPage() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [showQRModal, setShowQRModal] = useState(false);
+  const [showCardModal, setShowCardModal] = useState(false);
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
   const [showPaymentSuccessModal, setShowPaymentSuccessModal] = useState(false);
 
   const navigate = useNavigate();
   const { totalItems } = useCart();
   const { darkMode, setDarkMode } = useDarkMode();
+  const firstOrder = orders.length > 0 ? orders[0] : null;
 
   useEffect(() => {
     document.body.classList.toggle("dark", darkMode);
@@ -108,6 +113,16 @@ export default function OrderHistoryPage() {
       socket.disconnect();
     };
   }, []);
+
+  const removeOrderFromHistory = (orderId) => {
+    setOrders((prev) => prev.filter((order) => String(order._id) !== String(orderId)));
+  };
+  
+  const handlePaymentSuccess = (orderId) => {
+    removeOrderFromHistory(orderId);
+    setShowCardModal(false);
+    setShowPaymentModal(false);
+  };
 
   const fetchOrderHistory = async () => {
     try {
@@ -404,8 +419,8 @@ export default function OrderHistoryPage() {
     }
 
     try {
-      if (paymentMethod === "scan") {
-        setShowQRModal(true);
+      if (paymentMethod === "card") {
+        setShowCardModal(true);
         return;
       }
   
@@ -442,7 +457,6 @@ export default function OrderHistoryPage() {
         });
     }
 };
-
 
   const handleSubmitReceipt = async () => {
     setIsPaymentProcessing(true);
@@ -491,7 +505,7 @@ export default function OrderHistoryPage() {
       console.log(" Payment processed:", data);
 
       // Reset and close
-      setShowQRModal(false);
+      setShowCardModal(false);
       setShowPaymentModal(false);
       // Navigate back to order history page
       navigate('/order-history');
@@ -511,7 +525,7 @@ export default function OrderHistoryPage() {
   
 
   const handleCloseQRModal = () => {
-    setShowQRModal(false);
+    setShowCardModal(false);
     setShowPaymentModal(false);
     navigate('/order-history');
   };
@@ -857,17 +871,17 @@ export default function OrderHistoryPage() {
               <div className="space-y-4">
                 {/* QR Code Payment Button */}
                 <button
-                  onClick={() => handlePayment('scan')}
+                  onClick={() => handlePayment('card')}
                   className={`w-full p-4 rounded-xl border-2 transition-all duration-200 flex items-center justify-center gap-3 ${
                     darkMode 
                       ? 'border-blue-500 bg-blue-900 hover:bg-blue-800 text-blue-300' 
                       : 'border-blue-500 bg-blue-50 hover:bg-blue-100 text-blue-700'
                   }`}
                 >
-                  <div className="text-2xl">📱</div>
+                  <div className="text-2xl">💳</div>
                   <div>
-                    <p className="font-bold text-lg">Pay with QR Code</p>
-                    <p className="text-sm opacity-80">Scan QR code to pay</p>
+                    <p className="font-bold text-lg">Pay with Card</p>
+                    <p className="text-sm opacity-80">Add Card and Pay</p>
                   </div>
                 </button>
 
@@ -892,93 +906,44 @@ export default function OrderHistoryPage() {
         </div>
       )}
       {/* QR Code Payment Modal */}
-      {showQRModal && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" 
-          onClick={handleCloseQRModal}
+      {showCardModal && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowCardModal(false)}
         >
-          <div 
+          <div
             className={`max-w-md w-full rounded-xl shadow-2xl max-h-[90vh] overflow-y-auto ${
-              darkMode ? 'bg-gray-800 border border-gray-600' : 'bg-white border border-gray-200'
+              darkMode ? "bg-gray-800 border border-gray-600" : "bg-white border border-gray-200"
             }`}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h2 className={`text-xl font-bold ${
-                  darkMode ? 'text-pink-300' : 'text-pink-900'
-                }`}>
-                  QR Code
+                <h2
+                  className={`text-xl font-bold ${
+                    darkMode ? "text-pink-300" : "text-pink-900"
+                  }`}
+                >
+                  Card Payment
                 </h2>
                 <button
-                  onClick={handleCloseQRModal}
+                  onClick={() => setShowCardModal(false)}
                   className={`text-gray-400 hover:text-gray-600 ${
-                    darkMode ? 'hover:text-gray-300' : 'hover:text-gray-600'
+                    darkMode ? "hover:text-gray-300" : "hover:text-gray-600"
                   }`}
                 >
                   ✕
                 </button>
               </div>
 
-              {/* Total Amount */}
-              <div className={`mb-6 p-4 rounded-lg text-center ${
-                darkMode ? 'bg-gray-700' : 'bg-gray-50'
-              }`}>
-                <p className={`text-lg font-semibold ${
-                  darkMode ? 'text-white' : 'text-gray-900'
-                }`}>
-                  Total Amount
-                </p>
-                <p className={`text-2xl font-bold ${
-                  darkMode ? 'text-pink-300' : 'text-pink-600'
-                }`}>
-                  {totalPrice.toLocaleString('en-US')} MMK
-                </p>
-              </div>
-
-              {/* QR Code Image */}
-              <div className="mb-6 text-center">
-                <div className={`p-4 rounded-lg ${
-                  darkMode ? 'bg-blue-900' : 'bg-blue-50'
-                }`}>
-                  <p className={`text-lg font-semibold mb-4 ${
-                    darkMode ? 'text-blue-300' : 'text-blue-700'
-                  }`}>
-                    Use QR Scan to pay me
-                  </p>
-                  <div className="bg-white p-4 rounded-lg inline-block">
-                    <img 
-                      src="/image/QR.jpeg" 
-                      alt=" QR Code" 
-                      className="w-64 h-64 object-contain mx-auto"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'block';
-                      }}
-                    />
-                    <div style={{display: 'none'}} className="w-64 h-64 flex items-center justify-center bg-gray-100 rounded-lg">
-                      <p className="text-gray-500">QR Code Image Not Found</p>
-                    </div>
-                  </div>
-                  {/* <p className={`text-sm mt-2 ${
-                    darkMode ? 'text-blue-400' : 'text-blue-600'
-                  }`}>
-                    Mg Yel Lin(*******4572)
-                  </p> */}
-                </div>
-              </div>
-
-              {/* Submit Button */}
-              <button
-                onClick={handleSubmitReceipt}
-                className={`w-full py-3 px-6 rounded-xl font-bold text-lg transition-all duration-200 ${
-                  darkMode 
-                    ? 'bg-green-600 hover:bg-green-500 text-white' 
-                    : 'bg-green-600 hover:bg-green-700 text-white'
-                }`}
-              >
-                Confirm Payment
-              </button>
+              {/* Stripe Card Form */}
+              <Elements stripe={stripePromise}>
+              <CardPaymentForm
+                totalPrice={totalPrice}
+                orderId={firstOrder._id}
+                onClose={() => handlePaymentSuccess(firstOrder._id)}
+              />
+              </Elements>
             </div>
           </div>
         </div>

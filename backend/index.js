@@ -5,7 +5,6 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 
-
 dotenv.config({ path: "../.env" });
 
 const app = express();
@@ -68,6 +67,7 @@ import analyticsRoutes from "./routes/analytics.js";
 import feedbackRoutes from "./routes/feedback.js";
 import checkoutRoutes from "./routes/checkout.js";
 import waiterRoutes from "./routes/waiter.js";
+import stripeRoutes from "./routes/stripe.js";
 
 app.use("/api/menu", menuRoutes);
 app.use("/api/orders", orderRoutes);
@@ -77,6 +77,7 @@ app.use("/api/analytics", analyticsRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/checkouts", checkoutRoutes);
 app.use("/api/waiter", waiterRoutes);
+app.use("/api/stripe", stripeRoutes);
 
 
 const PORT = process.env.API_PORT || process.env.PORT || 5001;
