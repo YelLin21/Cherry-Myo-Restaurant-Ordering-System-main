@@ -99,7 +99,17 @@ export default function CartPage() {
     }, 0);
   };
 
+  const calculateSelectedQuantity = () => {
+    return Object.values(cart).reduce((total, { item, quantity }) => {
+      if (selectedItems[item._id]) {
+        return total + quantity;
+      }
+      return total;
+    }, 0);
+  };
+
   const selectedTotal = calculateSelectedTotal();
+  const selectedQuantity = calculateSelectedQuantity();
 
   const handleCheckoutClick = () => {
     if (!tableId) {
@@ -198,7 +208,7 @@ export default function CartPage() {
 
       <main className={`pt-20 px-4 sm:px-6 lg:px-8 transition-colors duration-300 ${darkMode ? "bg-gray-900" : "bg-gray-100"}`}>
         <h1 className={`text-2xl font-bold text-center mb-6 ${darkMode ? "text-pink-300" : "text-gray-800"}`}>
-          🛒 Your Cart ({totalItems} items)
+          🛒 Your Cart ({totalItems} {totalItems === 1 ? 'Item' : 'Items'})
         </h1>
 
         {Object.values(cart).length > 0 ? (
@@ -338,7 +348,7 @@ export default function CartPage() {
                 className={`px-4 py-2 rounded-xl text-white text-sm font-semibold shadow whitespace-nowrap ${loading || orderSent ? "bg-gray-400 cursor-not-allowed" : "bg-pink-600 hover:bg-pink-700"}`}
                 disabled={loading || orderSent}
               >
-                {loading ? "Sending..." : `Order (${Object.keys(selectedItems).filter((id) => selectedItems[id]).length})`}
+                {loading ? "Sending..." : `Order (${selectedQuantity})`}
               </button>
             </div>
           </div>
@@ -373,7 +383,7 @@ export default function CartPage() {
               className={`px-5 py-2 rounded-xl text-white text-sm font-semibold shadow whitespace-nowrap ${loading || orderSent ? "bg-gray-400 cursor-not-allowed" : "bg-pink-600 hover:bg-pink-700"}`}
               disabled={loading || orderSent}
             >
-              {loading ? "Sending..." : `Confirm Order (${Object.keys(selectedItems).filter((id) => selectedItems[id]).length})`}
+              {loading ? "Sending..." : `Confirm Order (${selectedQuantity})`}
             </button>
           </div>
         </div>
@@ -424,7 +434,7 @@ export default function CartPage() {
                           <p className={`text-sm ${
                             darkMode ? 'text-gray-300' : 'text-gray-600'
                           }`}>
-                            {formatPrice(item.price)} × {quantity}
+                            {formatPrice(item.price)} × {quantity} {quantity === 1 ? 'item' : 'items'}
                           </p>
                         </div>
                         <div className={`font-bold ${
