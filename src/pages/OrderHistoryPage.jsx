@@ -11,7 +11,7 @@ import CardPaymentForm from "../components/CardPaymentForm.jsx";
 import { loadStripe } from "@stripe/stripe-js";
 
 const APIBASE = import.meta.env.VITE_API_URL;
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5001";
 const stripePromise = loadStripe("pk_test_51QDrLfLUvxdBWUIqRJOiJByIbUq265bcc6M7UyinYcVXrc4NcZsOd673ru7a5n8kn67TjnzwkgHwTUOQU5L6O9im00Krkf5fO1"); 
 
 export default function OrderHistoryPage() {
@@ -24,6 +24,10 @@ export default function OrderHistoryPage() {
   const [showCardModal, setShowCardModal] = useState(false);
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
   const [showPaymentSuccessModal, setShowPaymentSuccessModal] = useState(false);
+  const [socketConnected, setSocketConnected] = useState(false);
+  const [lastStatusUpdate, setLastStatusUpdate] = useState(null);
+  const [showStatusToast, setShowStatusToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
 
   const navigate = useNavigate();
   const { totalItems } = useCart();
@@ -37,80 +41,372 @@ export default function OrderHistoryPage() {
   useEffect(() => {
     fetchOrderHistory();
     
+    // Set up periodic refresh every 30 seconds as backup
+    const refreshInterval = setInterval(() => {
+      console.log("🔄 Periodic refresh of order history");
+      fetchOrderHistory(false); // Don't show loader for background refresh
+    }, 30000);
+    
     const socket = io(SOCKET_URL, {
-      transports: ["websocket"],
+      transports: ["websocket", "polling"],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 10,
+      timeout: 20000,
+      forceNew: true
     });
 
-    console.log(" Socket connected to:", SOCKET_URL);
+    console.log("🔌 Socket connecting to:", SOCKET_URL);
+
+    // Join table room for targeted updates
+    const currentTableId = (sessionStorage.getItem("tableId") || "").trim();
+    if (currentTableId) {
+      socket.emit("join:table", currentTableId);
+      console.log("🏠 Joined table room:", currentTableId);
+    } else {
+      console.warn("⚠️ No table ID found - socket events may not work properly");
+    }
+
+    console.log("🎧 Setting up socket event listeners for order updates...");
 
     socket.on("order:paid", ({ orderId, tableNumber }) => {
-      const currentTableId = (sessionStorage.getItem("tableId") || "").trim();
-    
-      if (tableNumber?.toString().trim() !== currentTableId) {
-        console.log(` Ignored order:paid for Table ${tableNumber}`);
-        return;
-      }
-    
-      console.log(" Order marked as paid for this table:", orderId);
-    
-      setShowPaymentSuccessModal(true);
-      setIsPaymentProcessing(false);
+      try {
+        const currentTableId = (sessionStorage.getItem("tableId") || "").trim();
       
-      setOrders((prev) => {
-        const filteredOrders = prev.filter(order => order._id !== orderId);
-        console.log("📋 Orders before filtering:", prev.length, "After filtering:", filteredOrders.length);
-        console.log("🗑️ Order permanently removed from customer history");
-        return filteredOrders;
-      });
+        if (tableNumber?.toString().trim() !== currentTableId) {
+          console.log(`❌ Ignored order:paid for Table ${tableNumber} (current: ${currentTableId})`);
+          return;
+        }
+      
+        console.log("💰 Order marked as paid for this table:", orderId);
+      
+        setShowPaymentSuccessModal(true);
+        setIsPaymentProcessing(false);
+        
+        setOrders((prev) => {
+          const filteredOrders = prev.filter(order => order._id !== orderId);
+          console.log("📋 Orders before filtering:", prev.length, "After filtering:", filteredOrders.length);
+          console.log("🗑️ Order permanently removed from customer history");
+          return filteredOrders;
+        });
+      } catch (error) {
+        console.error("Error handling order:paid event:", error);
+      }
     });
     
-    // Also listen for any order updates to double-check paid status
+    // Listen for general order status updates (fallback handler)
     socket.on("order:update", (updatedOrder) => {
-      if (updatedOrder.paid === true) {
-        console.log("Order update detected - removing paid order:", updatedOrder._id);
-        setOrders((prev) => prev.filter(order => order._id !== updatedOrder._id));
-      } else {
-        // Update order status in real-time (including status changes like "sent")
-        console.log(" Order status update detected:", updatedOrder._id, "->", updatedOrder.status);
-        setOrders((prev) =>
-          prev.map((order) =>
-            order._id === updatedOrder._id ? { ...order, status: updatedOrder.status } : order
-          )
-        );
+      try {
+        const currentTableId = (sessionStorage.getItem("tableId") || "").trim();
+        
+        // Only process updates for current table
+        if (updatedOrder.tableNumber?.toString().trim() !== currentTableId) {
+          return;
+        }
+
+        console.log("🔄 General order update received:", {
+          id: updatedOrder._id.slice(-8),
+          status: updatedOrder.status,
+          paid: updatedOrder.paid
+        });
+
+        if (updatedOrder.paid === true) {
+          console.log("💳 Order marked as paid - removing from history:", updatedOrder._id);
+          setOrders((prev) => prev.filter(order => order._id !== updatedOrder._id));
+          setShowPaymentSuccessModal(true);
+          setIsPaymentProcessing(false);
+        } else {
+          // Update order status in real-time with notifications
+          setOrders((prev) =>
+            prev.map((order) => {
+              if (order._id === updatedOrder._id) {
+                console.log(`📝 Updating order ${order._id.slice(-8)}: ${order.status} → ${updatedOrder.status}`);
+                
+                
+                
+                return { 
+                  ...order, 
+                  status: updatedOrder.status,
+                  updatedAt: updatedOrder.updatedAt || new Date().toISOString()
+                };
+              }
+              return order;
+            })
+          );
+        }
+      } catch (error) {
+        console.error("Error handling order:update event:", error);
       }
     });
 
-    // Listen for new orders
+    // Listen for kitchen status updates (specific events)
+    socket.on("kitchen:orderComplete", (updatedOrder) => {
+      const currentTableId = (sessionStorage.getItem("tableId") || "").trim();
+      
+      if (updatedOrder.tableNumber?.toString().trim() !== currentTableId) {
+        return;
+      }
+
+      console.log("🍳 Kitchen completed order - updating status:", updatedOrder._id.slice(-8));
+      showStatusUpdateToast("readyForWaiter", updatedOrder._id);
+      setLastStatusUpdate({ orderId: updatedOrder._id, status: "readyForWaiter", timestamp: Date.now() });
+      
+      setOrders((prev) =>
+        prev.map((order) => {
+          if (order._id === updatedOrder._id) {
+            return { 
+              ...order, 
+              status: "readyForWaiter",
+              updatedAt: new Date().toISOString()
+            };
+          }
+          return order;
+        })
+      );
+    });
+
+    socket.on("kitchen:orderStarted", (updatedOrder) => {
+      const currentTableId = (sessionStorage.getItem("tableId") || "").trim();
+      
+      if (updatedOrder.tableNumber?.toString().trim() !== currentTableId) {
+        return;
+      }
+
+      console.log("🍳 Kitchen started preparing order:", updatedOrder._id.slice(-8));
+      showStatusUpdateToast("preparing", updatedOrder._id);
+      setLastStatusUpdate({ orderId: updatedOrder._id, status: "preparing", timestamp: Date.now() });
+      
+      setOrders((prev) =>
+        prev.map((order) => {
+          if (order._id === updatedOrder._id) {
+            return { 
+              ...order, 
+              status: "preparing",
+              updatedAt: new Date().toISOString()
+            };
+          }
+          return order;
+        })
+      );
+    });
+
+    // Listen for new orders placed from this table
     socket.on("order:new", (newOrder) => {
       const currentTableId = (sessionStorage.getItem("tableId") || "").trim();
+      
       if (newOrder.tableNumber?.toString().trim() === currentTableId) {
-        console.log(" New order received for this table:", newOrder);
-        setOrders((prev) => [newOrder, ...prev]);
-      } else {
-        console.log(" Ignored order for another table:", newOrder.tableNumber);
+        console.log("🆕 New order received for this table:", {
+          id: newOrder._id.slice(-8),
+          items: newOrder.items?.length || 0,
+          status: newOrder.status
+        });
+        
+        setOrders((prev) => {
+          // Check if order already exists to prevent duplicates
+          const existingOrder = prev.find(order => order._id === newOrder._id);
+          if (existingOrder) {
+            console.log("⚠️ Order already exists, skipping duplicate");
+            return prev;
+          }
+          return [newOrder, ...prev];
+        });
+      }
+    });
+
+    // Listen for orders ready for waiter (Kitchen Complete Button)
+    socket.on("order:readyForWaiter", (updatedOrder) => {
+      try {
+        const currentTableId = (sessionStorage.getItem("tableId") || "").trim();
+        
+        console.log("🔊 Received order:readyForWaiter event:", {
+          orderId: updatedOrder._id?.slice(-8),
+          orderTable: updatedOrder.tableNumber,
+          currentTable: currentTableId,
+          status: updatedOrder.status
+        });
+        
+        if (updatedOrder.tableNumber?.toString().trim() !== currentTableId) {
+          console.log("❌ Ignoring order:readyForWaiter - different table");
+          return;
+        }
+
+        console.log("✅ Kitchen completed order - ready for waiter:", updatedOrder._id.slice(-8));
+ 
+        showStatusUpdateToast("readyForWaiter", updatedOrder._id);
+        setLastStatusUpdate({ orderId: updatedOrder._id, status: "readyForWaiter", timestamp: Date.now() });
+        
+        setOrders((prev) =>
+          prev.map((order) => {
+            if (order._id === updatedOrder._id) {
+              console.log(`🔄 Updating order ${order._id.slice(-8)} status to readyForWaiter`);
+              return { 
+                ...order, 
+                status: "readyForWaiter",
+                updatedAt: updatedOrder.processedAt || updatedOrder.updatedAt || new Date().toISOString()
+              };
+            }
+            return order;
+          })
+        );
+      } catch (error) {
+        console.error("Error handling order:readyForWaiter event:", error);
       }
     });
 
     // Listen for orders ready for checkout
     socket.on("order:readyForCheckout", (updatedOrder) => {
-      console.log(" Order ready for checkout:", updatedOrder);
+      const currentTableId = (sessionStorage.getItem("tableId") || "").trim();
+      
+      if (updatedOrder.tableNumber?.toString().trim() !== currentTableId) {
+        return;
+      }
+
+      console.log("✅ Order ready for checkout:", updatedOrder._id.slice(-8));
+      
       setOrders((prev) =>
-        prev.map((order) =>
-          order._id === updatedOrder._id ? { ...order, status: updatedOrder.status } : order
-        )
+        prev.map((order) => {
+          if (order._id === updatedOrder._id) {
+            return { 
+              ...order, 
+              status: "readyForCheckout",
+              updatedAt: updatedOrder.updatedAt || new Date().toISOString()
+            };
+          }
+          return order;
+        })
+      );
+    });
+
+    // Listen for orders being prepared in kitchen
+    socket.on("order:preparing", (updatedOrder) => {
+      const currentTableId = (sessionStorage.getItem("tableId") || "").trim();
+      
+      if (updatedOrder.tableNumber?.toString().trim() !== currentTableId) {
+        return;
+      }
+
+      console.log("👨‍🍳 Order is being prepared in kitchen:", updatedOrder._id.slice(-8));
+      
+      showStatusUpdateToast("preparing", updatedOrder._id);
+      setLastStatusUpdate({ orderId: updatedOrder._id, status: "preparing", timestamp: Date.now() });
+      
+      setOrders((prev) =>
+        prev.map((order) => {
+          if (order._id === updatedOrder._id) {
+            return { 
+              ...order, 
+              status: "preparing",
+              updatedAt: updatedOrder.updatedAt || new Date().toISOString()
+            };
+          }
+          return order;
+        })
+      );
+    });
+
+    // Listen for orders completed in kitchen (ready for waiter)
+    socket.on("order:completed", (updatedOrder) => {
+      const currentTableId = (sessionStorage.getItem("tableId") || "").trim();
+      
+      if (updatedOrder.tableNumber?.toString().trim() !== currentTableId) {
+        return;
+      }
+
+      console.log("✅ Order completed in kitchen - ready for waiter:", updatedOrder._id.slice(-8));
+      
+      showStatusUpdateToast("readyForWaiter", updatedOrder._id);
+      setLastStatusUpdate({ orderId: updatedOrder._id, status: "readyForWaiter", timestamp: Date.now() });
+      
+      setOrders((prev) =>
+        prev.map((order) => {
+          if (order._id === updatedOrder._id) {
+            return { 
+              ...order, 
+              status: "readyForWaiter",
+              updatedAt: updatedOrder.updatedAt || new Date().toISOString()
+            };
+          }
+          return order;
+        })
+      );
+    });
+
+    // Listen for orders sent to table
+    socket.on("order:sent", (updatedOrder) => {
+      const currentTableId = (sessionStorage.getItem("tableId") || "").trim();
+      
+      if (updatedOrder.tableNumber?.toString().trim() !== currentTableId) {
+        return;
+      }
+
+      console.log("🚚 Order sent to table:", updatedOrder._id.slice(-8));
+      
+      setOrders((prev) =>
+        prev.map((order) => {
+          if (order._id === updatedOrder._id) {
+            return { 
+              ...order, 
+              status: "sent",
+              updatedAt: updatedOrder.updatedAt || new Date().toISOString()
+            };
+          }
+          return order;
+        })
       );
     });
 
     socket.on("connect", () => {
-      console.log(" Socket connected successfully");
+      console.log("✅ Socket connected successfully:", socket.id);
+      setSocketConnected(true);
+      // Rejoin table room on reconnection
+      const tableId = (sessionStorage.getItem("tableId") || "").trim();
+      if (tableId) {
+        socket.emit("join:table", tableId);
+        console.log("🏠 Re-joined table room:", tableId);
+      } else {
+        console.warn("⚠️ No table ID for socket room join");
+      }
     });
 
-    socket.on("disconnect", () => {
-      console.log(" Socket disconnected");
+    socket.on("disconnect", (reason) => {
+      console.log("❌ Socket disconnected:", reason);
+      setSocketConnected(false);
     });
+
+    socket.on("reconnect", (attemptNumber) => {
+      console.log("🔄 Socket reconnected after", attemptNumber, "attempts");
+      setSocketConnected(true);
+      // Refresh orders after reconnection
+      fetchOrderHistory(false);
+    });
+
+    socket.on("connect_error", (error) => {
+      console.error("🚨 Socket connection error:", error);
+      setSocketConnected(false);
+    });
+
+    // Debug: Listen to all socket events in development
+    if (import.meta.env.DEV) {
+      try {
+        if (socket.onAny && typeof socket.onAny === 'function') {
+          socket.onAny((event, ...args) => {
+            console.log(`🔊 Socket event received: ${event}`, args);
+          });
+        }
+      } catch (error) {
+        console.log("Debug listener setup failed:", error);
+      }
+    }
 
     return () => {
+      // Clear the refresh interval
+      clearInterval(refreshInterval);
+      
+      if (currentTableId) {
+        socket.emit("leave:table", currentTableId);
+      }
       socket.disconnect();
+      console.log("🔌 Socket disconnected and cleaned up");
     };
   }, []);
 
@@ -124,9 +420,10 @@ export default function OrderHistoryPage() {
     setShowPaymentModal(false);
   };
 
-  const fetchOrderHistory = async () => {
+  const fetchOrderHistory = async (showLoader = true) => {
     try {
-      setLoading(true);
+      if (showLoader) setLoading(true);
+      
       const res = await fetch(`${APIBASE}/orders/customer`);
       if (!res.ok) throw new Error("Failed to fetch order history");
       const unpaidOrders = await res.json();
@@ -134,46 +431,56 @@ export default function OrderHistoryPage() {
       const currentTableId = (sessionStorage.getItem("tableId") || "").trim();
       const now = new Date();
       
-      console.log(" Current Table ID from sessionStorage:", currentTableId);
-      console.log(" All unpaid orders received:", unpaidOrders.map(order => ({
-        id: order._id.slice(-8),
-        table: order.tableNumber,
-        status: order.status,
-        paid: order.paid
-      })));
+      console.log("📊 Current Table ID from sessionStorage:", currentTableId);
+      console.log("📋 All unpaid orders received:", unpaidOrders.length);
+      
+      if (!currentTableId) {
+        console.warn("⚠️ No table ID found in sessionStorage");
+        setOrders([]);
+        return;
+      }
   
       const tableOrders = unpaidOrders.filter(order => {
         const orderTime = new Date(order.createdAt);
-        const isSameTable =
-          order.tableNumber?.toString().trim() === currentTableId;
+        const isSameTable = order.tableNumber?.toString().trim() === currentTableId;
+        const isPaid = order.paid === true;
+
+        // Filter out paid orders
+        if (isPaid) {
+          console.log(`💳 Excluding paid order: ${order._id.slice(-8)}`);
+          return false;
+        }
 
         const isToday =
           orderTime.getFullYear() === now.getFullYear() &&
           orderTime.getMonth() === now.getMonth() &&
           orderTime.getDate() === now.getDate();
   
-        const isWithin1Hour = now - orderTime <= 60 * 60 * 1000;
+        // Extend time window to 4 hours for better user experience
+        const isWithinTimeWindow = now - orderTime <= 4 * 60 * 60 * 1000;
         
-        console.log(` Order ${order._id.slice(-8)}: table=${order.tableNumber}, currentTable=${currentTableId}, match=${isSameTable}, today=${isToday}, within1h=${isWithin1Hour}`);
+        const shouldInclude = isSameTable && isToday && isWithinTimeWindow;
+        
+        if (isSameTable) {
+          console.log(`🔍 Order ${order._id.slice(-8)}: table=${order.tableNumber}, status=${order.status}, paid=${order.paid}, today=${isToday}, withinTime=${isWithinTimeWindow}, included=${shouldInclude}`);
+        }
   
-        return isSameTable && isToday && isWithin1Hour;
+        return shouldInclude;
       });
       
-      console.log(" Filtered table orders for table", currentTableId, ":", tableOrders.length);
-      console.log(" Detailed filtered orders:", tableOrders.map(order => ({
-        id: order._id.slice(-8),
-        table: order.tableNumber,
-        status: order.status,
-        paid: order.paid,
-        items: order.items?.length || 0
-      })));
+      console.log("✅ Filtered orders for table", currentTableId, ":", tableOrders.length);
       
-      setOrders(tableOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+      // Sort by creation time (newest first)
+      const sortedOrders = tableOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      
+      setOrders(sortedOrders);
+      setError(""); // Clear any previous errors
+      
     } catch (err) {
-      console.error(" Error fetching order history:", err);
+      console.error("❌ Error fetching order history:", err);
       setError(err.message);
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   };
 
@@ -220,99 +527,55 @@ export default function OrderHistoryPage() {
   };
 
   const getStatusBadge = (order) => {
-    const status = order.displayStatus || order.status;
-    const baseClasses = "px-2 py-1 rounded-full text-xs font-medium";
+    const status = order.status;
+    const baseClasses = "px-3 py-1 rounded-full text-xs font-medium transition-all duration-300";
+    
+    // Add animation for recently updated orders
+    const isRecentlyUpdated = order.updatedAt && 
+      (new Date() - new Date(order.updatedAt)) < 5000; // Within last 5 seconds
+    const animationClass = isRecentlyUpdated ? "animate-pulse" : "";
+    
     switch (status) {
       case "pending":
-        return `${baseClasses} ${darkMode ? "bg-yellow-900 text-yellow-300" : "bg-yellow-100 text-yellow-800"}`;
+        return `${baseClasses} ${animationClass} ${darkMode ? "bg-yellow-900 text-yellow-300 border border-yellow-600" : "bg-yellow-100 text-yellow-800 border border-yellow-300"}`;
       case "preparing":
-        return `${baseClasses} ${darkMode ? "bg-blue-900 text-blue-300" : "bg-blue-100 text-blue-800"}`;
+        return `${baseClasses} ${animationClass} ${darkMode ? "bg-blue-900 text-blue-300 border border-blue-600" : "bg-blue-100 text-blue-800 border border-blue-300"}`;
       case "readyForWaiter":
-        return `${baseClasses} ${darkMode ? "bg-orange-900 text-orange-300" : "bg-orange-100 text-orange-800"}`;
+        return `${baseClasses} ${animationClass} ${darkMode ? "bg-orange-900 text-orange-300 border border-orange-600" : "bg-orange-100 text-orange-800 border border-orange-300"}`;
       case "ready":
-        return `${baseClasses} ${darkMode ? "bg-green-900 text-green-300" : "bg-green-100 text-green-800"}`;
+        return `${baseClasses} ${animationClass} ${darkMode ? "bg-green-900 text-green-300 border border-green-600" : "bg-green-100 text-green-800 border border-green-300"}`;
       case "completed":
-        return `${baseClasses} ${darkMode ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-800"}`;
+        return `${baseClasses} ${animationClass} ${darkMode ? "bg-gray-700 text-gray-300 border border-gray-600" : "bg-gray-100 text-gray-800 border border-gray-300"}`;
       case "readyForCheckout":
-        return `${baseClasses} ${darkMode ? "bg-purple-900 text-purple-300" : "bg-purple-100 text-purple-800"}`;
+        return `${baseClasses} ${animationClass} ${darkMode ? "bg-purple-900 text-purple-300 border border-purple-600" : "bg-purple-100 text-purple-800 border border-purple-300"}`;
       case "sent":
-        return `${baseClasses} ${darkMode ? "bg-green-900 text-green-300" : "bg-green-100 text-green-800"}`;
+        return `${baseClasses} ${animationClass} ${darkMode ? "bg-green-900 text-green-300 border border-green-600" : "bg-green-100 text-green-800 border border-green-300"}`;
       default:
-        return `${baseClasses} ${darkMode ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-800"}`;
+        return `${baseClasses} ${darkMode ? "bg-gray-700 text-gray-300 border border-gray-600" : "bg-gray-100 text-gray-800 border border-gray-300"}`;
     }
   };
 
-  // Function to update order status in backend
-  const updateOrderStatus = async (orderId, newStatus) => {
-    try {
-      const response = await fetch(`${APIBASE}/orders/${orderId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
 
-      if (!response.ok) {
-        console.error('Failed to update order status in backend');
-        return false;
-      }
 
-      console.log(` Order ${orderId} status updated to "${newStatus}" in backend`);
-      return true;
-    } catch (error) {
-      console.error('Error updating order status:', error);
-      return false;
-    }
-  };
-
-  // Automatically update status for checkout availability
-  useEffect(() => {
-    const timers = {};
-
-    orders.forEach(order => {
-      // If order is sent, automatically make it ready for checkout after a short delay
-      if (order.status === "sent" && !timers[order._id]) {
-        timers[order._id] = setTimeout(async () => {
-          console.log(` Automatically updating order ${order._id} status to "readyForCheckout" for checkout purposes`);
-          
-          // Update status in backend first - this is internal for checkout logic
-          const success = await updateOrderStatus(order._id, "readyForCheckout");
-          
-          if (success) {
-            // Update local state for checkout availability, but keep display as "sent"
-            setOrders(prevOrders =>
-              prevOrders.map(prevOrder =>
-                prevOrder._id === order._id
-                  ? { ...prevOrder, status: "readyForCheckout", displayStatus: "sent" }
-                  : prevOrder
-              )
-            );
-          }
-          
-          delete timers[order._id];
-        }, 5000); // 5 seconds after waiter marks as sent
-      }
-    });
-
-    // Clean up timers when component unmounts or orders change
-    return () => {
-      Object.values(timers).forEach(timer => clearTimeout(timer));
-    };
-  }, [orders]);
+  // Orders with status "sent" remain unchanged and are available for checkout
+  // No automatic status updates needed - "sent" orders can proceed to checkout directly
 
   // Update the display text for statuses
   const displayStatusText = (order) => {
-    const status = order.displayStatus || order.status;
+    const status = order.status; // Always use the actual status, not displayStatus
     switch (status) {
       case "pending":
-        return "Your order is processing";
+        return "Order received - Processing";
+      case "preparing":
+        return "Being prepared in kitchen";
       case "readyForWaiter":
         return "Your order is sending to your table";
       case "readyForCheckout":
-        return order.displayStatus === "sent" ? "Sent" : "Your order is sending to your table";
+        return "Your order is sending to your table";
       case "sent":
-        return "Sent";
+        return "Delivered to table"; 
+      case "completed":
+        return "Ready for checkout";
       default:
         return status.charAt(0).toUpperCase() + status.slice(1);
     }
@@ -531,20 +794,36 @@ export default function OrderHistoryPage() {
   };
 
   return (
-    <div className={`min-h-screen pt-10 pb-28 transition-colors duration-300 ${
+    <div className={`min-h-screen transition-colors duration-300 ${
       darkMode ? "dark bg-gray-900" : "bg-gray-50"
     }`}>
       <Navbar darkMode={darkMode} setDarkMode={setDarkMode} cartCount={totalItems} />
 
-      <main className={`pt-20 px-4 sm:px-6 lg:px-8 transition-colors duration-300 ${
+      <main className={`pt-32 px-4 sm:px-6 lg:px-8 pb-40 transition-colors duration-300 ${
         darkMode ? "bg-gray-900" : "bg-gray-100"
       }`}>
         <div className="max-w-4xl mx-auto">
-          <h1 className={`text-3xl font-bold text-center mb-4 ${
-            darkMode ? "text-pink-300" : "text-pink-900"
-          }`}>
-           Orders History
-          </h1>
+          <div className="flex justify-between items-center mb-4">
+            <h1 className={`text-3xl font-bold ${
+              darkMode ? "text-pink-300" : "text-pink-900"
+            }`}>
+             Orders History
+            </h1>
+            <div className="flex items-center gap-3">
+              {/* Connection Status */}
+              
+              
+              
+              {/* Debug Info - only show in development */}
+              {import.meta.env.DEV && (
+                <div className={`text-xs px-2 py-1 rounded ${
+                  darkMode ? "text-gray-400" : "text-gray-600"
+                }`}>
+                  Table: {sessionStorage.getItem("tableId") || "None"}
+                </div>
+              )}
+            </div>
+          </div>
 
           {loading && (
             <div className="text-center py-12">
@@ -597,7 +876,7 @@ export default function OrderHistoryPage() {
 
           {!loading && !error && orders.length > 0 && (
             <>
-              <div className="space-y-4">
+              <div className="space-y-4 pb-30">
                 {orders.map((order) => (
                   <div
                     key={order._id}
@@ -612,7 +891,7 @@ export default function OrderHistoryPage() {
                       <h3 className={`text-lg font-semibold ${
                         darkMode ? "text-white" : "text-gray-900"
                       }`}>
-                        Order #{order._id.slice(-8)}
+                        Order #{order.orderNumber || order._id.slice(-8)}
                       </h3>
                       <span className={`text-lg font-bold ${
                         darkMode ? "text-pink-300" : "text-pink-600"
@@ -621,7 +900,7 @@ export default function OrderHistoryPage() {
                       </span>
                     </div>
 
-                    <div className="mb-2">
+                    <div className="mb-2 flex items-center gap-2">
                       <span className={getStatusBadge(order)}>
                         {displayStatusText(order)}
                       </span>
@@ -650,7 +929,7 @@ export default function OrderHistoryPage() {
                           darkMode ? "text-gray-400" : "text-gray-500"
                         }`} />
                         <span className={darkMode ? "text-gray-300" : "text-gray-600"}>
-                          {formatTime(order.createdAt)}
+                          {formatTime(order.updatedAt || order.createdAt)}
                         </span>
                       </div>
                       <div className="flex items-center gap-1">
@@ -662,26 +941,26 @@ export default function OrderHistoryPage() {
                   </div>
                 ))}
               </div>
-              <div className="fixed bottom-0 left-0 w-full bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 px-4 py-3 z-40">
+              <div className="fixed bottom-0 left-0 w-full bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-t border-gray-200 dark:border-gray-700 px-4 py-4 z-50 shadow-lg">
                 <div className="max-w-4xl mx-auto">
-                  <div className="flex justify-between items-center mb-2">
+                  <div className="flex justify-between items-center mb-3">
                     <span className="text-sm font-medium">Total:</span>
                     <span className={`text-xl font-bold ${darkMode ? 'text-pink-300' : 'text-pink-600'}`}>
                       {totalPrice.toLocaleString('en-US')} MMK
                     </span>
                   </div>
                   {!canCheckout && (
-                    <p className={`text-xs text-center mb-2 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>
+                    <p className={`text-xs text-center mb-3 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>
                       Wait for orders to be ready
                     </p>
                   )}
                   
                   {/* Buttons Container - Side by Side */}
-                  <div className="flex gap-2 mb-2">
+                  <div className="flex gap-3">
                     {/* Call Waiter Button */}
                     <button
                       onClick={handleCallWaiter}
-                      className={`flex-1 py-2 rounded-lg text-center font-bold text-sm transition-colors duration-200 flex items-center justify-center gap-2 ${
+                      className={`flex-1 py-3 rounded-lg text-center font-bold text-sm transition-colors duration-200 flex items-center justify-center gap-2 ${
                         darkMode 
                           ? 'bg-blue-600 text-white hover:bg-blue-500' 
                           : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -694,7 +973,7 @@ export default function OrderHistoryPage() {
                     <button
                       onClick={handleCheckout}
                       disabled={!canCheckout || isPaymentProcessing}
-                      className={`flex-1 py-2.5 rounded-lg text-center font-bold text-base transition-colors duration-200 ${
+                      className={`flex-1 py-3 rounded-lg text-center font-bold text-base transition-colors duration-200 ${
                         canCheckout && !isPaymentProcessing
                           ? darkMode 
                             ? 'bg-pink-600 text-white hover:bg-pink-500' 
@@ -750,7 +1029,7 @@ export default function OrderHistoryPage() {
                   <span className={`text-sm font-medium ${
                     darkMode ? 'text-gray-300' : 'text-gray-600'
                   }`}>
-                    Order #{selectedOrder._id.slice(-8)}
+                    Order #{selectedOrder.orderNumber || selectedOrder._id.slice(-8)}
                   </span>
                   <span className={getStatusBadge(selectedOrder)}>
                     {displayStatusText(selectedOrder)}
@@ -790,7 +1069,7 @@ export default function OrderHistoryPage() {
                         <p className={`text-sm ${
                           darkMode ? 'text-gray-300' : 'text-gray-600'
                         }`}>
-                          {formatPrice(item.price)} × {item.quantity}
+                          {formatPrice(item.price)} × {item.quantity} {item.quantity === 1 ? 'item' : 'items'}
                         </p>
                       </div>
                       <div className={`font-bold ${

@@ -23,8 +23,8 @@ export default function AdminSalesReport({ darkMode = false }) {
   const [topItems, setTopItems] = useState([]);
   const [revenueByCategory, setRevenueByCategory] = useState([]);
   const [periodComparison, setPeriodComparison] = useState({
-    prev: { orders: 0, revenue: 0 },
-    curr: { orders: 0, revenue: 0 }
+    previous: { orders: 0, revenue: 0 },
+    current: { orders: 0, revenue: 0 }
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -52,14 +52,20 @@ export default function AdminSalesReport({ darkMode = false }) {
       }
       const data = await response.json();
       
-      setKpi(data.kpi);
+      // Ensure KPI data is properly structured with fallback values
+      setKpi({
+        orders: data.kpi?.orders || 0,
+        items: data.kpi?.items || 0,
+        revenue: data.kpi?.revenue || 0,
+        aov: data.kpi?.aov || 0
+      });
       setBestSellers(data.bestSellers || []);
       setSalesOverTime(data.salesOverTime || []);
       setTopItems(data.topItems || []);
       setRevenueByCategory(data.revenueByCategory || []);
       setPeriodComparison(data.periodComparison || {
-        prev: { orders: 0, revenue: 0 },
-        curr: { orders: 0, revenue: 0 }
+        previous: { orders: 0, revenue: 0 },
+        current: { orders: 0, revenue: 0 }
       });
       setLastUpdated(new Date());
     } catch (error) {
@@ -83,9 +89,10 @@ export default function AdminSalesReport({ darkMode = false }) {
         throw new Error("Failed to fetch feedback");
       }
       const data = await response.json();
-      setFeedbacks(data || []);
+      setFeedbacks(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching feedback:", error);
+      setFeedbacks([]); // Set empty array on error
     }
   };
   
@@ -104,9 +111,19 @@ export default function AdminSalesReport({ darkMode = false }) {
 
   // Socket.IO connection and real-time updates
   useEffect(() => {
+    // Only try to connect if we have a valid API base URL
+    if (!APIBASE) {
+      console.warn('No API base URL available for Socket.IO connection');
+      return;
+    }
+
     const newSocket = io(APIBASE.replace('/api', ''), {
       withCredentials: true,
-      transports: ['websocket', 'polling']
+      transports: ['websocket', 'polling'],
+      timeout: 10000,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000
     });
 
     setSocket(newSocket);
@@ -116,8 +133,13 @@ export default function AdminSalesReport({ darkMode = false }) {
       setIsConnected(true);
     });
 
-    newSocket.on('disconnect', () => {
-      console.log('❌ Disconnected from Socket.IO server');
+    newSocket.on('disconnect', (reason) => {
+      console.log('❌ Disconnected from Socket.IO server:', reason);
+      setIsConnected(false);
+    });
+
+    newSocket.on('connect_error', (error) => {
+      console.warn('Socket.IO connection error:', error.message);
       setIsConnected(false);
     });
 
@@ -415,7 +437,7 @@ export default function AdminSalesReport({ darkMode = false }) {
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 flex flex-col items-center shadow-md border border-pink-200 dark:border-pink-900">
           <span className="text-2xl">💰</span>
           <span className="text-lg font-semibold mt-2">Revenue</span>
-          <span className="text-2xl font-bold text-pink-600 dark:text-pink-300">{kpi.revenue.toLocaleString()} MMK</span>
+          <span className="text-2xl font-bold text-pink-600 dark:text-pink-300">{(kpi.revenue || 0).toLocaleString()} MMK</span>
         </div>
         {activeTab === 'Custom' && (
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 flex flex-col items-center shadow-md border border-pink-200 dark:border-pink-900">
@@ -431,7 +453,7 @@ export default function AdminSalesReport({ darkMode = false }) {
       {/* User Feedback Section */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-md border border-pink-200 dark:border-pink-900 mb-8">
         <h2 className="font-semibold mb-4 text-pink-700 dark:text-pink-300">User Feedback</h2>
-        {feedbacks.length > 0 ? (
+        {feedbacks && feedbacks.length > 0 ? (
           <ul className="space-y-4">
             {feedbacks.map((fb, idx) => (
               <li key={idx} className="border-b border-gray-200 dark:border-gray-700 pb-2">
@@ -453,13 +475,13 @@ export default function AdminSalesReport({ darkMode = false }) {
         {/* Sales Over Time Chart */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-md border border-pink-200 dark:border-pink-900">
           <h2 className="font-semibold mb-2 text-pink-700 dark:text-pink-300">Sales Over Time</h2>
-          {salesOverTime.length > 0 ? (
+          {salesOverTime && salesOverTime.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
               <LineChart data={salesOverTime}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
                 <YAxis />
-                <Tooltip />
+                <Tooltip formatter={(value) => [`${(value || 0).toLocaleString()} MMK`, 'Sales']} />
                 <Line type="monotone" dataKey="sales" stroke="#e11d48" strokeWidth={3} />
               </LineChart>
             </ResponsiveContainer>
@@ -473,7 +495,7 @@ export default function AdminSalesReport({ darkMode = false }) {
         {/* Revenue by Category Donut */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-md border border-pink-200 dark:border-pink-900">
           <h2 className="font-semibold mb-2 text-pink-700 dark:text-pink-300">Revenue by Category</h2>
-          {revenueByCategory.length > 0 ? (
+          {revenueByCategory && revenueByCategory.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
                 <Pie
@@ -492,7 +514,7 @@ export default function AdminSalesReport({ darkMode = false }) {
                   ))}
                 </Pie>
                 <Legend />
-                <Tooltip />
+                <Tooltip formatter={(value) => [`${(value || 0).toLocaleString()} MMK`, 'Revenue']} />
               </PieChart>
             </ResponsiveContainer>
           ) : (
@@ -508,12 +530,12 @@ export default function AdminSalesReport({ darkMode = false }) {
         {/* Top 10 Items Bar Chart */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-md border border-pink-200 dark:border-pink-900">
           <h2 className="font-semibold mb-2 text-pink-700 dark:text-pink-300">Top 10 Items</h2>
-          {topItems.length > 0 ? (
+          {topItems && topItems.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={topItems} layout="vertical">
                 <XAxis type="number" />
                 <YAxis dataKey="name" type="category" width={100} />
-                <Tooltip />
+                <Tooltip formatter={(value) => [`${value} sold`, 'Quantity']} />
                 <Bar dataKey="sold" fill="#e11d48">
                   {topItems.map((entry, idx) => (
                     <Cell key={`cell-bar-${idx}`} fill={CHERRY_COLORS[idx % CHERRY_COLORS.length]} />
@@ -531,7 +553,7 @@ export default function AdminSalesReport({ darkMode = false }) {
         {/* Best Sellers Table */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-md border border-pink-200 dark:border-pink-900 overflow-x-auto">
           <h2 className="font-semibold mb-2 text-pink-700 dark:text-pink-300">Revenue</h2>
-          {bestSellers.length > 0 ? (
+          {bestSellers && bestSellers.length > 0 ? (
             <table className="min-w-full divide-y divide-pink-200 dark:divide-pink-900">
               <thead>
                 <tr>
@@ -545,7 +567,7 @@ export default function AdminSalesReport({ darkMode = false }) {
                   <tr key={row.name} className={idx % 2 === 0 ? 'bg-pink-50 dark:bg-gray-900/30' : ''}>
                     <td className="px-4 py-2 font-medium">{row.name}</td>
                     <td className="px-4 py-2 text-right">{row.sold}</td>
-                    <td className="px-4 py-2 text-right">{row.revenue.toLocaleString()} MMK</td>
+                    <td className="px-4 py-2 text-right">{(row.revenue || 0).toLocaleString()} MMK</td>
                   </tr>
                 ))}
               </tbody>

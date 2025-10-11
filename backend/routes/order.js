@@ -1,6 +1,31 @@
 import express from "express";
 import Order from "../models/Order.js";
+import OrderCounter from "../models/OrderCounter.js";
 const router = express.Router();
+
+// Helper function to generate order number
+const generateOrderNumber = async () => {
+  const today = new Date();
+  const dateStr = today.getFullYear().toString() + 
+                  (today.getMonth() + 1).toString().padStart(2, '0') + 
+                  today.getDate().toString().padStart(2, '0');
+
+  try {
+    // Find or create counter for today
+    let counter = await OrderCounter.findOneAndUpdate(
+      { date: dateStr },
+      { $inc: { sequence: 1 } },
+      { new: true, upsert: true }
+    );
+
+    const sequenceStr = counter.sequence.toString().padStart(3, '0');
+    return `${dateStr}-${sequenceStr}`;
+  } catch (error) {
+    console.error("Error generating order number:", error);
+    // Fallback to timestamp-based number if database fails
+    return `${dateStr}-${Date.now().toString().slice(-3)}`;
+  }
+};
 
 // GET all orders
 router.get("/", async (req, res) => {
@@ -21,16 +46,17 @@ router.get("/customer", async (req, res) => {
     }).sort({ createdAt: -1 });
 
     console.log(
-      `📋 Customer orders endpoint called - Total orders in DB: ${await Order.countDocuments()}`
+      ` Customer orders endpoint called - Total orders in DB: ${await Order.countDocuments()}`
     );
     console.log(
-      `📋 Paid orders in DB: ${await Order.countDocuments({ paid: true })}`
+      ` Paid orders in DB: ${await Order.countDocuments({ paid: true })}`
     );
-    console.log(`📋 Unpaid orders returned: ${unpaidOrders.length}`);
+    console.log(` Unpaid orders returned: ${unpaidOrders.length}`);
     console.log(
-      `📋 Order details:`,
+      ` Order details:`,
       unpaidOrders.map((order) => ({
         id: order._id.toString(),
+        orderNumber: order.orderNumber,
         table: order.tableNumber,
         paid: order.paid,
         status: order.status,
@@ -53,12 +79,13 @@ router.get("/checkout", async (req, res) => {
     }).sort({ createdAt: -1 });
 
     console.log(
-      `🧾 Checkout endpoint called - Found ${orders.length} orders with status readyForCheckout or sent`
+      ` Checkout endpoint called - Found ${orders.length} orders with status readyForCheckout or sent`
     );
     console.log(
-      "🧾 Order statuses:",
+      " Order statuses:",
       orders.map((o) => ({
         id: o._id.toString(),
+        orderNumber: o.orderNumber,
         table: o.tableNumber,
         status: o.status,
         paid: o.paid,
@@ -81,10 +108,10 @@ router.get("/ready-for-waiter", async (req, res) => {
     }).sort({ processedAt: -1 });
 
     console.log(
-      `🍽️ Waiter orders endpoint called - Found ${orders.length} orders ready for waiter`
+      ` Waiter orders endpoint called - Found ${orders.length} orders ready for waiter`
     );
     console.log(
-      "🍽️ Order details:",
+      " Order details:",
       orders.map((o) => ({
         id: o._id.toString(),
         table: o.tableNumber,
@@ -109,7 +136,11 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "Invalid order format" });
     }
 
+    // Generate custom order number
+    const orderNumber = await generateOrderNumber();
+
     const newOrder = new Order({
+      orderNumber,
       tableNumber,
       items,
       createdAt: new Date(),
@@ -117,12 +148,14 @@ router.post("/", async (req, res) => {
     });
 
     await newOrder.save();
+    console.log(`✅ Created order ${orderNumber} for Table ${tableNumber}`);
 
     const io = req.app.get("io");
     io.emit("order:new", newOrder);
 
     res.status(201).json(newOrder);
   } catch (error) {
+    console.error("Error creating order:", error);
     res.status(500).json({ error: "Failed to create order" });
   }
 });
@@ -171,7 +204,9 @@ router.put("/:id/process", async (req, res) => {
 
     const io = req.app.get("io");
     io.emit("order:readyForWaiter", updated);
+    io.emit("order:update", updated); // Also emit general update for fallback
 
+    console.log(`✅ Order ${updated._id} marked as ready for waiter - status: ${updated.status}`);
     res.json(updated);
   } catch (err) {
     console.error(err);
@@ -208,7 +243,7 @@ router.post("/mark-paid", async (req, res) => {
   }
 
   try {
-    console.log(`💰 Marking order ${orderId} as paid...`);
+    console.log(` Marking order ${orderId} as paid...`);
 
     const existingOrder = await Order.findById(orderId);
     if (!existingOrder) {
@@ -216,7 +251,7 @@ router.post("/mark-paid", async (req, res) => {
       return res.status(404).json({ error: "Order not found" });
     }
 
-    console.log(`📋 Order ${orderId} current status:`, {
+    console.log(` Order ${orderId} current status:`, {
       table: existingOrder.tableNumber,
       paid: existingOrder.paid,
       status: existingOrder.status,

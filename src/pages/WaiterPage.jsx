@@ -968,11 +968,11 @@ export default function WaiterPage() {
                 {/* Order Items */}
                 <div className="bg-green-50/50 rounded-xl sm:rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6 border border-green-100">
                   <div className="flex justify-between items-center font-bold text-green-800 border-b-2 border-green-200 pb-2 sm:pb-3 mb-3 sm:mb-4 text-sm sm:text-base">
-                    <span className="flex items-center gap-1 sm:gap-2">
+                    <span className="flex items-center gap-1 sm:gap-1">
                       <span>🍴</span>
                       <span>Dish</span>
                     </span>
-                    <span className="text-center">
+                    <span className="">
                       <span>🧮</span>
                       <span className="hidden sm:inline">Qty</span>
                     </span>
@@ -988,7 +988,7 @@ export default function WaiterPage() {
                           <span className="line-clamp-2">{item.name}</span>
                         </span>
                         <span className="bg-green-100 text-green-700 font-bold px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm text-center min-w-[2rem] sm:min-w-[2.5rem]">
-                          {item.quantity}
+                          {item.quantity}{item.quantity > 1 ? ' items' : ' item'}
                         </span>
                       </li>
                     ))}
