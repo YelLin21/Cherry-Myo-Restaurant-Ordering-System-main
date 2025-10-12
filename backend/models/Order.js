@@ -21,6 +21,11 @@ const OrderSchema = new mongoose.Schema({
     default: false,
   },
   processedAt: Date,
+  paymentMethod: {
+    type: String,
+    enum: ['Cash', 'Card', 'QR Code', 'Mobile Banking'],
+    default: 'Cash'
+  },
 });
 
 export default mongoose.model("Order", OrderSchema);
