@@ -10,7 +10,6 @@ A modern, full-stack restaurant ordering system built with React, Node.js, and M
 - **Digital Menu Browsing** - Browse categorized menus (Food, Grill, Beverages, Special, Promotions)
 - **QR Code Table Ordering** - Scan QR codes to order directly from tables
 - **Shopping Cart** - Add, remove, and modify orders with real-time calculations
-- **Multiple Payment Options** - Stripe integration and PromptPay QR code payments
 - **Order History** - Track previous orders and reorder favorites
 - **Real-time Updates** - Live order status updates using Socket.io
 - **Feedback System** - Submit reviews and ratings
@@ -23,7 +22,6 @@ A modern, full-stack restaurant ordering system built with React, Node.js, and M
 - **Table Management** - Monitor table occupancy and orders
 - **Kitchen Dashboard** - Real-time order queue for kitchen staff
 - **Waiter Interface** - Order management for serving staff
-- **Payment Processing** - Handle various payment methods
 - **Promotion Management** - Create and manage special offers
 
 ### 🔧 Technical Features
@@ -56,15 +54,14 @@ A modern, full-stack restaurant ordering system built with React, Node.js, and M
 - **Mongoose** - MongoDB object modeling
 - **Socket.io** - Real-time bidirectional communication
 - **Stripe** - Payment processing
-- **QRCode** - QR code generation
-- **PromptPay QR** - Thai payment system integration
 - **Multer** - File upload handling
 - **CORS** - Cross-origin resource sharing
 
 ### Additional Services
-- **Firebase** - Authentication and real-time database
-- **Supabase** - Backend-as-a-Service
-- **Vercel** - Deployment and hosting
+- **Firebase** - Authentication
+- **Supabase** - Image storage
+- **Vercel** - Deployment and frontend hosting
+- **Render** - Deployment and backend hosting
 
 ## 🚀 Quick Start
 
