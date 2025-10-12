@@ -31,7 +31,6 @@ A modern, full-stack restaurant ordering system built with React, Node.js, and M
 - **File Upload** - Image upload for menu items and payment slips
 - **PDF Generation** - Generate receipts and reports
 - **CSV Export** - Export sales data for analysis
-- **QR Code Generation** - Dynamic QR codes for tables and payments
 
 ## 🛠️ Tech Stack
 
