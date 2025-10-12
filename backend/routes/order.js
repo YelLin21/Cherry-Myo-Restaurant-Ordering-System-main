@@ -37,6 +37,58 @@ router.get("/", async (req, res) => {
   }
 });
 
+// GET detailed orders for sales report (with date filtering)
+router.get("/detailed", async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    
+    let dateFilter = {};
+    
+    // If date range is provided, filter by dates
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      // Set end date to end of day (23:59:59.999)
+      end.setHours(23, 59, 59, 999);
+      
+      dateFilter.createdAt = {
+        $gte: start,
+        $lte: end
+      };
+    }
+    
+    // Only fetch paid orders for the sales report
+    const orders = await Order.find({
+      ...dateFilter,
+      paid: true
+    }).sort({ createdAt: -1 });
+    
+    // Transform data to include detailed information
+    const detailedOrders = orders.map(order => {
+      const totalItems = order.items.reduce((sum, item) => sum + item.quantity, 0);
+      const totalAmount = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      
+      return {
+        _id: order._id,
+        orderNumber: order.orderNumber,
+        tableNumber: order.tableNumber,
+        paymentMethod: order.paymentMethod || 'Cash', // Default to Cash if not specified
+        paidAt: order.processedAt || order.updatedAt || order.createdAt,
+        totalAmount: totalAmount,
+        totalItems: totalItems,
+        items: order.items,
+        createdAt: order.createdAt,
+        status: order.status
+      };
+    });
+    
+    res.json(detailedOrders);
+  } catch (error) {
+    console.error("Error fetching detailed orders:", error);
+    res.status(500).json({ error: "Failed to fetch detailed orders" });
+  }
+});
+
 // GET customer orders (only unpaid orders - for customer view)
 router.get("/customer", async (req, res) => {
   try {
@@ -216,9 +268,21 @@ router.put("/:id/process", async (req, res) => {
 
 router.put("/:id/paid", async (req, res) => {
   try {
+    const { paymentMethod } = req.body;
+    
+    const updateData = { 
+      paid: true, 
+      processedAt: new Date() 
+    };
+    
+    // Add payment method if provided
+    if (paymentMethod) {
+      updateData.paymentMethod = paymentMethod;
+    }
+    
     const updated = await Order.findByIdAndUpdate(
       req.params.id,
-      { paid: true, processedAt: new Date() },
+      updateData,
       { new: true }
     );
 
@@ -237,7 +301,7 @@ router.put("/:id/paid", async (req, res) => {
 
 // POST mark order as paid
 router.post("/mark-paid", async (req, res) => {
-  const { orderId } = req.body;
+  const { orderId, paymentMethod } = req.body;
   if (!orderId) {
     return res.status(400).json({ error: "Missing orderId" });
   }
@@ -257,9 +321,14 @@ router.post("/mark-paid", async (req, res) => {
       status: existingOrder.status,
     });
 
+    const updateData = { paid: true };
+    if (paymentMethod) {
+      updateData.paymentMethod = paymentMethod;
+    }
+
     const updated = await Order.findByIdAndUpdate(
       orderId,
-      { paid: true },
+      updateData,
       { new: true }
     );
 
@@ -267,6 +336,7 @@ router.post("/mark-paid", async (req, res) => {
       table: updated.tableNumber,
       paid: updated.paid,
       status: updated.status,
+      paymentMethod: updated.paymentMethod,
     });
 
     const io = req.app.get("io");
