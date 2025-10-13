@@ -122,9 +122,7 @@ A modern, full-stack restaurant ordering system built with React, Node.js, and M
    # Stripe
    STRIPE_SECRET_KEY=your_stripe_secret_key
    
-   # Other configurations
-   JWT_SECRET=your_jwt_secret
-   ```
+   
 
 4. **Start the development servers**
    ```bash
@@ -167,7 +165,7 @@ A modern, full-stack restaurant ordering system built with React, Node.js, and M
 ### For Waiters
 1. **Waiter Interface** - Access `/waiter` for table management
 2. **Order Status** - Update order delivery status
-3. **Customer Service** - Handle special requests and feedback
+3. **Customer Service** - Handle special requests
 
 ## 🏗️ Project Structure
 
@@ -209,7 +207,7 @@ Cherry-Myo-Restaurant-Ordering-System/
    - Set up MongoDB Atlas for production database
 
 3. **Deploy Backend**
-   - Deploy backend separately or use a service like Railway/Heroku
+   - Deploy backend separately or use a service like Render
    - Update API endpoints in frontend
 
 ### Manual Deployment
@@ -227,7 +225,10 @@ Cherry-Myo-Restaurant-Ordering-System/
 
 ## 👥 Authors
 
-- **YelLin21**  - [YelLin21](https://github.com/YelLin21)
+- **YelLin**  - [YelLin21](https://github.com/YelLin21)
+- **KelvinKaung**  - [KelvinKaungDev](https://github.com/KelvinKaungDev)
+- **KyawZ1nLynn**  - [YKyawZ1nLynn](https://github.com/KyawZ1nLynn)
+
 
 
 
