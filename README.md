@@ -10,7 +10,6 @@ A modern, full-stack restaurant ordering system built with React, Node.js, and M
 - **Digital Menu Browsing** - Browse categorized menus (Food, Grill, Beverages, Special, Promotions)
 - **QR Code Table Ordering** - Scan QR codes to order directly from tables
 - **Shopping Cart** - Add, remove, and modify orders with real-time calculations
-- **Multiple Payment Options** - Stripe integration and PromptPay QR code payments
 - **Order History** - Track previous orders and reorder favorites
 - **Real-time Updates** - Live order status updates using Socket.io
 - **Feedback System** - Submit reviews and ratings
@@ -23,7 +22,6 @@ A modern, full-stack restaurant ordering system built with React, Node.js, and M
 - **Table Management** - Monitor table occupancy and orders
 - **Kitchen Dashboard** - Real-time order queue for kitchen staff
 - **Waiter Interface** - Order management for serving staff
-- **Payment Processing** - Handle various payment methods
 - **Promotion Management** - Create and manage special offers
 
 ### 🔧 Technical Features
@@ -33,7 +31,6 @@ A modern, full-stack restaurant ordering system built with React, Node.js, and M
 - **File Upload** - Image upload for menu items and payment slips
 - **PDF Generation** - Generate receipts and reports
 - **CSV Export** - Export sales data for analysis
-- **QR Code Generation** - Dynamic QR codes for tables and payments
 
 ## 🛠️ Tech Stack
 
@@ -56,15 +53,14 @@ A modern, full-stack restaurant ordering system built with React, Node.js, and M
 - **Mongoose** - MongoDB object modeling
 - **Socket.io** - Real-time bidirectional communication
 - **Stripe** - Payment processing
-- **QRCode** - QR code generation
-- **PromptPay QR** - Thai payment system integration
 - **Multer** - File upload handling
 - **CORS** - Cross-origin resource sharing
 
 ### Additional Services
-- **Firebase** - Authentication and real-time database
-- **Supabase** - Backend-as-a-Service
-- **Vercel** - Deployment and hosting
+- **Firebase** - Authentication
+- **Supabase** - Image storage
+- **Vercel** - Deployment and frontend hosting
+- **Render** - Deployment and backend hosting
 
 ## 🚀 Quick Start
 
@@ -126,9 +122,7 @@ A modern, full-stack restaurant ordering system built with React, Node.js, and M
    # Stripe
    STRIPE_SECRET_KEY=your_stripe_secret_key
    
-   # Other configurations
-   JWT_SECRET=your_jwt_secret
-   ```
+   
 
 4. **Start the development servers**
    ```bash
@@ -171,7 +165,7 @@ A modern, full-stack restaurant ordering system built with React, Node.js, and M
 ### For Waiters
 1. **Waiter Interface** - Access `/waiter` for table management
 2. **Order Status** - Update order delivery status
-3. **Customer Service** - Handle special requests and feedback
+3. **Customer Service** - Handle special requests
 
 ## 🏗️ Project Structure
 
@@ -213,7 +207,7 @@ Cherry-Myo-Restaurant-Ordering-System/
    - Set up MongoDB Atlas for production database
 
 3. **Deploy Backend**
-   - Deploy backend separately or use a service like Railway/Heroku
+   - Deploy backend separately or use a service like Render
    - Update API endpoints in frontend
 
 ### Manual Deployment
@@ -228,38 +222,15 @@ Cherry-Myo-Restaurant-Ordering-System/
    pnpm start
    ```
 
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the project
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 👥 Authors
 
-- **YelLin21** - *Initial work* - [YelLin21](https://github.com/YelLin21)
+- **YelLin**  - [YelLin21](https://github.com/YelLin21)
+- **KelvinKaung**  - [KelvinKaungDev](https://github.com/KelvinKaungDev)
+- **KyawZ1nLynn**  - [YKyawZ1nLynn](https://github.com/KyawZ1nLynn)
 
-## 🙏 Acknowledgments
 
-- React team for the amazing framework
-- MongoDB team for the flexible database
-- Stripe for secure payment processing
-- All contributors who have helped improve this project
 
-## 📞 Support
-
-If you have any questions or need help getting started, please:
-
-1. Check the [Issues](https://github.com/YelLin21/Cherry-Myo-Restaurant-Ordering-System/issues) page
-2. Create a new issue if your problem isn't already addressed
-3. Contact the maintainers
 
 ---
 

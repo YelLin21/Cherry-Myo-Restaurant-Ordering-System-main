@@ -433,6 +433,14 @@ export default function OrderHistoryPage() {
     setShowPaymentModal(false);
   };
 
+  const resetDeclineState = () => {
+    setIsDeclined(false);
+    setDeclinedOrder(null);
+    setIsPaid(false);
+    setIsPaymentProcessing(false);
+    setShowDeclineModal(false);
+  };
+
   useEffect(() => {
     const firstOrder = orders[0];
     if (!firstOrder) return;
@@ -479,7 +487,7 @@ export default function OrderHistoryPage() {
         const isSameTable = order.tableNumber?.toString().trim() === currentTableId;
         const isPaid = order.paid === true;
 
-        // Filter out paid orders
+        // Filter out paid orders (but keep declined orders so customer can try again)
         if (isPaid) {
           console.log(`💳 Excluding paid order: ${order._id.slice(-8)}`);
           return false;
@@ -493,6 +501,7 @@ export default function OrderHistoryPage() {
         // Extend time window to 4 hours for better user experience
         const isWithinTimeWindow = now - orderTime <= 4 * 60 * 60 * 1000;
         
+        // Include declined orders so customer can retry payment
         const shouldInclude = isSameTable && isToday && isWithinTimeWindow;
         
         if (isSameTable) {
@@ -584,6 +593,8 @@ export default function OrderHistoryPage() {
         return `${baseClasses} ${animationClass} ${darkMode ? "bg-purple-900 text-purple-300 border border-purple-600" : "bg-purple-100 text-purple-800 border border-purple-300"}`;
       case "sent":
         return `${baseClasses} ${animationClass} ${darkMode ? "bg-green-900 text-green-300 border border-green-600" : "bg-green-100 text-green-800 border border-green-300"}`;
+      case "declined":
+        return `${baseClasses} ${animationClass} ${darkMode ? "bg-red-900 text-red-300 border border-red-600" : "bg-red-100 text-red-800 border border-red-300"}`;
       default:
         return `${baseClasses} ${darkMode ? "bg-gray-700 text-gray-300 border border-gray-600" : "bg-gray-100 text-gray-800 border border-gray-300"}`;
     }
@@ -604,6 +615,8 @@ export default function OrderHistoryPage() {
         return "Delivered to table"; 
       case "completed":
         return "Ready for checkout";
+      case "declined":
+        return "Payment declined - Please try again";
       default:
         return status.charAt(0).toUpperCase() + status.slice(1);
     }
@@ -667,7 +680,7 @@ export default function OrderHistoryPage() {
   const totalPrice = orders.reduce((sum, order) => sum + calculateOrderTotal(order.items), 0);
 
   const canCheckout = orders.length > 0 && orders.every(order => 
-    order.status === 'sent' || order.status === 'readyForCheckout' || order.status === 'completed'
+    order.status === 'sent' || order.status === 'readyForCheckout' || order.status === 'completed' || order.status === 'declined'
   );
 
   const handleCheckout = () => {
@@ -680,6 +693,12 @@ export default function OrderHistoryPage() {
       });      
       return;
     }
+
+    // Reset decline state when customer tries to checkout again
+    if (isDeclined) {
+      resetDeclineState();
+    }
+
     setShowPaymentModal(true);
   };
 
@@ -692,7 +711,7 @@ export default function OrderHistoryPage() {
       Swal.fire({
         title: 'Table ID Missing',
         text: 'Cannot process checkout.',
-        icon: 'error',          // ❌ red error icon
+        icon: 'error',         
         confirmButtonText: 'OK'
       });      
       return;
@@ -703,7 +722,7 @@ export default function OrderHistoryPage() {
       Swal.fire({
         title: 'No Orders Found',
         text: 'No orders found to checkout.',
-        icon: 'warning',        // ⚠️ yellow warning icon
+        icon: 'warning',       
         confirmButtonText: 'OK'
       });      
       return;
@@ -737,6 +756,36 @@ export default function OrderHistoryPage() {
           icon: 'success',         // ✅ green checkmark icon
           confirmButtonText: 'OK',
           confirmButtonColor: '#ff69b4', // 🎨 hot pink background
+          buttonsStyling: true,
+          customClass: {
+            confirmButton: 'swal-payment-confirm-btn'
+          },
+          didOpen: () => {
+            // Ensure OK button is always visible
+            const confirmBtn = document.querySelector('.swal-payment-confirm-btn');
+            if (confirmBtn) {
+              confirmBtn.style.cssText = `
+                background-color: #ff69b4 !important;
+                color: white !important;
+                border: none !important;
+                padding: 12px 24px !important;
+                border-radius: 8px !important;
+                font-weight: bold !important;
+                cursor: pointer !important;
+                margin: 0 8px !important;
+                display: inline-block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+                min-width: 80px !important;
+              `;
+            }
+          }
+        }).then((result) => {
+          // When OK is clicked, immediately set payment processing state
+          if (result.isConfirmed) {
+            setIsPaymentProcessing(true);
+            setIsPaid(true);
+          }
         });
         setShowPaymentModal(false);
     } catch (err) {
@@ -823,10 +872,32 @@ export default function OrderHistoryPage() {
   };
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${
-      darkMode ? "dark bg-gray-900" : "bg-gray-50"
-    }`}>
-      <Navbar darkMode={darkMode} setDarkMode={setDarkMode} cartCount={totalItems} />
+    <>
+      {/* CSS for Payment Recorded Modal Button */}
+      <style>{`
+        .swal-payment-confirm-btn {
+          background-color: #ff69b4 !important;
+          color: white !important;
+          border: none !important;
+          padding: 12px 24px !important;
+          border-radius: 8px !important;
+          font-weight: bold !important;
+          cursor: pointer !important;
+          margin: 0 8px !important;
+          display: inline-block !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+          min-width: 80px !important;
+        }
+        
+        .swal-payment-confirm-btn:hover {
+          background-color: #e91e63 !important;
+        }
+      `}</style>
+      <div className={`min-h-screen transition-colors duration-300 ${
+        darkMode ? "dark bg-gray-900" : "bg-gray-50"
+      }`}>
+        <Navbar darkMode={darkMode} setDarkMode={setDarkMode} cartCount={totalItems} />
 
       <main className={`pt-32 px-4 sm:px-6 lg:px-8 pb-40 transition-colors duration-300 ${
         darkMode ? "bg-gray-900" : "bg-gray-100"
@@ -911,9 +982,13 @@ export default function OrderHistoryPage() {
                     key={order._id}
                     onClick={() => handleOrderClick(order)}
                     className={`p-4 rounded-xl border shadow-sm cursor-pointer transition-all duration-200 hover:shadow-md ${
-                      darkMode 
-                        ? "bg-gray-800 border-gray-600 hover:bg-gray-750" 
-                        : "bg-white border-gray-200 hover:bg-gray-50"
+                      order.status === 'declined'
+                        ? darkMode 
+                          ? "bg-red-900/20 border-red-600/50 hover:bg-red-900/30" 
+                          : "bg-red-50 border-red-200 hover:bg-red-100"
+                        : darkMode 
+                          ? "bg-gray-800 border-gray-600 hover:bg-gray-750" 
+                          : "bg-white border-gray-200 hover:bg-gray-50"
                     }`}
                   >
                     <div className="flex justify-between items-start mb-2">
@@ -931,8 +1006,16 @@ export default function OrderHistoryPage() {
 
                     <div className="mb-2 flex items-center gap-2">
                       <span className={getStatusBadge(order)}>
+                        {order.status === 'declined' && '⚠️ '}
                         {displayStatusText(order)}
                       </span>
+                      {order.status === 'declined' && (
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          darkMode ? 'bg-orange-800 text-orange-200' : 'bg-orange-100 text-orange-800'
+                        }`}>
+                          Can retry payment
+                        </span>
+                      )}
                     </div>
                     
                     <div className="text-sm mb-2">
@@ -1001,12 +1084,16 @@ export default function OrderHistoryPage() {
 
                     <button
                       onClick={handleCheckout}
-                      disabled={!canCheckout || isPaymentProcessing || isPaid}
+                      disabled={!canCheckout || (isPaymentProcessing && !isDeclined) || (isPaid && !isDeclined)}
                       className={`flex-1 py-3 rounded-lg text-center font-bold text-base transition-colors duration-200 ${
-                        canCheckout && !isPaymentProcessing && !isPaid
-                          ? darkMode 
-                            ? 'bg-pink-600 text-white hover:bg-pink-500' 
-                            : 'bg-pink-600 text-white hover:bg-pink-700'
+                        canCheckout && (!isPaymentProcessing || isDeclined) && (!isPaid || isDeclined)
+                          ? isDeclined
+                            ? darkMode 
+                              ? 'bg-orange-600 text-white hover:bg-orange-500' 
+                              : 'bg-orange-600 text-white hover:bg-orange-700'
+                            : darkMode 
+                              ? 'bg-pink-600 text-white hover:bg-pink-500' 
+                              : 'bg-pink-600 text-white hover:bg-pink-700'
                           : darkMode
                             ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
                             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -1140,17 +1227,49 @@ export default function OrderHistoryPage() {
 
       {showDeclineModal && declinedOrder && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-          <div className="bg-white rounded-2xl shadow-xl p-8 text-center w-[90%] max-w-md">
-            <h2 className="text-2xl font-bold text-red-600 mb-4">Payment Declined</h2>
-            <p className="text-gray-700 mb-6">
-              The payment for <strong>Table {declinedOrder.tableNumber}</strong> has been declined.
+          <div className={`rounded-2xl shadow-xl p-8 text-center w-[90%] max-w-md ${
+            darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-700'
+          }`}>
+            <div className="mb-4">
+              <div className="text-6xl mb-4">❌</div>
+              <h2 className="text-2xl font-bold text-red-500 mb-4">Payment Declined</h2>
+            </div>
+            <p className={`mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              The payment for <strong>Table {declinedOrder.tableNumber}</strong> has been declined by the admin. 
+              You can try a different payment method.
             </p>
-            <button
-              onClick={() => setShowDeclineModal(false)}
-              className="px-6 py-2 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition"
-            >
-              Close
-            </button>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={resetDeclineState}
+                className={`px-6 py-3 font-semibold rounded-lg transition ${
+                  darkMode 
+                    ? 'bg-gray-600 text-gray-200 hover:bg-gray-500' 
+                    : 'bg-gray-500 text-white hover:bg-gray-600'
+                }`}
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  resetDeclineState();
+                  if (canCheckout) {
+                    setShowPaymentModal(true);
+                  }
+                }}
+                className={`px-6 py-3 font-semibold rounded-lg transition ${
+                  canCheckout
+                    ? darkMode
+                      ? 'bg-pink-600 text-white hover:bg-pink-500'
+                      : 'bg-pink-600 text-white hover:bg-pink-700'
+                    : darkMode
+                      ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+                disabled={!canCheckout}
+              >
+                Try Again
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1341,6 +1460,7 @@ export default function OrderHistoryPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
