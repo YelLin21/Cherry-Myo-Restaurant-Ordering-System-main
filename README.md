@@ -207,7 +207,7 @@ Cherry-Myo-Restaurant-Ordering-System/
    - Set up MongoDB Atlas for production database
 
 3. **Deploy Backend**
-   - Deploy backend separately or use a service like Railway/Heroku
+   - Deploy backend separately or use a service like Render
    - Update API endpoints in frontend
 
 ### Manual Deployment
