@@ -224,38 +224,12 @@ Cherry-Myo-Restaurant-Ordering-System/
    pnpm start
    ```
 
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the project
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 👥 Authors
 
 - **YelLin21** - *Initial work* - [YelLin21](https://github.com/YelLin21)
 
-## 🙏 Acknowledgments
 
-- React team for the amazing framework
-- MongoDB team for the flexible database
-- Stripe for secure payment processing
-- All contributors who have helped improve this project
-
-## 📞 Support
-
-If you have any questions or need help getting started, please:
-
-1. Check the [Issues](https://github.com/YelLin21/Cherry-Myo-Restaurant-Ordering-System/issues) page
-2. Create a new issue if your problem isn't already addressed
-3. Contact the maintainers
 
 ---
 
