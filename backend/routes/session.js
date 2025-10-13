@@ -2,6 +2,7 @@ import express from "express";
 import Table from "../models/Table.js";
 import Session from "../models/Session.js";
 import { nanoid } from "nanoid";
+
 const router = express.Router();
 
 // Helper: Calculate distance between lat/lon points

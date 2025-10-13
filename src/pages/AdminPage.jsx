@@ -7,9 +7,8 @@ import AdminNavbar from "../components/AdminNavbar.jsx";
 import { io } from "socket.io-client";
 import Swal from 'sweetalert2'
 
-const APIBASE = import.meta.env.VITE_API_URL;
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000" || "https://cherry-myo-restaurant-ordering-system.onrender.com";
-
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5001";
+const APIBASE = import.meta.env.VITE_API_URL|| "http://localhost:5001";
 const TABS = ["Breakfast", "Lunch", "Dinner", "Grill", "Beverage"];
 
 export default function AdminPage() {
@@ -181,8 +180,13 @@ function AdminPageContent({
 
     // Initialize socket connection
     const socket = io(SOCKET_URL, {
-      transports: ["websocket"],
+      transports: ["websocket", "polling"],
+      reconnection: true,
+      reconnectionAttempts: 10,
+       timeout: 20000,
       forceNew: true,
+      withCredentials: false,
+      path: "/socket.io", // default path;
     });
 
     // Socket event listeners
@@ -208,6 +212,16 @@ function AdminPageContent({
       setMenuItems((prev) => prev.filter((item) => item._id !== id));
     });
 
+    socket.on("payment:slipUploaded", (p) => {
+  Swal.fire({
+    title: `New QR Slip • Table ${p.tableNumber}`,
+    text: `${(p.total || 0).toLocaleString('en-US')} MMK`,
+    imageUrl: p.slipUrl,
+    imageWidth: 300,
+    confirmButtonText: 'OK'
+  });
+});
+
     // Cleanup function
     return () => {
       console.log("Cleaning up socket connection");
@@ -216,6 +230,8 @@ function AdminPageContent({
       socket.off("menu:new");
       socket.off("menu:update");
       socket.off("menu:delete");
+      socket.off("payment:slipUploaded");
+
       socket.disconnect();
     };
   }, [user, setMenuItems]);

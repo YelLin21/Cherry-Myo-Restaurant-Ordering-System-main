@@ -26,6 +26,10 @@ const CheckoutSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+ slipUploadedAt: Date,
+  verificationStatus: { type: String, enum: ["none", "awaiting", "approved", "rejected"], default: "none" },
+  verifiedBy: String,
+  verifiedAt: Date,
 });
 
 export default mongoose.model("Checkout", CheckoutSchema);

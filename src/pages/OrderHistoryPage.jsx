@@ -22,8 +22,12 @@ export default function OrderHistoryPage() {
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showCardModal, setShowCardModal] = useState(false);
+  const [showPromptPayQR, setShowPromptPayQR] = useState(false);
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
   const [showPaymentSuccessModal, setShowPaymentSuccessModal] = useState(false);
+  const [isReceiptUploaded, setIsReceiptUploaded] = useState(false);
+  const [checkoutIdForSlip, setCheckoutIdForSlip] = useState(null);
+
   const [socketConnected, setSocketConnected] = useState(false);
   const [lastStatusUpdate, setLastStatusUpdate] = useState(null);
   const [showStatusToast, setShowStatusToast] = useState(false);
@@ -686,6 +690,23 @@ export default function OrderHistoryPage() {
         setShowCardModal(true);
         return;
       }
+      if (paymentMethod === "promptpay") {
+  // create checkout first (QR = "scan")
+  const res = await fetch(`${APIBASE}/checkouts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      orderId: firstOrder._id,
+      paymentMethod: "scan",
+      finalAmount: totalPrice
+    })
+  });
+  if (!res.ok) throw new Error("Failed to create checkout for QR");
+  const checkout = await res.json();
+  setCheckoutIdForSlip(checkout._id);
+  setShowPromptPayQR(true);
+  return;
+}
   
         const response = await fetch(`${APIBASE}/checkouts`, {
           method: "POST",
@@ -718,11 +739,36 @@ export default function OrderHistoryPage() {
           icon: 'error',           // ❌ red cross icon
           confirmButtonText: 'OK'
         });
+        setIsPaymentProcessing(false); // Re-enable buttons on error
     }
-};
+}; 
+  // Receipt upload function
+const handleUploadReceipt = async (event) => {
+  if (!checkoutIdForSlip) {
+    Swal.fire({ title: 'Missing checkout', text: 'Try again.', icon: 'error' });
+    return;
+  }
+  const file = event.target.files?.[0];
+  if (!file) return;
 
+  const fd = new FormData();
+  fd.append("file", file); // key must be "file"
+
+  const res = await fetch(`${APIBASE}/checkouts/${checkoutIdForSlip}/slip`, {
+    method: "POST",
+    body: fd
+  });
+
+  if (!res.ok) {
+    Swal.fire({ title: 'Upload failed', text: 'Please try again.', icon: 'error' });
+    return;
+  }
+
+  setIsReceiptUploaded(true);
+  Swal.fire({ title: 'Slip uploaded', text: 'Waiting for admin approval.', icon: 'success', timer: 1800, showConfirmButton: false });
+};
   const handleSubmitReceipt = async () => {
-    setIsPaymentProcessing(true);
+    {/*IsPaymentProcessing(true);
 
     const currentTableId = sessionStorage.getItem("tableId");
     if (!currentTableId) {
@@ -734,7 +780,29 @@ export default function OrderHistoryPage() {
       });
       setIsPaymentProcessing(false);
       
-      return;
+      return;*/}
+      if (!isReceiptUploaded) {
+    Swal.fire({
+      title: 'Receipt Missing',
+      text: 'Please upload the receipt before confirming payment.',
+      icon: 'warning',         // ⚠️ yellow warning icon
+      confirmButtonText: 'OK'
+    });
+    return;  // Prevent further execution if receipt isn't uploaded
+  }
+
+  setIsPaymentProcessing(true);
+
+  const currentTableId = sessionStorage.getItem("tableId");
+  if (!currentTableId) {
+    Swal.fire({
+      title: 'Table ID Missing',
+      text: 'Cannot process checkout.',
+      icon: 'error',           // ❌ red cross icon
+      confirmButtonText: 'OK'
+    });
+    setIsPaymentProcessing(false);
+    return;
     }
 
     const firstOrder = orders[0];
@@ -1148,7 +1216,7 @@ export default function OrderHistoryPage() {
               </div>
 
               <div className="space-y-4">
-                {/* QR Code Payment Button */}
+                {/* Card Payment Button */}
                 <button
                   onClick={() => handlePayment('card')}
                   className={`w-full p-4 rounded-xl border-2 transition-all duration-200 flex items-center justify-center gap-3 ${
@@ -1163,7 +1231,7 @@ export default function OrderHistoryPage() {
                     <p className="text-sm opacity-80">Add Card and Pay</p>
                   </div>
                 </button>
-
+              
                 {/* Cash Payment Button */}
                 <button
                   onClick={() => handlePayment('cash')}
@@ -1179,12 +1247,62 @@ export default function OrderHistoryPage() {
                     <p className="text-sm opacity-80">Pay at the counter</p>
                   </div>
                 </button>
+                    {/* QR Payment Button */}
+                <button
+                  onClick={() => handlePayment('promptpay')}
+                  className={`w-full p-4 rounded-xl border-2 transition-all duration-200 flex items-center justify-center gap-3 ${
+                    darkMode 
+                      ? 'border-red-500 bg-red-900 hover:bg-red-800 text-red-300' 
+                      : 'border-red-500 bg-red-50 hover:bg-red-100 text-red-700'
+                  }`}
+                >
+                  <div className="text-2xl">📱</div>
+                  <div>
+                    <p className="font-bold text-lg">Pay with QR (PromptPay)</p>
+                    <p className="text-sm opacity-80">Scan Qr to Pay</p>
+                  </div>
+                </button>
+              {/* QR Modal */}
+{showPromptPayQR && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowPromptPayQR(false)}>
+    <div className="max-w-md w-full rounded-xl shadow-2xl max-h-[90vh] overflow-y-auto bg-white">
+      <div className="p-6 text-center">
+        <h2 className="text-xl font-bold mb-4">Scan QR to Pay</h2>
+        <img 
+          src="/image/qr1.jpg" 
+          alt="PromptPay QR Code" 
+          className="w-64 h-64 rounded-xl shadow-md mx-auto"
+        />
+        {/* Upload Receipt Button */}
+        <div className="mt-4">
+          <label htmlFor="receipt-upload" className="block mb-2 font-medium text-gray-700">
+            Upload Payment Receipt
+          </label>
+          <input
+            id="receipt-upload"
+            type="file"
+            accept="image/*"
+            className="mb-4"
+            onChange={handleUploadReceipt}
+          />
+          <button
+            onClick={() => setShowPromptPayQR(false)}
+            className="p-2 bg-green-600 text-white rounded-lg w-full font-bold"
+            disabled={!isReceiptUploaded}
+          >
+            {isReceiptUploaded ? "Receipt Uploaded! Close" : "Upload & Close"}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
               </div>
             </div>
           </div>
         </div>
       )}
-      {/* QR Code Payment Modal */}
+      {/* card Payment Modal */}
       {showCardModal && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
@@ -1274,7 +1392,6 @@ export default function OrderHistoryPage() {
                   <span className="text-2xl animate-pulse">🍒</span>
                 </div>
               </div>
-
               {/* Close Button */}
               <button
                 onClick={() => setShowPaymentSuccessModal(false)}
@@ -1288,7 +1405,7 @@ export default function OrderHistoryPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div> 
       )}
     </div>
   );

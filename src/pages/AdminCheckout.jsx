@@ -64,7 +64,7 @@ export default function AdminCheckoutPage() {
 
 function CheckoutContent({ user, handleLogout }) {
     const [checkoutOrders, setCheckoutOrders] = useState([]);
-    const [discounts, setDiscounts] = useState({});
+    //const [discounts, setDiscounts] = useState({});
     const [currentTime, setCurrentTime] = useState(new Date());
     const [paymentMethods, setPaymentMethods] = useState({}); // 'scan' or 'cash'
     const [cashAmounts, setCashAmounts] = useState({}); // cash received amounts
@@ -479,7 +479,7 @@ function CheckoutContent({ user, handleLogout }) {
                             // If this was a merged order, remove just this ID
                             const remainingIds = order.orderIds.filter(id => id !== deletedOrderId);
                             if (remainingIds.length === 0) {
-                                return false; // Remove entire table order if no orders left
+                                return false;
                             }
                             // Update the order to remove the deleted order ID
                             order.orderIds = remainingIds;
@@ -589,13 +589,13 @@ function CheckoutContent({ user, handleLogout }) {
         };
     }, []);
 
-    const handleDiscountChange = (orderId, value) => {
+    /*const handleDiscountChange = (orderId, value) => {
         const numeric = parseFloat(value);
         setDiscounts((prev) => ({
             ...prev,
             [orderId]: isNaN(numeric) ? 0 : numeric,
         }));
-    };
+    };*/
 
     const handlePaymentMethodChange = (orderId, method) => {
         setPaymentMethods((prev) => ({
@@ -755,12 +755,13 @@ function CheckoutContent({ user, handleLogout }) {
             (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
             0
         );
-        const discountPercent = discounts[order._id] || 0;
-        const discountAmount = (discountPercent / 100) * total;
-        return Math.max(total - discountAmount, 0);
+        // const discountPercent = discounts[order._id] || 0;
+        // const discountAmount = (discountPercent / 100) * total;
+        // return Math.max(total - discountAmount, 0);
+        return total;
     };
 
-    // Keep only basic English letters, numbers, spaces, and common punctuation.
+// For Printer MM font removes and non-ASCII characters
 // Everything else (including Myanmar) is removed.
 function safeAscii(text) {
   if (!text) return '';
@@ -895,9 +896,12 @@ function printThermal58(order, { discountPercent = 0, paymentMethod, cashReceive
             (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
             0
         );
-        const discountPercent = discounts[order._id] || 0;
-        const discountAmount = (discountPercent / 100) * total;
-        const finalTotal = Math.max(total - discountAmount, 0);
+        //const discountPercent = discounts[order._id] || 0;
+        //const discountAmount = (discountPercent / 100) * total;
+        //const finalTotal = Math.max(total - discountAmount, 0);
+        const discountPercent = 0;
+        const discountAmount = 0;
+        const finalTotal = total;
         const paymentMethod = paymentMethods[order._id];
         const cashReceived = cashAmounts[order._id];
         const change = paymentMethod === 'cash' ? (cashReceived - finalTotal) : 0;
@@ -1263,9 +1267,12 @@ function printThermal58(order, { discountPercent = 0, paymentMethod, cashReceive
                                     (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
                                     0
                                 );
-                                const discountPercent = discounts[order._id] || 0;
-                                const discountAmount = (discountPercent / 100) * total;
-                                const finalTotal = Math.max(total - discountAmount, 0);
+                                //const discountPercent = discounts[order._id] || 0;
+                                //const discountAmount = (discountPercent / 100) * total;
+                                //const finalTotal = Math.max(total - discountAmount, 0);
+                                const dicountPercent = 0;
+                                const discountAmount = 0;
+                                const finalTotal = total;
 
                                 return (
                                     <div
@@ -1402,33 +1409,28 @@ function printThermal58(order, { discountPercent = 0, paymentMethod, cashReceive
                                                         <span>{total.toFixed(2)}MMK</span>
                                                     </div>
 
-                                                    <div className="flex justify-between items-center">
-                                                        <label htmlFor={`discount-${order._id}`} className={
-                                                            darkMode ? 'text-gray-200' : 'text-gray-800'
-                                                        }>
-                                                            Discount (%)
-                                                        </label>
-                                                        <input
-                                                            id={`discount-${order._id}`}
-                                                            type="number"
-                                                            className={`w-20 px-3 py-2 rounded-lg border text-center ${darkMode
-                                                                    ? 'bg-gray-600 border-gray-500 text-white'
-                                                                    : 'bg-white border-gray-300 text-gray-900'
-                                                                }`}
-                                                            value={discounts[order._id] || ""}
-                                                            placeholder="0"
-                                                            min="0"
-                                                            max="100"
-                                                            onChange={(e) =>
-                                                                handleDiscountChange(order._id, e.target.value)
-                                                            }
-                                                        />
-                                                    </div>
+                                                    {/* 
+<div className="flex justify-between items-center">
+    <label htmlFor={`discount-${order._id}`} className={darkMode ? 'text-gray-200' : 'text-gray-800'}>
+        Discount (%)
+    </label>
+    <input
+        id={`discount-${order._id}`}
+        type="number"
+        className={`w-20 px-3 py-2 rounded-lg border text-center ${darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+        value={discounts[order._id] || ""}
+        placeholder="0"
+        min="0"
+        max="100"
+        onChange={(e) => handleDiscountChange(order._id, e.target.value)}
+    />
+</div>
+*/}
 
-                                                    <div className="flex justify-between text-red-600">
+                                                    {/*<div className="flex justify-between text-red-600">
                                                         <span>Discount Amount</span>
                                                         <span>{discountAmount.toFixed(2)}-MMK</span>
-                                                    </div>
+                                                    </div>*/}
 
                                                     <div className={`flex justify-between text-xl font-bold pt-3 border-t ${darkMode ? 'border-gray-600 text-green-400' : 'border-gray-300 text-green-600'
                                                         }`}>
