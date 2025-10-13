@@ -122,9 +122,7 @@ A modern, full-stack restaurant ordering system built with React, Node.js, and M
    # Stripe
    STRIPE_SECRET_KEY=your_stripe_secret_key
    
-   # Other configurations
-   JWT_SECRET=your_jwt_secret
-   ```
+   
 
 4. **Start the development servers**
    ```bash
@@ -167,7 +165,7 @@ A modern, full-stack restaurant ordering system built with React, Node.js, and M
 ### For Waiters
 1. **Waiter Interface** - Access `/waiter` for table management
 2. **Order Status** - Update order delivery status
-3. **Customer Service** - Handle special requests and feedback
+3. **Customer Service** - Handle special requests
 
 ## 🏗️ Project Structure
 
