@@ -122,11 +122,10 @@ router.get("/customer", async (req, res) => {
   }
 });
 
-// GET orders ready for checkout
 router.get("/checkout", async (req, res) => {
   try {
     const orders = await Order.find({
-      status: { $in: ["readyForCheckout", "sent"] },
+      status: { $in: ["readyForCheckout", "sent", "declined"] },
       paid: { $ne: true },
     }).sort({ createdAt: -1 });
 
@@ -351,5 +350,29 @@ router.post("/mark-paid", async (req, res) => {
     res.status(500).json({ error: "Failed to mark as paid" });
   }
 });
+
+router.put("/decline/:id", async (req, res) => {
+  try {
+    const order = await Order.findByIdAndUpdate(
+      req.params.id,
+      { status: "declined", paid: false },
+      { new: true }
+    );
+
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    const io = req.app.get("io");
+    io.emit("order:declined", {
+      orderId: order._id,
+      tableNumber: order.tableNumber,
+    });
+
+    res.json({ message: "Order marked as declined", order });
+  } catch (err) {
+    console.error("❌ Error declining payment:", err);
+    res.status(500).json({ message: "Failed to decline payment" });
+  }
+});
+
 
 export default router;

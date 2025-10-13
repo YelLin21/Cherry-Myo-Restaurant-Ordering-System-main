@@ -36,6 +36,33 @@ router.get("/table/:tableNumber", async (req, res) => {
   }
 });
 
+router.get("/order/:orderId", async (req, res) => {
+  try {
+    const payment = await Checkout.findOne({ orderId: req.params.orderId });
+    if (!payment) return res.status(404).json({ paid: false });
+    res.json(payment);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put("/decline/:id", async (req, res) => {
+  try {
+    const checkout = await Checkout.findByIdAndUpdate(
+      req.params.id,
+      { status: "declined" },
+      { new: true }
+    );
+    if (!checkout) return res.status(404).json({ message: "Checkout not found" });
+    const io = req.app.get("io");
+    io.emit("checkout:declined", checkout);
+    res.json({ message: "Payment declined successfully", checkout });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+
 // // ✅ POST create checkout (with optional slip image)
 // router.post("/", upload.single("slipImage"), async (req, res) => {
 //   const { orderId, paymentMethod, finalAmount, cashReceived, changeGiven } = req.body;
@@ -123,14 +150,12 @@ router.post("/", upload.single("slipImage"), async (req, res) => {
       return res.status(404).json({ error: "Order not found" });
     }
 
-    // Upload to Supabase if file exists
     let slipImageUrl = null;
     if (req.file) {
       const fileExt = path.extname(req.file.originalname);
       const fileName = `${Date.now()}${fileExt}`;
       const filePath = fileName;
 
-      // Upload file
       const { error: uploadError } = await supabase.storage
         .from("slip-image")
         .upload(filePath, req.file.buffer);
@@ -140,7 +165,6 @@ router.post("/", upload.single("slipImage"), async (req, res) => {
         return res.status(500).json({ error: "Failed to upload receipt" });
       }
 
-      // Get public URL
       const { data: publicData, error: publicError } = supabase.storage
         .from("slip-image")
         .getPublicUrl(filePath);
@@ -166,7 +190,24 @@ router.post("/", upload.single("slipImage"), async (req, res) => {
     await newCheckout.save();
 
     const io = req.app.get("io");
-    io.emit("checkout:new", newCheckout);
+    if (!io) {
+      console.error("❌ io not found on app instance!");
+    } else {
+      console.log("⚡ Preparing full checkout data for socket emit:", newCheckout._id);
+    
+      const fullOrderData = {
+        ...newCheckout.toObject(),
+        items: order.items,
+        status: order.status,
+        orderNumber: order.orderNumber,
+      };
+    
+      io.emit("checkout:new", fullOrderData);
+    
+      console.log("⚡ Emitted checkout:new with merged order data:", fullOrderData._id);
+      console.log("Active socket count:", io.engine.clientsCount);
+    }
+    
 
     if (paymentMethod === "cash") {
       io.emit("checkout:cash", {

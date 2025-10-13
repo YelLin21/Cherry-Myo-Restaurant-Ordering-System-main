@@ -10,7 +10,7 @@ import Swal from 'sweetalert2';
 const APIBASE = import.meta.env.VITE_API_URL;
 const SOCKET_URL =
     import.meta.env.VITE_SOCKET_URL ||
-    "http://localhost:5000" ||
+    "http://localhost:5001" ||
     "https://cherry-myo-restaurant-ordering-system.onrender.com";
 
 // Error Boundary Component
@@ -78,21 +78,18 @@ function CheckoutContent({ user, handleLogout }) {
     const isMountedRef = useRef(true);
     const socketRef = useRef(null);
 
-    // Cleanup on unmount
     useEffect(() => {
         return () => {
             isMountedRef.current = false;
         };
     }, []);
 
-    // Safe state setter that checks if component is still mounted
     const safeSetState = useCallback((setter, value) => {
         if (isMountedRef.current) {
             setter(value);
         }
     }, []);
 
-    // Disable browser extension interference
     useEffect(() => {
         // Prevent browser extensions from interfering
         const preventExtensionMessages = (e) => {
@@ -111,7 +108,6 @@ function CheckoutContent({ user, handleLogout }) {
 
         window.addEventListener('message', preventExtensionMessages, true);
         
-        // Also add to document
         document.addEventListener('message', preventExtensionMessages, true);
         
         return () => {
@@ -119,6 +115,7 @@ function CheckoutContent({ user, handleLogout }) {
             document.removeEventListener('message', preventExtensionMessages, true);
         };
     }, []);
+
     useEffect(() => {
         const handleUnhandledRejection = (event) => {
             console.error('Unhandled promise rejection:', event.reason);
@@ -149,8 +146,6 @@ function CheckoutContent({ user, handleLogout }) {
         };
     }, []);
 
-
-    // Function to sync with database
     const syncWithDatabase = useCallback(async () => {
         if (!isMountedRef.current) return;
         
@@ -167,7 +162,6 @@ function CheckoutContent({ user, handleLogout }) {
                     'Content-Type': 'application/json',
                 }
             });
-            
             clearTimeout(timeoutId);
             
             if (!isMountedRef.current) return;
@@ -311,8 +305,6 @@ function CheckoutContent({ user, handleLogout }) {
         }
       }, [safeSetState]);
       
-
-      
       useEffect(() => {
         const init = async () => {
           try {
@@ -337,15 +329,16 @@ function CheckoutContent({ user, handleLogout }) {
     useEffect(() => {
         // Load saved orders first
         const saved = localStorage.getItem("checkoutOrders");
+        console.log("Loaded saved checkout orders from localStorage:", saved ? JSON.parse(saved) : "none");
         if (saved) {
             try {
+                console.log("hello")
                 setCheckoutOrders(JSON.parse(saved));
             } catch {
                 console.error("❌ Failed to parse saved orders");
             }
         }
 
-        // Fetch current checkout orders from database to sync with reality
         const fetchCheckoutOrders = async () => {
             try {
                 await syncWithDatabase();
@@ -354,10 +347,8 @@ function CheckoutContent({ user, handleLogout }) {
             }
         };
 
-        // Initial fetch
         fetchCheckoutOrders();
 
-        // Initialize socket connection with error handling
         let socket;
         try {
             socket = io(SOCKET_URL, { 
@@ -574,7 +565,53 @@ function CheckoutContent({ user, handleLogout }) {
                 console.error("❌ Error handling order:paid:", error);
             }
         });
-        } // Close the if (socket) block
+
+        socket.on("checkout:new", (checkout) => {
+            console.log("🆕 New checkout received:", checkout);
+            
+            // Update payments mapping
+            if (checkout.paymentMethod) {
+                setPayments(prev => ({
+                    ...prev,
+                    [checkout.orderId]: checkout.paymentMethod
+                }));
+            }
+        
+            // Update orders
+            setCheckoutOrders(prev => [...prev, checkout]);
+        });
+        
+        socket.on("checkout:declined", (declinedCheckout) => {
+            console.log("⚠️ Checkout declined:", declinedCheckout);
+            setCheckoutOrders((prev) =>
+            prev.map((order) =>
+                order._id === declinedCheckout._id ? declinedCheckout : order
+            )
+            );
+            localStorage.setItem(
+            "checkoutOrders",
+            JSON.stringify(
+                checkoutOrders.map((o) =>
+                o._id === declinedCheckout._id ? declinedCheckout : o
+                )
+            )
+            );
+        });
+        
+        socket.on("checkout:paid", (paidCheckout) => {
+            console.log("💰 Checkout paid:", paidCheckout);
+            setCheckoutOrders((prev) =>
+            prev.filter((order) => order._id !== paidCheckout._id)
+            );
+            localStorage.setItem(
+            "checkoutOrders",
+            JSON.stringify(
+                checkoutOrders.filter((o) => o._id !== paidCheckout._id)
+            )
+            );
+        });
+  
+        } 
 
         return () => {
             try {
@@ -693,7 +730,6 @@ function CheckoutContent({ user, handleLogout }) {
 
             const responses = await Promise.all(markPaidPromises);
 
-            // Check if all requests were successful
             const failedResponses = responses.filter(response => !response.ok);
             if (failedResponses.length > 0) {
                 throw new Error(`Failed to mark ${failedResponses.length} order(s) as paid`);
@@ -749,6 +785,44 @@ function CheckoutContent({ user, handleLogout }) {
         }
     };
 
+    const declinePayment = async (tableOrder) => {
+        if (!tableOrder?._id) {
+          console.error("❌ Missing order ID for decline");
+          return;
+        }
+      
+        try {
+          console.log(`Declining payment for order ${tableOrder._id}...`);
+      
+          const response = await fetch(`${APIBASE}/orders/decline/${tableOrder._id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+          });
+      
+          const data = await response.json();
+      
+          if (!response.ok) {
+            console.error("❌ Failed to decline payment:", data.error || data.message);
+            alert(data.error || "Failed to decline payment");
+            return;
+          }
+      
+          console.log("✅ Payment declined:", data);
+      
+          // 🧹 Remove declined order from checkout list
+          setCheckoutOrders((prev) => {
+            const updated = prev.filter((order) => order._id !== tableOrder._id);
+            localStorage.setItem("checkoutOrders", JSON.stringify(updated));
+            return updated;
+          });
+      
+          toast.success(`Order ${tableOrder.tableNumber} payment declined`);
+        } catch (err) {
+          console.error("❌ Error declining payment:", err);
+          toast.error("Something went wrong while declining payment");
+        }
+    };
+      
     const calculateFinalTotal = (order) => {
         const orderItems = Array.isArray(order.items) ? order.items : [];
         const total = orderItems.reduce(
@@ -1232,7 +1306,6 @@ function printThermal58(order, { discountPercent = 0, paymentMethod, cashReceive
                     </div>
                 </div>
 
-                {/* Main Content */}
                 <div className="relative z-10 max-w-7xl mx-auto px-6 py-8">
                     {checkoutOrders.length === 0 ? (
                         <div className="text-center py-16">
@@ -1300,29 +1373,26 @@ function printThermal58(order, { discountPercent = 0, paymentMethod, cashReceive
                                                         </h2>
                                                         <div className="flex items-center gap-2 mt-1">
                                                         
+                                                        {(() => {
+                                                            const ids = Array.isArray(order.orderIds) ? order.orderIds : [order.orderId];
+                                                            const firstPayment = ids.map(id => payments[id.toString()]).find(Boolean);
 
-{(() => {
-  const firstPayment = Array.isArray(order.orderIds)
-    ? order.orderIds.map(id => payments[id.toString()]).find(Boolean)
-    : null;
+                                                            if (!firstPayment) return null;
 
-  if (!firstPayment) return null;
+                                                            if (firstPayment === "cash") {
+                                                                return (
+                                                                <span className="ml-3 px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                                                    💵 Pay with Cash
+                                                                </span>
+                                                                );
+                                                            }
 
-  if (firstPayment === "cash") {
-    return (
-      <span className="ml-3 px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-        💵 Pay with Cash
-      </span>
-    );
-  }
-
-  // For scan/QR, just show the scan badge without image
-  return (
-    <span className="ml-3 px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-      📱 Scan
-    </span>
-  );
-})()}
+                                                            return (
+                                                                <span className="ml-3 px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                                📱 Scan
+                                                                </span>
+                                                            );
+                                                            })()}
 
                                                             <span className={`px-3 py-1 rounded-full text-xs font-medium ${order.status === 'readyForCheckout'
                                                                     ? 'bg-blue-100 text-blue-800'
@@ -1624,13 +1694,13 @@ function printThermal58(order, { discountPercent = 0, paymentMethod, cashReceive
                                                     </div>
                                                 )}
 
-                                                <div className="mt-6 text-right pt-3">
+                                                <div className="flex-end gap-4 mt-6 text-right pt-3">
                                                     <button
                                                         onClick={() => handleMarkAsPaid(order)}
                                                         disabled={!paymentMethods[order._id] ||
                                                             (paymentMethods[order._id] === 'cash' &&
                                                                 (!cashAmounts[order._id] || cashAmounts[order._id] < finalTotal))}
-                                                        className={`px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg ${!paymentMethods[order._id]
+                                                        className={`px-8 mr-5 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg ${!paymentMethods[order._id]
                                                                 ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
                                                                 : 'bg-gradient-to-r from-red-500 via-pink-500 to-rose-500 hover:from-red-600 hover:via-pink-600 hover:to-rose-600 text-white shadow-red-400/50'
                                                             }`}
@@ -1643,33 +1713,31 @@ function printThermal58(order, { discountPercent = 0, paymentMethod, cashReceive
                                                         )}
                                                     </button>
                                                     <button
-  onClick={() => printThermal58(order, {
-    discountPercent: discounts[order._id] || 0,
-    paymentMethod: paymentMethods[order._id],
-    cashReceived: cashAmounts[order._id] || 0,
-  })}
-  className="ml-3 px-6 py-3 rounded-xl font-bold bg-white/80 hover:bg-white text-pink-700"
->
-  🧾 Print 58mm Receipt
-</button>
-
-                                                    {/* Payment Status */}
-                                                    <div className="mt-3 text-right">
-                                                        {!paymentMethods[order._id] && (
-                                                            <span className="text-orange-600">⚠️ Select payment method</span>
+                                                        onClick={() => declinePayment(order)}
+                                                        className={`px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg ${!paymentMethods[order._id]
+                                                            ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                                                            : 'bg-gradient-to-r from-red-500 via-pink-500 to-rose-500 hover:from-red-600 hover:via-pink-600 hover:to-rose-600 text-white shadow-red-400/50'
+                                                        }`}
+                                                    >
+                                                        Decline payment
+                                                    </button>
+                                                </div>
+                                                                                                    {/* Payment Status */}
+                                                <div className="mt-3 text-right">
+                                                    {!paymentMethods[order._id] && (
+                                                        <span className="text-orange-600">⚠️ Select payment method</span>
+                                                    )}
+                                                    {paymentMethods[order._id] === 'cash' &&
+                                                        (!cashAmounts[order._id] || cashAmounts[order._id] < finalTotal) && (
+                                                            <span className="text-red-600">⚠️ Enter sufficient cash amount</span>
                                                         )}
-                                                        {paymentMethods[order._id] === 'cash' &&
-                                                            (!cashAmounts[order._id] || cashAmounts[order._id] < finalTotal) && (
-                                                                <span className="text-red-600">⚠️ Enter sufficient cash amount</span>
-                                                            )}
-                                                        {paymentMethods[order._id] === 'scan' && (
-                                                            <span className="text-green-600">✅ QR payment method selected - Ready to proceed</span>
+                                                    {paymentMethods[order._id] === 'scan' && (
+                                                        <span className="text-green-600">✅ QR payment method selected - Ready to proceed</span>
+                                                    )}
+                                                    {(paymentMethods[order._id] === 'cash' &&
+                                                        cashAmounts[order._id] >= finalTotal) && (
+                                                            <span className="text-green-600">✅ Ready to mark as paid & print receipt</span>
                                                         )}
-                                                        {(paymentMethods[order._id] === 'cash' &&
-                                                            cashAmounts[order._id] >= finalTotal) && (
-                                                                <span className="text-green-600">✅ Ready to mark as paid & print receipt</span>
-                                                            )}
-                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

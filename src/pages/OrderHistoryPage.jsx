@@ -28,6 +28,10 @@ export default function OrderHistoryPage() {
   const [lastStatusUpdate, setLastStatusUpdate] = useState(null);
   const [showStatusToast, setShowStatusToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+  const [isPaid, setIsPaid] = useState(false);
+  const [showDeclineModal, setShowDeclineModal] = useState(false);
+  const [declinedOrder, setDeclinedOrder] = useState(null);
+  const [isDeclined, setIsDeclined] = useState(false);
 
   const navigate = useNavigate();
   const { totalItems } = useCart();
@@ -139,6 +143,15 @@ export default function OrderHistoryPage() {
       }
     });
 
+    socket.on("order:declined", (data) => {
+      console.log("📥 Received declined order:", data);
+      setIsPaid(false);
+      setIsPaymentProcessing(false);
+      setIsDeclined(true);
+      setDeclinedOrder(data); 
+      setShowDeclineModal(true);
+    });
+  
     // Listen for kitchen status updates (specific events)
     socket.on("kitchen:orderComplete", (updatedOrder) => {
       const currentTableId = (sessionStorage.getItem("tableId") || "").trim();
@@ -420,6 +433,27 @@ export default function OrderHistoryPage() {
     setShowPaymentModal(false);
   };
 
+  useEffect(() => {
+    const firstOrder = orders[0];
+    if (!firstOrder) return;
+  
+    const checkPaymentStatus = async () => {
+      try {
+        const res = await fetch(`${APIBASE}/checkouts/order/${firstOrder._id}`);
+        if (!res.ok) throw new Error("Failed to fetch payment status");
+        const data = await res.json();
+  
+        if (data && data.paymentMethod) {
+          setIsPaid(true); // means this order already has a payment record
+        }
+      } catch (err) {
+        console.error("Error checking payment status:", err);
+      }
+    };
+  
+    checkPaymentStatus();
+  }, [orders]);
+
   const fetchOrderHistory = async (showLoader = true) => {
     try {
       if (showLoader) setLoading(true);
@@ -555,12 +589,6 @@ export default function OrderHistoryPage() {
     }
   };
 
-
-
-  // Orders with status "sent" remain unchanged and are available for checkout
-  // No automatic status updates needed - "sent" orders can proceed to checkout directly
-
-  // Update the display text for statuses
   const displayStatusText = (order) => {
     const status = order.status; // Always use the actual status, not displayStatus
     switch (status) {
@@ -707,7 +735,8 @@ export default function OrderHistoryPage() {
           title: 'Payment Recorded!',
           text: 'Waiting for admin approval.',
           icon: 'success',         // ✅ green checkmark icon
-          confirmButtonText: 'OK'
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#ff69b4', // 🎨 hot pink background
         });
         setShowPaymentModal(false);
     } catch (err) {
@@ -716,7 +745,8 @@ export default function OrderHistoryPage() {
           title: 'Payment Failed',
           text: 'Please try again.',
           icon: 'error',           // ❌ red cross icon
-          confirmButtonText: 'OK'
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#ff69b4', // 🎨 hot pink background
         });
     }
 };
@@ -785,7 +815,6 @@ export default function OrderHistoryPage() {
       setIsPaymentProcessing(false);
     }
   };
-  
 
   const handleCloseQRModal = () => {
     setShowCardModal(false);
@@ -972,9 +1001,9 @@ export default function OrderHistoryPage() {
 
                     <button
                       onClick={handleCheckout}
-                      disabled={!canCheckout || isPaymentProcessing}
+                      disabled={!canCheckout || isPaymentProcessing || isPaid}
                       className={`flex-1 py-3 rounded-lg text-center font-bold text-base transition-colors duration-200 ${
-                        canCheckout && !isPaymentProcessing
+                        canCheckout && !isPaymentProcessing && !isPaid
                           ? darkMode 
                             ? 'bg-pink-600 text-white hover:bg-pink-500' 
                             : 'bg-pink-600 text-white hover:bg-pink-700'
@@ -983,7 +1012,13 @@ export default function OrderHistoryPage() {
                             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       }`}
                     >
-                      {(isPaymentProcessing && !showPaymentSuccessModal) ? 'Payment is under review...' : 'Checkout'}
+                      {isDeclined
+                      ? 'Payment Declined – Try Again'
+                      : isPaymentProcessing && !showPaymentSuccessModal
+                        ? 'Payment is under review...'
+                        : isPaid
+                          ? 'Payment is under review...'
+                          : 'Checkout'}
                     </button>
                   </div>
                 </div>
@@ -1103,7 +1138,23 @@ export default function OrderHistoryPage() {
         </div>
       )}
 
-      {/* Payment Modal */}
+      {showDeclineModal && declinedOrder && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white rounded-2xl shadow-xl p-8 text-center w-[90%] max-w-md">
+            <h2 className="text-2xl font-bold text-red-600 mb-4">Payment Declined</h2>
+            <p className="text-gray-700 mb-6">
+              The payment for <strong>Table {declinedOrder.tableNumber}</strong> has been declined.
+            </p>
+            <button
+              onClick={() => setShowDeclineModal(false)}
+              className="px-6 py-2 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
       {showPaymentModal && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" 
