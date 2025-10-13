@@ -227,7 +227,7 @@ Cherry-Myo-Restaurant-Ordering-System/
 
 ## 👥 Authors
 
-- **YelLin21** - *Initial work* - [YelLin21](https://github.com/YelLin21)
+- **YelLin21**  - [YelLin21](https://github.com/YelLin21)
 
 
 
