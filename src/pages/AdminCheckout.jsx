@@ -203,8 +203,28 @@ function CheckoutContent({ user, handleLogout }) {
                 })));
 
                 if (isMountedRef.current) {
-                    safeSetState(setCheckoutOrders, groupedOrders);
-                    localStorage.setItem("checkoutOrders", JSON.stringify(groupedOrders));
+                    // Additional deduplication check before setting state
+                    const dedupedOrders = groupedOrders.reduce((acc, order) => {
+                        const existingIndex = acc.findIndex(existing => existing.tableNumber === order.tableNumber);
+                        if (existingIndex !== -1) {
+                            // If table already exists, merge the items and order IDs
+                            acc[existingIndex].items = [...acc[existingIndex].items, ...order.items];
+                            acc[existingIndex].orderIds = [
+                                ...(acc[existingIndex].orderIds || [acc[existingIndex]._id]),
+                                ...(order.orderIds || [order._id])
+                            ];
+                            // Remove duplicates from orderIds
+                            acc[existingIndex].orderIds = [...new Set(acc[existingIndex].orderIds)];
+                        } else {
+                            acc.push(order);
+                        }
+                        return acc;
+                    }, []);
+
+                    console.log("After final deduplication:", dedupedOrders.length, "unique tables");
+                    
+                    safeSetState(setCheckoutOrders, dedupedOrders);
+                    localStorage.setItem("checkoutOrders", JSON.stringify(dedupedOrders));
                     console.log("Successfully synced with database");
                 }
             } else {
@@ -326,14 +346,48 @@ function CheckoutContent({ user, handleLogout }) {
         return () => clearInterval(interval);
     }, []);
 
+    // Add periodic refresh for checkout orders to ensure real-time sync
     useEffect(() => {
-        // Load saved orders first
+        const checkoutRefreshInterval = setInterval(() => {
+            console.log("🔄 Periodic checkout orders refresh");
+            syncWithDatabase();
+        }, 10000); // Refresh every 10 seconds
+        
+        return () => clearInterval(checkoutRefreshInterval);
+    }, [syncWithDatabase]);
+
+    useEffect(() => {
+        // Load saved orders first and clean up duplicates
         const saved = localStorage.getItem("checkoutOrders");
         console.log("Loaded saved checkout orders from localStorage:", saved ? JSON.parse(saved) : "none");
         if (saved) {
             try {
-                console.log("hello")
-                setCheckoutOrders(JSON.parse(saved));
+                const parsedOrders = JSON.parse(saved);
+                
+                // Remove any duplicate table numbers
+                const dedupedOrders = parsedOrders.reduce((acc, order) => {
+                    const existingIndex = acc.findIndex(existing => existing.tableNumber === order.tableNumber);
+                    if (existingIndex !== -1) {
+                        // Merge duplicate tables
+                        acc[existingIndex].items = [...acc[existingIndex].items, ...order.items];
+                        acc[existingIndex].orderIds = [
+                            ...(acc[existingIndex].orderIds || [acc[existingIndex]._id]),
+                            ...(order.orderIds || [order._id])
+                        ];
+                        acc[existingIndex].orderIds = [...new Set(acc[existingIndex].orderIds)];
+                        console.log(`🧹 Merged duplicate table ${order.tableNumber} from localStorage`);
+                    } else {
+                        acc.push(order);
+                    }
+                    return acc;
+                }, []);
+                
+                if (dedupedOrders.length !== parsedOrders.length) {
+                    console.log(`🧹 Removed ${parsedOrders.length - dedupedOrders.length} duplicate table entries`);
+                    localStorage.setItem("checkoutOrders", JSON.stringify(dedupedOrders));
+                }
+                
+                setCheckoutOrders(dedupedOrders);
             } catch {
                 console.error("❌ Failed to parse saved orders");
             }
@@ -379,6 +433,11 @@ function CheckoutContent({ user, handleLogout }) {
 
             socket.on("reconnect", (attemptNumber) => {
                 console.log("Socket reconnected after", attemptNumber, "attempts");
+                // Aggressive sync after reconnection to catch any missed events
+                console.log("🔄 Performing aggressive sync after socket reconnection");
+                setTimeout(() => {
+                    syncWithDatabase();
+                }, 500);
             });
 
             socket.on("reconnect_error", (error) => {
@@ -577,8 +636,31 @@ function CheckoutContent({ user, handleLogout }) {
                 }));
             }
         
-            // Update orders
-            setCheckoutOrders(prev => [...prev, checkout]);
+            // Update orders with deduplication check
+            setCheckoutOrders(prev => {
+                const existingTableIndex = prev.findIndex(
+                    order => order.tableNumber === checkout.tableNumber
+                );
+
+                if (existingTableIndex !== -1) {
+                    // Merge with existing table order
+                    const updated = [...prev];
+                    updated[existingTableIndex] = {
+                        ...updated[existingTableIndex],
+                        items: [...updated[existingTableIndex].items, ...checkout.items],
+                        orderIds: [
+                            ...(updated[existingTableIndex].orderIds || [updated[existingTableIndex]._id]),
+                            checkout._id
+                        ]
+                    };
+                    console.log(`Merged checkout with existing table ${checkout.tableNumber}`);
+                    return updated;
+                } else {
+                    // Add as new table
+                    console.log(`Added new checkout for table ${checkout.tableNumber}`);
+                    return [...prev, checkout];
+                }
+            });
         });
         
         socket.on("checkout:declined", (declinedCheckout) => {
@@ -609,6 +691,37 @@ function CheckoutContent({ user, handleLogout }) {
                 checkoutOrders.filter((o) => o._id !== paidCheckout._id)
             )
             );
+        });
+
+        // Listen for orders being sent to table (should trigger checkout availability)
+        socket.on("order:sent", (sentOrder) => {
+            console.log("📬 Order sent to table - refreshing checkout:", sentOrder._id);
+            // Trigger a database sync to pick up the order for checkout
+            setTimeout(() => {
+                console.log("🔄 Syncing database after order sent");
+                syncWithDatabase();
+            }, 1000); // Small delay to ensure backend is updated
+        });
+
+        // Listen for orders marked as ready for checkout
+        socket.on("order:completed", (completedOrder) => {
+            console.log("✅ Order completed - refreshing checkout:", completedOrder._id);
+            // Trigger a database sync to pick up the order for checkout  
+            setTimeout(() => {
+                console.log("🔄 Syncing database after order completed");
+                syncWithDatabase();
+            }, 1000); // Small delay to ensure backend is updated
+        });
+
+        // Listen for any order status changes that might affect checkout
+        socket.on("order:statusChanged", (orderUpdate) => {
+            console.log("🔄 Order status changed:", orderUpdate);
+            if (orderUpdate.status === 'sent' || orderUpdate.status === 'readyForCheckout' || orderUpdate.status === 'completed') {
+                console.log("🔄 Order status change may affect checkout - syncing database");
+                setTimeout(() => {
+                    syncWithDatabase();
+                }, 1000);
+            }
         });
   
         } 
@@ -711,33 +824,69 @@ function CheckoutContent({ user, handleLogout }) {
             console.log("Marking orders as paid for table", tableOrder.tableNumber, ":", orderIds);
             console.log("Payment method:", paymentMethod);
 
-            // Mark all orders for this table as paid
-            const markPaidPromises = orderIds.map(orderId =>
-                fetch(`${APIBASE}/orders/mark-paid`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        orderId,
-                        paymentMethod,
-                        finalAmount: finalTotal,
-                        cashReceived: paymentMethod === 'cash' ? cashAmounts[tableOrder._id] : null,
-                        changeGiven: paymentMethod === 'cash' ? (cashAmounts[tableOrder._id] - finalTotal) : null
-                    }),
-                })
-            );
+            // Mark all orders for this table as paid - handle each individually
+            let successfulPayments = 0;
+            let errorMessages = [];
+            let allSuccessful = true;
 
-            const responses = await Promise.all(markPaidPromises);
+            for (const orderId of orderIds) {
+                try {
+                    console.log(`💳 Marking order as paid: ${orderId}`);
+                    const response = await fetch(`${APIBASE}/orders/mark-paid`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            orderId,
+                            paymentMethod,
+                            finalAmount: finalTotal,
+                            cashReceived: paymentMethod === 'cash' ? cashAmounts[tableOrder._id] : null,
+                            changeGiven: paymentMethod === 'cash' ? (cashAmounts[tableOrder._id] - finalTotal) : null
+                        }),
+                    });
 
-            const failedResponses = responses.filter(response => !response.ok);
-            if (failedResponses.length > 0) {
-                throw new Error(`Failed to mark ${failedResponses.length} order(s) as paid`);
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        // If order not found, it might already be processed - don't treat as critical error
+                        if (response.status === 404 || (errorData.message && errorData.message.includes('not found'))) {
+                            console.warn(`⚠️ Order ${orderId} not found - might already be paid`);
+                            successfulPayments++; // Count as successful since order is already processed
+                        } else {
+                            console.error(`❌ Failed to mark order ${orderId} as paid:`, errorData.error || errorData.message);
+                            errorMessages.push(`Order ${orderId.slice(-8)}: ${errorData.error || errorData.message}`);
+                            allSuccessful = false;
+                        }
+                    } else {
+                        console.log(`✅ Order ${orderId} marked as paid successfully`);
+                        successfulPayments++;
+                    }
+                } catch (error) {
+                    console.error(`❌ Error marking order ${orderId} as paid:`, error);
+                    errorMessages.push(`Order ${orderId.slice(-8)}: Network error`);
+                    allSuccessful = false;
+                }
             }
 
-            console.log(" All orders marked as paid successfully for table", tableOrder.tableNumber);
+            // If at least one order was processed, consider it successful
+            if (successfulPayments > 0 && errorMessages.length === 0) {
+                allSuccessful = true;
+            }
 
-            // Remove from local checkout orders list
+            console.log(`💰 Payment process completed for table ${tableOrder.tableNumber} (${successfulPayments}/${orderIds.length} orders processed)`);
+
+            // Handle errors - only show if there were actual critical failures
+            if (!allSuccessful && errorMessages.length > 0) {
+                Swal.fire({
+                    title: 'Some Orders Failed',
+                    html: `Failed to mark some orders as paid:<br><br>${errorMessages.join('<br>')}<br><br>However, successfully processed orders have been completed.`,
+                    icon: 'warning',
+                    confirmButtonText: 'OK'
+                });
+                // Don't return here - continue with cleanup and receipt generation
+            }
+
+            // Remove from local checkout orders list (even if some individual orders failed)
             setCheckoutOrders((prev) => {
                 const updated = prev.filter((order) => order.tableNumber !== tableOrder.tableNumber);
                 localStorage.setItem("checkoutOrders", JSON.stringify(updated));
@@ -771,16 +920,13 @@ function CheckoutContent({ user, handleLogout }) {
                 // Continue even if PDF generation fails
             }
         } catch (error) {
+            console.error("❌ Unexpected error in handleMarkAsPaid:", error);
             Swal.fire({
-                title: 'No items selected',
-                text: 'Failed to mark orders as paid. Please try again.',
-                icon: 'warning',
-                confirmButtonText: 'OK',
-                customClass: {
-                    confirmButton: 'swal-confirm'
-                },
-                buttonsStyling: false // <- disables default SweetAlert2 styles
-            })
+                title: 'Unexpected Error',
+                text: 'An unexpected error occurred. Please try again.',
+                icon: 'error',
+                confirmButtonText: 'OK'
+            });
             return;
         }
     };
@@ -793,33 +939,179 @@ function CheckoutContent({ user, handleLogout }) {
       
         try {
           console.log(`Declining payment for order ${tableOrder._id}...`);
-      
-          const response = await fetch(`${APIBASE}/orders/decline/${tableOrder._id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
+          
+          // Show confirmation dialog
+          const result = await Swal.fire({
+            title: 'Decline Payment?',
+            text: `Are you sure you want to decline the payment for Table ${tableOrder.tableNumber}?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Yes, decline it',
+            cancelButtonText: 'Cancel',
+            buttonsStyling: true,
+            customClass: {
+              confirmButton: 'swal-decline-confirm-btn',
+              cancelButton: 'swal-decline-cancel-btn',
+              popup: 'swal-decline-popup'
+            },
+            didOpen: () => {
+              // Ensure buttons are visible by adding inline styles
+              const confirmBtn = document.querySelector('.swal-decline-confirm-btn');
+              const cancelBtn = document.querySelector('.swal-decline-cancel-btn');
+              
+              if (confirmBtn) {
+                confirmBtn.style.cssText = `
+                  background-color: #dc2626 !important;
+                  color: white !important;
+                  border: none !important;
+                  padding: 12px 24px !important;
+                  border-radius: 8px !important;
+                  font-weight: bold !important;
+                  cursor: pointer !important;
+                  margin: 0 8px !important;
+                  display: inline-block !important;
+                  visibility: visible !important;
+                  opacity: 1 !important;
+                  min-width: 120px !important;
+                `;
+              }
+              
+              if (cancelBtn) {
+                cancelBtn.style.cssText = `
+                  background-color: #3085d6 !important;
+                  color: white !important;
+                  border: none !important;
+                  padding: 12px 24px !important;
+                  border-radius: 8px !important;
+                  font-weight: bold !important;
+                  cursor: pointer !important;
+                  margin: 0 8px !important;
+                  display: inline-block !important;
+                  visibility: visible !important;
+                  opacity: 1 !important;
+                  min-width: 120px !important;
+                `;
+              }
+            }
           });
-      
-          const data = await response.json();
-      
-          if (!response.ok) {
-            console.error("❌ Failed to decline payment:", data.error || data.message);
-            alert(data.error || "Failed to decline payment");
-            return;
+
+          if (!result.isConfirmed) {
+            return; // User cancelled
           }
       
-          console.log("✅ Payment declined:", data);
+          // Handle both single orders and merged orders
+          const orderIdsToDecline = Array.isArray(tableOrder.orderIds) ? tableOrder.orderIds : [tableOrder._id];
+          console.log("📝 Declining orders:", orderIdsToDecline);
+          
+          let allSuccessful = true;
+          let errorMessages = [];
+          
+          // Decline all orders for this table
+          let successfulDeclines = 0;
+          for (const orderId of orderIdsToDecline) {
+            try {
+              console.log(`🔄 Declining order: ${orderId}`);
+              const response = await fetch(`${APIBASE}/orders/decline/${orderId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+              });
+        
+              const data = await response.json();
+        
+              if (!response.ok) {
+                // If order not found, it might already be processed - don't treat as critical error
+                if (response.status === 404 || (data.message && data.message.includes('not found'))) {
+                  console.warn(`⚠️ Order ${orderId} not found - might already be processed`);
+                  successfulDeclines++; // Count as successful since order is already gone
+                } else {
+                  console.error(`❌ Failed to decline order ${orderId}:`, data.error || data.message);
+                  errorMessages.push(`Order ${orderId.slice(-8)}: ${data.error || data.message}`);
+                  allSuccessful = false;
+                }
+              } else {
+                console.log(`✅ Order ${orderId} declined successfully`);
+                successfulDeclines++;
+              }
+            } catch (error) {
+              console.error(`❌ Error declining order ${orderId}:`, error);
+              errorMessages.push(`Order ${orderId.slice(-8)}: Network error`);
+              allSuccessful = false;
+            }
+          }
+          
+          // If at least one order was processed (or all were already gone), consider it successful
+          if (successfulDeclines > 0 && errorMessages.length === 0) {
+            allSuccessful = true;
+          }
+          
+          // Only show error if there were actual critical failures
+          if (!allSuccessful && errorMessages.length > 0) {
+            Swal.fire({
+              title: 'Some Orders Failed to Decline',
+              html: `Failed to decline some orders:<br><br>${errorMessages.join('<br>')}<br><br>However, orders that could be declined have been processed.`,
+              icon: 'warning',
+              confirmButtonText: 'OK'
+            });
+            // Don't return here - continue with cleanup
+          }
+          
+          console.log(`✅ Decline process completed for table ${tableOrder.tableNumber} (${successfulDeclines}/${orderIdsToDecline.length} orders processed)`);
       
-          // 🧹 Remove declined order from checkout list
+          // 🧹 Remove declined order from checkout list (even if some individual orders failed)
+          // This prevents the UI from showing stale data
           setCheckoutOrders((prev) => {
             const updated = prev.filter((order) => order._id !== tableOrder._id);
             localStorage.setItem("checkoutOrders", JSON.stringify(updated));
             return updated;
           });
+
+          // Also clean up any related checkout records
+          const checkoutOrderIds = Array.isArray(tableOrder.orderIds) ? tableOrder.orderIds : [tableOrder._id];
+          
+          // Mark any existing checkout records as declined
+          for (const orderId of checkoutOrderIds) {
+            try {
+              const checkoutResponse = await fetch(`${APIBASE}/checkouts/order/${orderId}`);
+              if (checkoutResponse.ok) {
+                const checkoutData = await checkoutResponse.json();
+                if (checkoutData && checkoutData._id) {
+                  await fetch(`${APIBASE}/checkouts/decline/${checkoutData._id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' }
+                  });
+                }
+              }
+            } catch (checkoutError) {
+              console.warn("Could not decline checkout record:", checkoutError);
+            }
+          }
       
-          toast.success(`Order ${tableOrder.tableNumber} payment declined`);
+          // Show appropriate success message
+          if (successfulDeclines === orderIdsToDecline.length) {
+            Swal.fire({
+              title: 'Payment Declined',
+              text: `Payment for Table ${tableOrder.tableNumber} has been declined. Customer can try again.`,
+              icon: 'success',
+              confirmButtonText: 'OK'
+            });
+          } else if (successfulDeclines > 0) {
+            Swal.fire({
+              title: 'Payment Declined',
+              text: `Table ${tableOrder.tableNumber} has been removed from checkout. Some orders were already processed.`,
+              icon: 'success',
+              confirmButtonText: 'OK'
+            });
+          }
         } catch (err) {
           console.error("❌ Error declining payment:", err);
-          toast.error("Something went wrong while declining payment");
+          Swal.fire({
+            title: 'Error',
+            text: "Something went wrong while declining payment",
+            icon: 'error',
+            confirmButtonText: 'OK'
+          });
         }
     };
       
@@ -1186,12 +1478,73 @@ function printThermal58(order, { discountPercent = 0, paymentMethod, cashReceive
     console.log("Orders count:", checkoutOrders.length);
 
     return (
-        <div className={`min-h-screen transition-all duration-500 relative overflow-hidden ${darkMode
-                ? "bg-gradient-to-br from-gray-900 via-red-950 to-pink-950 text-white"
-                : "bg-gradient-to-br from-pink-50 via-rose-100 to-red-50 text-gray-800"
-            }`}>
-            {/* Admin Navigation */}
-            <AdminNavbar />
+        <>
+            {/* CSS for SweetAlert2 Modal Buttons */}
+            <style>{`
+                .swal-decline-confirm-btn {
+                    background-color: #dc2626 !important;
+                    color: white !important;
+                    border: none !important;
+                    padding: 12px 24px !important;
+                    border-radius: 8px !important;
+                    font-weight: bold !important;
+                    cursor: pointer !important;
+                    margin: 0 8px !important;
+                    display: inline-block !important;
+                    visibility: visible !important;
+                    opacity: 1 !important;
+                    min-width: 120px !important;
+                }
+                
+                .swal-decline-cancel-btn {
+                    background-color: #3085d6 !important;
+                    color: white !important;
+                    border: none !important;
+                    padding: 12px 24px !important;
+                    border-radius: 8px !important;
+                    font-weight: bold !important;
+                    cursor: pointer !important;
+                    margin: 0 8px !important;
+                    display: inline-block !important;
+                    visibility: visible !important;
+                    opacity: 1 !important;
+                    min-width: 120px !important;
+                }
+                
+                .swal-decline-confirm-btn:hover {
+                    background-color: #b91c1c !important;
+                }
+                
+                .swal-decline-cancel-btn:hover {
+                    background-color: #2563eb !important;
+                }
+                
+                /* Fix for all SweetAlert2 confirm buttons (like OK button) */
+                .swal2-confirm {
+                    background-color: #3085d6 !important;
+                    color: white !important;
+                    border: none !important;
+                    padding: 12px 24px !important;
+                    border-radius: 8px !important;
+                    font-weight: bold !important;
+                    cursor: pointer !important;
+                    margin: 0 8px !important;
+                    display: inline-block !important;
+                    visibility: visible !important;
+                    opacity: 1 !important;
+                    min-width: 80px !important;
+                }
+                
+                .swal2-confirm:hover {
+                    background-color: #2563eb !important;
+                }
+            `}</style>
+            <div className={`min-h-screen transition-all duration-500 relative overflow-hidden ${darkMode
+                    ? "bg-gradient-to-br from-gray-900 via-red-950 to-pink-950 text-white"
+                    : "bg-gradient-to-br from-pink-50 via-rose-100 to-red-50 text-gray-800"
+                }`}>
+                {/* Admin Navigation */}
+                <AdminNavbar />
             
             {/* Animated Cherry Background */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -1244,6 +1597,33 @@ function printThermal58(order, { discountPercent = 0, paymentMethod, cashReceive
 
                         {/* Right Side Controls */}
                         <div className="flex items-center gap-4">
+                            {/* Manual Refresh Button */}
+                            <button
+                                onClick={() => {
+                                    console.log("🔄 Manual refresh triggered");
+                                    syncWithDatabase();
+                                }}
+                                disabled={isRefreshing}
+                                className={`relative px-4 py-3 rounded-2xl text-sm font-bold transform transition-all duration-300 hover:scale-105 ${
+                                    isRefreshing 
+                                        ? darkMode 
+                                            ? 'bg-gray-700 text-gray-500 cursor-not-allowed' 
+                                            : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                        : darkMode
+                                            ? 'bg-blue-600/80 border border-blue-500/30 shadow-lg shadow-blue-500/20 text-blue-200 hover:bg-blue-500'
+                                            : 'bg-blue-500/90 border border-blue-400 shadow-lg shadow-blue-300/30 text-white hover:bg-blue-600'
+                                } backdrop-blur-md`}
+                            >
+                                <div className="flex items-center gap-2">
+                                    <span className={`text-base ${isRefreshing ? 'animate-spin' : ''}`}>
+                                        🔄
+                                    </span>
+                                    <span className="tracking-wide">
+                                        {isRefreshing ? 'Refreshing...' : 'Refresh Orders'}
+                                    </span>
+                                </div>
+                            </button>
+
                             {/* Current Time */}
                             <div className={`relative px-4 py-3 rounded-2xl text-sm font-mono font-bold transform transition-all duration-300 hover:scale-105 ${darkMode
                                     ? 'bg-gray-800/80 border border-pink-600/30 shadow-lg shadow-pink-500/20 text-pink-200'
@@ -1694,32 +2074,31 @@ function printThermal58(order, { discountPercent = 0, paymentMethod, cashReceive
                                                     </div>
                                                 )}
 
-                                                <div className="flex-end gap-4 mt-6 text-right pt-3">
+                                                <div className="flex gap-4 mt-6 text-right pt-3 justify-end">
                                                     <button
                                                         onClick={() => handleMarkAsPaid(order)}
                                                         disabled={!paymentMethods[order._id] ||
                                                             (paymentMethods[order._id] === 'cash' &&
                                                                 (!cashAmounts[order._id] || cashAmounts[order._id] < finalTotal))}
-                                                        className={`px-8 mr-5 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg ${!paymentMethods[order._id]
-                                                                ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                                                                : 'bg-gradient-to-r from-red-500 via-pink-500 to-rose-500 hover:from-red-600 hover:via-pink-600 hover:to-rose-600 text-white shadow-red-400/50'
-                                                            }`}
+                                                        className={`px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg ${
+                                                            !paymentMethods[order._id] || 
+                                                            (paymentMethods[order._id] === 'cash' && (!cashAmounts[order._id] || cashAmounts[order._id] < finalTotal))
+                                                                ? 'bg-gray-500 text-white cursor-not-allowed opacity-60 border border-gray-600' 
+                                                                : 'bg-gradient-to-r from-green-500 via-green-600 to-green-700 hover:from-green-600 hover:via-green-700 hover:to-green-800 text-white shadow-green-400/50 border border-green-500'
+                                                        }`}
                                                     >
                                                         🍒 Mark as Paid & Print Receipt
                                                         {(Array.isArray(order.orderIds) && order.orderIds.length > 1) && (
-                                                            <span className="ml-2 px-2 py-1 bg-red-600 rounded text-sm">
+                                                            <span className="ml-2 px-2 py-1 bg-green-800 rounded text-sm">
                                                                 {order.orderIds.length} orders
                                                             </span>
                                                         )}
                                                     </button>
                                                     <button
                                                         onClick={() => declinePayment(order)}
-                                                        className={`px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg ${!paymentMethods[order._id]
-                                                            ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                                                            : 'bg-gradient-to-r from-red-500 via-pink-500 to-rose-500 hover:from-red-600 hover:via-pink-600 hover:to-rose-600 text-white shadow-red-400/50'
-                                                        }`}
+                                                        className="px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg bg-gradient-to-r from-red-600 via-red-700 to-red-800 hover:from-red-700 hover:via-red-800 hover:to-red-900 text-white shadow-red-600/50 border border-red-500"
                                                     >
-                                                        Decline payment
+                                                        ❌ Decline Payment
                                                     </button>
                                                 </div>
                                                                                                     {/* Payment Status */}
@@ -1760,6 +2139,7 @@ function printThermal58(order, { discountPercent = 0, paymentMethod, cashReceive
                 }
                 `}
             </style>
-        </div>
+            </div>
+        </>
     );
 }
