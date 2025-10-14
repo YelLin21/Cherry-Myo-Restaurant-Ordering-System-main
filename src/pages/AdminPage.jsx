@@ -44,7 +44,8 @@ export default function AdminPage() {
       })
       return;
     }
-    
+
+
     const newItem = { ...item, category: activeTab };
     fetch(`${APIBASE}/menu`, {
       method: "POST",
@@ -167,7 +168,11 @@ function AdminPageContent({
   closeForm, 
   darkMode 
 }) {
-  // Initialize menu fetching when user is authenticated
+
+  const [showModal, setShowModal] = useState(false);
+  const [tableNumber, setTableNumber] = useState("");
+  const [qrValue, setQrValue] = useState("");
+
   useEffect(() => {
     if (!user) return;
     
@@ -219,6 +224,28 @@ function AdminPageContent({
       socket.disconnect();
     };
   }, [user, setMenuItems]);
+
+  const handleGenerateTableQR = async () => {
+    if (!tableNumber) {
+      alert("Please enter a table ID!");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${APIBASE}/qr/table/${tableNumber}`);
+      const data = await res.json();
+
+      if (data.qrCode) {
+        setQrValue(data.qrCode);
+      } else {
+        alert("Failed to generate QR code");
+      }
+    } catch (error) {
+      console.error("QR generation error:", error);
+      alert("Error generating QR code");
+    }
+  };
+  
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${
@@ -282,6 +309,93 @@ function AdminPageContent({
             Add {activeTab} Item
           </button>
         </div>
+
+        <div className="mb-8 p-4 rounded-lg border-2 border-dashed border-blue-300">
+      {/* Section Title */}
+      <h3
+        className={`text-lg font-semibold mb-3 ${
+          darkMode ? "text-blue-300" : "text-blue-700"
+        }`}
+      >
+        Table QR Management
+      </h3>
+
+      {/* Button to open modal */}
+      <button
+        onClick={() => setShowModal(true)}
+        className={`px-4 py-2 rounded-lg font-medium transition-colors duration-200 ${
+          darkMode
+            ? "bg-blue-600 hover:bg-blue-500 text-white"
+            : "bg-blue-500 hover:bg-blue-600 text-white"
+        }`}
+      >
+        Generate Table QR
+      </button>
+
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+          <div
+            className={`rounded-xl p-6 w-96 shadow-lg ${
+              darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-800"
+            }`}
+          >
+            <h2 className="text-xl font-semibold mb-4">Generate Table QR</h2>
+
+            {/* Input for table ID */}
+            <input
+              type="text"
+              placeholder="Enter Table ID"
+              value={tableNumber}
+              onChange={(e) => setTableNumber(e.target.value)}
+              className={`w-full border rounded-lg px-3 py-2 mb-4 ${
+                darkMode
+                  ? "bg-gray-700 text-white border-gray-600"
+                  : "bg-gray-100 text-gray-800 border-gray-300"
+              }`}
+            />
+
+            {/* Buttons */}
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowModal(false)}
+                className={`px-3 py-2 rounded-lg ${
+                  darkMode
+                    ? "bg-gray-700 hover:bg-gray-600"
+                    : "bg-gray-200 hover:bg-gray-300"
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleGenerateTableQR}
+                className={`px-3 py-2 rounded-lg ${
+                  darkMode
+                    ? "bg-blue-600 hover:bg-blue-500 text-white"
+                    : "bg-blue-500 hover:bg-blue-600 text-white"
+                }`}
+              >
+                Generate
+              </button>
+            </div>
+
+            {/* Show QR if generated */}
+            {qrValue && (
+              <div className="mt-6 text-center">
+                <img
+                  src={qrValue}
+                  alt="Table QR"
+                  className="mx-auto w-40 h-40"
+                />
+                <p className="mt-2 text-sm text-gray-400">
+                  Table ID: {tableNumber}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
 
         {/* Special Admin Menu Links & Sales Report */}
         <div className="mb-6 p-4 rounded-lg border-2 border-dashed border-pink-300">

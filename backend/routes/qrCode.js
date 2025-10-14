@@ -6,7 +6,6 @@ const FRONTEND_BASE_URL = "http://localhost:5173";
 
 router.get("/table/:tableId", async (req, res) => {
   const { tableId } = req.params;
-
   const fullUrl = `${FRONTEND_BASE_URL}/table/${tableId}`;
 
   try {
