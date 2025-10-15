@@ -24,7 +24,7 @@ const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5001";
 
 export default function WaiterPage() {
   // Waiter email addresses
-  const WAITER_EMAIL = ["waiter1@cherrymyo.com", "waiter2@cherrymyo.com", "2001yellin@gmail.com", "u6520242@au.edu", "cherrymyokitchen@gmail.com"];
+  const WAITER_EMAIL = ["2001yellin@gmail.com", "u6520242@au.edu", "cherrymyokitchen@gmail.com"];
 
   const [readyOrders, setReadyOrders] = useState([]);
   const [waiterCalls, setWaiterCalls] = useState([]);
@@ -70,11 +70,11 @@ export default function WaiterPage() {
   // Function to play alert sound multiple times for urgency
   const playAlertSound = useCallback(async () => {
     if (!alertAudio) {
-      console.log("❌ Audio not initialized yet");
+      console.log("Audio not initialized yet");
       return;
     }
 
-    console.log("🔊 Playing waiter call alert sound");
+    console.log(" Playing waiter call alert sound");
     
     // Play sound 5 times with intervals
     const playCount = 5;
@@ -287,7 +287,7 @@ export default function WaiterPage() {
       });
 
       // Show prominent toast notification
-      toast.error(`🚨 URGENT: Table ${callData.tableNumber} is calling the waiter!`, {
+      toast.error(` URGENT: Table ${callData.tableNumber} is calling the waiter!`, {
         position: "top-center",
         autoClose: 10000,
         hideProgressBar: false,

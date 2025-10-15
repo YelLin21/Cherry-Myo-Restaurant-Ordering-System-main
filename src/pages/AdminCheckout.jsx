@@ -1844,15 +1844,15 @@ function printThermal58(order, { discountPercent = 0, paymentMethod, cashReceive
                                                     }`}>
                                                     Payment Summary
                                                 </h3>
-
+                                                    
                                                 <div className="space-y-3">
                                                     <div className={`flex justify-between ${darkMode ? 'text-gray-200' : 'text-gray-800'
                                                         }`}>
                                                         <span>Subtotal</span>
                                                         <span>{total.toFixed(2)}MMK</span>
                                                     </div>
-
-                                                    <div className="flex justify-between items-center">
+{/* Removed Discount Fields */}
+                                                    {/*<div className="flex justify-between items-center">
                                                         <label htmlFor={`discount-${order._id}`} className={
                                                             darkMode ? 'text-gray-200' : 'text-gray-800'
                                                         }>
@@ -1878,7 +1878,7 @@ function printThermal58(order, { discountPercent = 0, paymentMethod, cashReceive
                                                     <div className="flex justify-between text-red-600">
                                                         <span>Discount Amount</span>
                                                         <span>{discountAmount.toFixed(2)}-MMK</span>
-                                                    </div>
+                                                    </div> */}
 
                                                     <div className={`flex justify-between text-xl font-bold pt-3 border-t ${darkMode ? 'border-gray-600 text-green-400' : 'border-gray-300 text-green-600'
                                                         }`}>
