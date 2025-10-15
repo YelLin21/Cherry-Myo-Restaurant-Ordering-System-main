@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { onAuthStateChanged, signOut, signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { auth, signInWithGoogle } from "../firebase";
 import { useDarkMode } from "../pages/DarkModeContext.jsx";
+import { jwtDecode } from "jwt-decode";
 
 // Simple Google SVG icon component
 function GoogleIcon({ className = "w-6 h-6" }) {
@@ -17,9 +18,7 @@ function GoogleIcon({ className = "w-6 h-6" }) {
   );
 }
 
-// Admin email addresses
-const ADMIN_EMAIL = ["2001yellin@gmail.com", "u6520242@au.edu", "cherrymyo@gmail.com"];
-
+const APIBASE = import.meta.env.VITE_API_URL;
 export default function AdminAuth({ children, onLogout }) {
   const { darkMode } = useDarkMode();
   const [user, setUser] = useState(null);
@@ -58,29 +57,30 @@ export default function AdminAuth({ children, onLogout }) {
   }, [darkMode]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const token = localStorage.getItem("adminToken");
+    if (token) {
       try {
-        if (user && !ADMIN_EMAIL.includes(user.email)) {
-          setLoginError("You are not authorized to access the admin page.");
+        const decoded = jwtDecode(token);
+        console.log("Decoded JWT:", decoded);
+        // Check expiration
+        const currentTime = Date.now() / 1000;
+        if (decoded.exp < currentTime) {
+          localStorage.removeItem("adminToken");
           setUser(null);
-          setLoading(false);
-          return;
+        } else if (decoded.role === "admin") {
+          setUser({ id: decoded.id, email: decoded.email, role: decoded.role });
+        } else {
+          setUser(null);
         }
-        setUser(user);
-        setLoginError("");
       } catch (error) {
-        console.error("Auth state change error:", error);
-        setLoginError("Authentication error occurred. Please try again.");
-      } finally {
-        setLoading(false);
+        console.error("JWT decode error:", error);
+        localStorage.removeItem("adminToken");
+        setUser(null);
       }
-    });
-
-    // Cleanup function
-    return () => {
-      unsubscribe();
-    };
+    }
+    setLoading(false);
   }, []);
+  
   
   const handleLogin = async () => {
     setLoginError("");
@@ -106,44 +106,45 @@ export default function AdminAuth({ children, onLogout }) {
   const handleEmailLogin = async (e) => {
     e.preventDefault();
     setLoginError("");
-    
+  
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      
-      // Check if the email is in the admin list
-      if (!ADMIN_EMAIL.includes(user.email)) {
+      const res = await fetch(`${APIBASE}/users/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+  
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || "Login failed");
+      }
+  
+      const data = await res.json();
+      const { token, user } = data;
+  
+      // Check role dynamically
+      if (user.role !== "admin") {
         setLoginError("You are not authorized to access the admin page.");
-        await signOut(auth);
         return;
       }
-      
-      // Remember me functionality (optional - you can store in localStorage)
+  
+      // Store token for future requests
+      localStorage.setItem("adminToken", token);
+  
+      // Remember me functionality (optional)
       if (rememberMe) {
-        localStorage.setItem('rememberAdmin', 'true');
+        localStorage.setItem("rememberAdmin", "true");
       }
-      
+  
+      // Optional: set user state for frontend
+      setUser(user);
+  
     } catch (error) {
       console.error("Email login error:", error);
-      switch (error.code) {
-        case 'auth/user-not-found':
-          setLoginError("No admin account found with this email address.");
-          break;
-        case 'auth/wrong-password':
-          setLoginError("Incorrect password. Please try again.");
-          break;
-        case 'auth/invalid-email':
-          setLoginError("Invalid email address format.");
-          break;
-        case 'auth/too-many-requests':
-          setLoginError("Too many failed attempts. Please try again later.");
-          break;
-        default:
-          setLoginError("Login failed. Please check your credentials and try again.");
-      }
+      setLoginError(error.message);
     }
   };
-
+  
   const handleForgotPassword = async () => {
     if (!email) {
       setLoginError("Please enter your email address first.");
@@ -181,17 +182,16 @@ export default function AdminAuth({ children, onLogout }) {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      if (onLogout) {
-        onLogout();
-      }
-    } catch (error) {
-      console.error("Logout error:", error);
+  const handleLogout = () => {
+    localStorage.removeItem("adminToken");
+  
+    window.location.href = "/admin";
+  
+    if (onLogout) {
+      onLogout();
     }
   };
-
+  
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">

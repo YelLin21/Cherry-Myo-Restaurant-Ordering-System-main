@@ -4,6 +4,7 @@ import AdminNavbar from "../components/AdminNavbar.jsx";
 import { onAuthStateChanged, signOut, signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { auth, signInWithGoogle } from "../firebase";
 import { toast } from "react-toastify";
+import { jwtDecode } from "jwt-decode";
 
 // Simple Google SVG icon component
 function GoogleIcon({ className = "w-6 h-6" }) {
@@ -189,47 +190,53 @@ export default function WaiterPage() {
   }, []);
 
   // Auth state listener
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      console.log("Auth state changed:", user?.email);
-
-      if (user) {
-        // Check if the user email is in the waiter list
-        if (!WAITER_EMAIL.includes(user.email)) {
-          console.log("Non-waiter user detected, signing out:", user.email);
-          setLoginError("You are not authorized to access the waiter page.");
-          setUser(null);
-
-          // Prevent multiple signOut calls
-          if (!isSigningOut) {
-            setIsSigningOut(true);
-            try {
-              await signOut(auth);
-            } catch (error) {
-              console.error("Error signing out:", error);
-            } finally {
-              setIsSigningOut(false);
-            }
-          }
-          setAuthLoading(false);
-          return;
-        }
-
-        // User is authorized
-        console.log("Waiter user authenticated:", user.email);
-        setUser(user);
-        setLoginError(""); // Clear any previous errors
-      } else {
-        console.log("No user authenticated");
-        setUser(null);
-        setIsSigningOut(false); // Reset signing out state
-      }
-
-      setAuthLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [isSigningOut]);
+ useEffect(() => {
+   const checkAuth = async () => {
+     const token = localStorage.getItem("waiterToken");
+     if (!token) {
+       console.log("No JWT token found — user not authenticated");
+       setUser(null);
+       setAuthLoading(false);
+       return;
+     }
+ 
+     try {
+       // Decode the JWT
+       const decoded = jwtDecode(token);
+       console.log("Decoded JWT:", decoded);
+ 
+       // Optionally: verify token with backend
+       const res = await fetch(`${APIBASE}/users/me`, {
+         headers: { Authorization: `Bearer ${token}` },
+       });
+ 
+       if (!res.ok) throw new Error("Token verification failed");
+ 
+       const data = await res.json();
+       console.log("Token verified, user data:", data);
+       // Check user role
+       if (data.role !== "waiter") {
+         console.warn("Unauthorized role:", data.role);
+         setLoginError("You are not authorized to access the kitchen page.");
+         localStorage.removeItem("waiterToken");
+         setUser(null);
+         setAuthLoading(false);
+         return;
+       }
+ 
+       setUser(data);
+       setLoginError("");
+     } catch (error) {
+       console.error("Auth check failed:", error);
+       localStorage.removeItem("waiterToken");
+       setUser(null);
+     } finally {
+       setAuthLoading(false);
+     }
+   };
+ 
+   checkAuth();
+ }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -383,52 +390,41 @@ export default function WaiterPage() {
     e.preventDefault();
     setLoginError("");
 
-    if (!email || !password) {
-      setLoginError("Please enter both email and password.");
-      return;
-    }
-
-    // Check if email is in waiter list before attempting login
-    if (!WAITER_EMAIL.includes(email)) {
-      setLoginError("You are not authorized to access the waiter page.");
-      return;
-    }
-
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      const res = await fetch(`${APIBASE}/users/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-      console.log("Email login successful for waiter:", user.email);
-
-      if (rememberMe) {
-        localStorage.setItem('rememberWaiter', 'true');
-        localStorage.setItem('waiterEmail', email);
-      } else {
-        localStorage.removeItem('rememberWaiter');
-        localStorage.removeItem('waiterEmail');
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || "Login failed");
       }
+
+      const data = await res.json();
+      const { token, user } = data;
+
+      // ✅ Check for kitchen role instead of admin
+      if (user.role !== "waiter") {
+        setLoginError("You are not authorized to access the waiter page.");
+        return;
+      }
+
+      // ✅ Store JWT
+      localStorage.setItem("waiterToken", token);
+
+      // ✅ Remember me option
+      if (rememberMe) {
+        localStorage.setItem("rememberWaiter", "true");
+      }
+
+      // Optional: redirect to kitchen dashboard
+      window.location.href = "/waiter";
 
     } catch (error) {
       console.error("Email login error:", error);
-      switch (error.code) {
-        case 'auth/user-not-found':
-          setLoginError("No waiter account found with this email address.");
-          break;
-        case 'auth/wrong-password':
-          setLoginError("Incorrect password. Please try again.");
-          break;
-        case 'auth/invalid-email':
-          setLoginError("Invalid email address format.");
-          break;
-        case 'auth/too-many-requests':
-          setLoginError("Too many failed attempts. Please try again later.");
-          break;
-        case 'auth/invalid-credential':
-          setLoginError("Invalid credentials. Please check your email and password.");
-          break;
-        default:
-          setLoginError("Login failed. Please check your credentials and try again.");
-      }
+      setLoginError(error.message);
     }
   };
 
@@ -468,13 +464,12 @@ export default function WaiterPage() {
   };
 
   const handleLogout = async () => {
-    try {
-      console.log("Logging out waiter:", user?.email);
-      localStorage.removeItem('rememberWaiter');
-      localStorage.removeItem('waiterEmail');
-      await signOut(auth);
-    } catch (error) {
-      console.error("Logout error:", error);
+    localStorage.removeItem("waiterToken");
+  
+    window.location.href = "/waiter";
+  
+    if (onLogout) {
+      onLogout();
     }
   };
 
