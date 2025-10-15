@@ -21,6 +21,7 @@ export default function OrderHistoryPage() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showPromptPayQR, setShowPromptPayQR] = useState(false);
   const [showCardModal, setShowCardModal] = useState(false);
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
   const [showPaymentSuccessModal, setShowPaymentSuccessModal] = useState(false);
@@ -733,6 +734,25 @@ export default function OrderHistoryPage() {
         setShowCardModal(true);
         return;
       }
+
+       if (paymentMethod === "promptpay") {
+      await fetch(`${APIBASE}/checkouts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: firstOrder._id,
+          paymentMethod: "scan",
+          finalAmount: totalPrice
+        })
+      });
+      setIsPaymentProcessing(true);
+      setIsPaid(true);
+      
+      setShowPaymentModal(false);
+      setShowPromptPayQR(true);
+      return;
+    }
+
   
         const response = await fetch(`${APIBASE}/checkouts`, {
           method: "POST",
@@ -1318,7 +1338,7 @@ export default function OrderHistoryPage() {
               </div>
 
               <div className="space-y-4">
-                {/* QR Code Payment Button */}
+                {/* Card Payment Button */}
                 <button
                   onClick={() => handlePayment('card')}
                   className={`w-full p-4 rounded-xl border-2 transition-all duration-200 flex items-center justify-center gap-3 ${
@@ -1349,12 +1369,56 @@ export default function OrderHistoryPage() {
                     <p className="text-sm opacity-80">Pay at the counter</p>
                   </div>
                 </button>
+                {/* QR Payment Button */}
+                <button
+                  onClick={() => handlePayment('promptpay')}
+                  className={`w-full p-4 rounded-xl border-2 transition-all duration-200 flex items-center justify-center gap-3 ${
+                    darkMode 
+                      ? 'border-red-500 bg-red-900 hover:bg-red-800 text-red-300' 
+                      : 'border-red-500 bg-red-50 hover:bg-red-100 text-red-700'
+                  }`}
+                >
+                  <div className="text-2xl">📱</div>
+                  <div>
+                    <p className="font-bold text-lg">Pay with QR (PromptPay)</p>
+                    <p className="text-sm opacity-80">Scan Qr to Pay</p>
+                  </div>
+                </button>
               </div>
             </div>
           </div>
         </div>
       )}
-      {/* QR Code Payment Modal */}
+       {/* QR Modal */}
+{showPromptPayQR && (
+  <div
+    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+    onClick={() => setShowPromptPayQR(false)}
+  >
+    <div
+      className="max-w-md w-full rounded-xl shadow-2xl max-h-[90vh] overflow-y-auto bg-white"
+      onClick={(e) => e.stopPropagation()} // prevent closing when clicking inside
+    >
+      <div className="p-6 text-center">
+        <h2 className="text-xl font-bold mb-4">Scan QR to Pay</h2>
+
+        <img
+          src="/image/QR.jpg"
+          alt="PromptPay QR Code"
+          className="w-64 h-64 rounded-xl shadow-md mx-auto"
+        />
+
+        <button
+          onClick={() => setShowPromptPayQR(false)}
+          className="mt-6 p-2 bg-green-600 text-white rounded-lg w-full font-bold"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+      {/* Card Payment Modal */}
       {showCardModal && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
