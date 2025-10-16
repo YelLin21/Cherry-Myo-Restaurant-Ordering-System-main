@@ -1,7 +1,7 @@
 import express from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import User from "../models/User.js"; // your mongoose model
+import User from "../models/User.js"; 
 import { verifyToken } from "../middlewares/auth.js";
 
 const router = express.Router();
@@ -23,7 +23,7 @@ router.get("/", verifyToken, async (req, res) => {
     }
   });
 /**
- * 🧱 REGISTER (Admin only)
+ * REGISTER (Admin only)
  * POST /api/users/register
  */
 router.post("/register",verifyToken, async (req, res) => {
@@ -65,7 +65,7 @@ router.post("/register",verifyToken, async (req, res) => {
 });
 
 /**
- * 🔐 LOGIN (Admin / Waiter / Kitchen)
+ * LOGIN (Admin / Waiter / Kitchen)
  * POST /api/users/login
  */
 router.post("/login", async (req, res) => {
@@ -114,7 +114,7 @@ router.delete("/:id", async (req, res) => {
     }
   });
 /**
- * 👤 GET CURRENT USER (with JWT)
+ * GET CURRENT USER (with JWT)
  * GET /api/users/me
  */
 router.get("/me", verifyToken, async (req, res) => {
