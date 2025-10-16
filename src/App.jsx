@@ -16,6 +16,7 @@ import AdminCheckoutPage from "./pages/AdminCheckout";
 import TableViewPage from "./pages/TableView";
 import WaiterPage from "./pages/WaiterPage";
 import { useDarkMode } from "./pages/DarkModeContext.jsx";
+import AdminUserManagement from "./pages/AdminUserManagement.jsx";
 import FeedbackPage from "./pages/FeedbackPage.jsx";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -50,6 +51,7 @@ function App() {
           <Route path="/feedback" element={<FeedbackPage />} />
           <Route path="/table/:tableId" element={<TableViewPage />} />
           <Route path="/kitchen" element={<KitchenPage />} />
+          <Route path="/admin/users" element={<AdminUserManagement />} />
 
           {/* Admin routes (wrapped in AdminAuth) */}
           <Route
@@ -78,6 +80,16 @@ function App() {
               <AdminAuth>
                 {({ user, handleLogout }) => (
                   <AdminPromotionMenuPage user={user} onLogout={handleLogout} />
+                )}
+              </AdminAuth>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <AdminAuth>
+                {({ user, handleLogout }) => (
+                  <AdminUserManagement user={user} onLogout={handleLogout} />
                 )}
               </AdminAuth>
             }
