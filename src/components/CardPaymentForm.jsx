@@ -15,7 +15,6 @@ export default function CardPaymentForm({ totalPrice, orderId, onClose }) {
 
     setLoading(true);
     try {
-      // 1️⃣ Create a payment intent on backend
       const response = await fetch(`${APIBASE}/stripe/create-payment-intent`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

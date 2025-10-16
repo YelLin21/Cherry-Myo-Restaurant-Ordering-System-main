@@ -1,14 +1,36 @@
-import { useState } from "react";
+import { useState, useEffect } from "react"; 
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { FaSun, FaMoon, FaHome, FaCog, FaUtensils, FaStar, FaGift, FaConciergeBell, FaCashRegister } from "react-icons/fa";
 import { useDarkMode } from "../pages/DarkModeContext.jsx";
+import { getAdminUser } from "../utils/auth.js";
+
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5001";
 
 export default function AdminNavbar() {
   const { darkMode, setDarkMode } = useDarkMode();
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  // useEffect(() => {
+  //   const admin = 'hello';
+  //   if (!admin) {
+  //     navigate("/admin/login");
+  //     return; 
+  //   }
+  
+  //   setUser(admin);
+  
+  //   // Only connect socket if user exists
+  //   const socket = io(SOCKET_URL, { transports: ["websocket"] });
+  
+  //   socket.on("connect", () => console.log("Socket connected:", socket.id));
+  //   socket.on("menu:new", (newItem) => { /* ... */ });
+  
+  //   return () => socket.disconnect();
+  // }, [navigate]);
+  
 
   const isActivePath = (path) => {
     return location.pathname === path;
@@ -26,6 +48,12 @@ export default function AdminNavbar() {
       path: "/admin/special",
       icon: <FaStar className="w-4 h-4" />,
       description: "Manage Special Items"
+    },
+    {
+      title: "User Management",
+      path: "/admin/users",
+      icon: <FaGift className="w-4 h-4" />,
+      description: "User account management"
     },
     {
       title: "Promotion Menu",
@@ -109,7 +137,6 @@ export default function AdminNavbar() {
               <span className="hidden xl:block">Customer Site</span>
             </Link>
 
-            {/* Dark Mode Toggle */}
             <button 
               onClick={() => setDarkMode(!darkMode)}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-all duration-200 text-lg ${
