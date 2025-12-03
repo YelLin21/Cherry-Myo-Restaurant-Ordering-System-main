@@ -1,4 +1,6 @@
-# 🍽️ Cherry-Myo Restaurant Ordering System
+# Project Name : Cherry-Myo Restaurant Ordering System
+
+https://cherry-myo-restaurant-ordering-system-main.vercel.app/table/1
 
 A modern, full-stack restaurant ordering system built with React, Node.js, and MongoDB. This comprehensive solution provides seamless ordering experiences for customers and powerful management tools for restaurant staff.
 
