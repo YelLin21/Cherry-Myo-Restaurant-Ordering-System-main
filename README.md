@@ -2,11 +2,14 @@
 # Client Restaurant : Cherry Myo
 **Cherry Myo** is a Burmese restaurant located in Bangkapi, Bangkok, close to the Ramkhamhaeng area. It serves authentic, home-style Burmese food such as goat curry and traditional fish dishes, prepared fresh each day. The restaurant is popular among Myanmar students and workers in the neighborhood and offers a friendly, casual atmosphere where people can enjoy familiar flavors from home.
 
-# Google Map : https://maps.app.goo.gl/4yp1j4Yo7hobpuRq6
+### Google Map of Cherry Myo : https://maps.app.goo.gl/4yp1j4Yo7hobpuRq6
 
-# https://cherry-myo-restaurant-ordering-system-main.vercel.app/table/1
+## Project Link
+https://cherry-myo-restaurant-ordering-system-main.vercel.app/table/1
 
-A modern, full-stack restaurant ordering system built with React, Node.js, and MongoDB. This comprehensive solution provides seamless ordering experiences for customers and powerful management tools for restaurant staff.
+## Overview
+
+### A modern, full-stack restaurant ordering system built with React, Node.js, and MongoDB. This comprehensive solution provides seamless ordering experiences for customers and powerful management tools for restaurant staff.
 
 ![Cherry-Myo Restaurant](./public/image/cherry_myo.png)
 
